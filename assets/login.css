@@ -1,0 +1,136 @@
+/* 退出登录按钮样式 - 左下角固定定位 + 缩小尺寸 + 半透明 */
+#logout-btn {
+  position: fixed;
+  top: 6px; /* 改到左下角：top → bottom */
+  right: 6px; /* 改到左下角：right → left */
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  border: none;
+  color: #666;
+  transition: all 0.2s ease;
+  z-index: 9997;
+  opacity: 0.5; /* 默认半透明 */
+}
+
+#logout-btn:hover {
+  background: #f5f5f5;
+  color: #ff4444;
+  opacity: 1; /* 鼠标悬浮时完全不透明 */
+}
+
+#logout-btn.hidden {
+  display: none !important;
+}
+
+/* 原有样式保持不变 */
+/* 遮罩层样式 */
+#login-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+/* 登录窗口容器 */
+#login-modal {
+  width: 320px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 9999;
+  box-sizing: border-box;
+}
+
+/* 登录标题 */
+#login-modal .login-title {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+}
+
+/* 输入框容器 */
+#login-modal .input-wrap {
+  margin-bottom: 16px;
+}
+#login-modal .input-wrap.password-wrap {
+  margin-bottom: 20px;
+}
+
+/* 输入框标签 */
+#login-modal .input-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* 输入框样式 */
+#login-modal .login-input {
+  width: 100%;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+#login-modal .login-input:focus {
+  border-color: #0078ff;
+}
+#login-modal .login-input::placeholder {
+  color: #999;
+}
+
+/* 提示文本 */
+#login-tip {
+  font-size: 12px;
+  text-align: center;
+  margin-bottom: 16px;
+  min-height: 16px;
+}
+#login-tip.error {
+  color: #ff4444;
+}
+#login-tip.success {
+  color: #00cc66;
+}
+
+/* 登录按钮 */
+#login-btn {
+  width: 100%;
+  padding: 10px;
+  background: #0078ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#login-btn:hover {
+  background: #0066cc;
+}
+
+/* 隐藏默认样式 */
+.hidden {
+  display: none !important;
+}

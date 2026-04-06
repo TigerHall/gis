@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGIS示例页面</title>
+    <!-- Leaflet核心库 -->
+    <script src="./assets/leaflet.js"></script>
+    <link rel="stylesheet" href="./assets/leaflet.css" />
+    <!-- 显示坐标插件 -->
+    <link rel="stylesheet" href="./assets/Leaflet.MousePosition.css" />
+    <script src="./assets/Leaflet.MousePosition.js"></script>
+    <!-- 自定义css -->
+    <link rel="stylesheet" href="./assets/login.css" />
+    <link rel="stylesheet" href="./assets/main.css" />
+
+    <!-- WPA -->
+    <!-- 静态兜底（优先被覆盖，仅JS失败时生效） -->
+    <link rel="manifest" href="./manifest.json" />
+    <!-- 包含动态生成manifest.json的主脚本 -->
+    <script src="./app.js"></script>
+    <!-- 适配iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="#99cc99" />
+    <meta name="apple-mobile-web-app-title" content="WebGeoJSON应用" />
+    <link rel="apple-touch-icon" href="./assets/images/icon.svg" />
+    <!-- 主题色适配 -->
+    <meta name="theme-color" content="#99cc99" />
+    <link rel="icon" href="./assets/images/icon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <!-- 悬浮触发按钮 -->
+    <div class="layer-trigger" id="layerTrigger">要素加载</div>
+    <!-- 左侧图层控制面板 -->
+    <div class="layer-panel" id="layerPanel">
+      <h3>图层要素</h3>
+      <div id="layerItemsContainer"></div>
+    </div>
+    <!-- 右侧地图容器 -->
+    <div id="map"></div>
+    <!-- 基础设定JS脚本 -->
+    <script>
+      // 天地图TK配置
+      const TDT_TK = "13f1ff3b1c59a59cea87cf63950b4888";
+      // 初始化地图容器
+      map = L.map("map", {
+        zoomControl: true,
+        attributionControl: false,
+      }).setView([32, 107], 3);
+
+      // 2. 比例尺控件
+      L.control
+        .scale({
+          imperial: false,
+          maxWidth: 100,
+          position: "bottomleft",
+        })
+        .addTo(map);
+
+      // 3. 鼠标坐标控件
+      L.control
+        .mousePosition({
+          position: "topright",
+          showZoom: true,
+          zoomLabel: "缩放: {zoom} ",
+          format: "经度: {lng}, 纬度: {lat}",
+          precision: 5,
+        })
+        .addTo(map);
+
+      // ========== 底图图层定义 ==========
+      // 0. 天地图全球境界底图
+      const tdtIboLayer = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        { maxZoom: 18 },
+      );
+      // 1. 天地图影像底图
+      const tdtImgLayer = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        {
+          maxZoom: 18,
+          attribution:
+            "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图影像</a>",
+        },
+      );
+      const tdtImgAnno = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        { maxZoom: 18 },
+      );
+      const imgLayers = L.layerGroup([tdtImgLayer, tdtImgAnno]);
+      const tdtImgLayer2 = tdtImgLayer;
+      // 2. 天地图矢量底图
+      const tdtVecLayer = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        {
+          maxZoom: 18,
+          attribution:
+            "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图矢量</a>",
+        },
+      );
+      const tdtVecAnno = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        { maxZoom: 18 },
+      );
+      const vecLayers = L.layerGroup([tdtVecLayer, tdtVecAnno]);
+
+      // 2.1 天地图地形底图
+      const tdtTerLayer = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=ter_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        {
+          maxZoom: 18,
+          attribution:
+            "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图地形</a>",
+        },
+      );
+      const tdtTerAnno = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=cta_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        { maxZoom: 18 },
+      );
+      const terLayers = L.layerGroup([tdtTerLayer, tdtTerAnno]);
+
+      // 3. ArcGIS影像底图
+      const ARCGIS_SERVICE_PREFIX =
+        "//server.arcgisonline.com/ArcGIS/rest/services/";
+
+      function createArcGISBaseLayer(config, boundaryLayer = null) {
+        // 拼接完整的服务地址（公共前缀 + 服务名称 + /MapServer）
+        const getFullServiceUrl = (serviceName) =>
+          `${ARCGIS_SERVICE_PREFIX}${serviceName}/MapServer`;
+
+        // 1. 创建基础瓦片图层
+        const baseLayer = L.tileLayer(
+          `${getFullServiceUrl(config.serviceName)}/tile/{z}/{y}/{x}`,
+          {
+            maxZoom: config.maxZoom || 19,
+            attribution: `<a href='https://www.arcgis.com/' target='_blank'>ArcGIS Online ${config.name}</a>`,
+          },
+        );
+
+        // 2. 若有标注图层，一起组合
+        let layersToGroup = [baseLayer];
+        if (config.labelServiceName) {
+          const labelLayer = L.tileLayer(
+            `${getFullServiceUrl(config.labelServiceName)}/tile/{z}/{y}/{x}`,
+            { maxZoom: config.maxZoom || 19 },
+          );
+          layersToGroup.push(labelLayer);
+        }
+
+        // 3. 叠加境界图层（如果传入）
+        if (boundaryLayer) {
+          layersToGroup.push(boundaryLayer);
+        }
+
+        // 4. 创建图层组并返回
+        return {
+          layerName: config.name,
+          layer: L.layerGroup(layersToGroup),
+        };
+      }
+
+      // ========== 3. ArcGIS 底图配置 ==========
+      /**
+       * 创建 ArcGIS 官方瓦片底图图层
+       * @param {Object} config - 底图配置项
+       * @param {string} config.name - 底图名称（用于控件显示）
+       * @param {string} config.serviceName - ArcGIS 服务名称（拼接前缀后得到完整地址）
+       * @param {number} config.maxZoom - 最大缩放层级
+       * @param {Layer} boundaryLayer - 可选，叠加的境界图层（如 tdtIboLayer）
+       * @param {string} config.labelServiceName - 可选，标注图层的服务名称
+       * @returns {Object} { layerName: 图层名称, layer: 组合后的图层组 }
+       */
+      const arcgisBaseLayerConfigs = [
+        // 影像底图
+        { name: "ArcGIS-影像底图", serviceName: "World_Imagery", maxZoom: 19 },
+        // 街道底图
+        {
+          name: "ArcGIS-街道底图",
+          serviceName: "World_Street_Map",
+        },
+        // 海洋底图
+        {
+          name: "ArcGIS-海洋底图",
+          serviceName: "Ocean/World_Ocean_Base",
+          labelServiceName: "Ocean/World_Ocean_Reference",
+          maxZoom: 19,
+        },
+        // 物理地图
+        {
+          name: "ArcGIS-物理地图",
+          serviceName: "World_Physical_Map",
+        },
+        // 阴影地形图
+        {
+          name: "ArcGIS-山体阴影地形图",
+          serviceName: "World_Shaded_Relief",
+          maxZoom: 13,
+        },
+        // 世界地形底图
+        {
+          name: "ArcGIS-世界地形基础底图",
+          serviceName: "World_Terrain_Base",
+          maxZoom: 19,
+        },
+        // 地形底图
+        { name: "ArcGIS-地形底图", serviceName: "World_Topo_Map", maxZoom: 19 },
+      ];
+
+      // ========== 4. 批量创建所有 ArcGIS 底图图层 ==========
+      const arcgisBaseLayers = {};
+      arcgisBaseLayerConfigs.forEach((config) => {
+        const result = createArcGISBaseLayer(config, tdtIboLayer);
+        arcgisBaseLayers[result.layerName] = result.layer;
+      });
+
+      // 打底的ArcGIS影像底图
+      const arcgisLayers = L.tileLayer(
+        "//server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 23 },
+      );
+
+      // 4. OSM底图
+      const osmLayer = L.tileLayer(
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution:
+            "<a href='https://www.openstreetmap.org/' target='_blank'>OpenStreetMap</a>",
+        },
+      );
+      const osmLayers = L.layerGroup([osmLayer]);
+
+      // ========== 控件配置 ==========
+      // 1. 底图切换控件
+      L.control
+        .layers(
+          {
+            // 天地图系列
+            天地图纯影像: tdtImgLayer2,
+            天地图影像底图: imgLayers,
+            天地图矢量底图: vecLayers,
+            天地图地形底图: terLayers,
+            // ArcGIS系列
+            ...arcgisBaseLayers,
+            // OSM
+            OSM底图_边界有误慎用: osmLayers,
+            // 全球境界: tdtIboLayer,
+          },
+          {
+            全球境界: tdtIboLayer,
+          },
+          {
+            position: "bottomright",
+            collapsed: true,
+            autoZIndex: true,
+          },
+        )
+        .addTo(map);
+
+      // 设置默认底图
+      tdtImgLayer2.addTo(map);
+      tdtIboLayer.addTo(map);
+    </script>
+    <!-- geojson图层加载器 -->
+    <script src="./assets/geojsonloader.js" defer></script>
+  </body>
+</html>
