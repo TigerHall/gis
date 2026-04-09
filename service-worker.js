@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.0.21";
+const CACHE_NAME = "v1.0.22";
 // 需要缓存的资源（替换为你的GeoJSON路径）
 const CACHE_ASSETS = [
   "./",
