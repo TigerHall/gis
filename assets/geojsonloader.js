@@ -500,10 +500,67 @@ document.addEventListener("DOMContentLoaded", function () {
   // layerCache[id] 存储的是 L.LayerGroup（包含 -360/0/+360 三份副本）
   // layerBoundsCache[id] 存储的是原始（0°）副本的 L.geoJSON，用于 getBounds 定位
   const layerBoundsCache = {};
+  // 当前正在加载的请求计数（按图层组）
+  const groupLoadingCount = {};
+
+  // 更新图层组的加载状态显示
+  function updateGroupStatus(groupDiv, status) {
+    const groupStatus = groupDiv.querySelector(".group-status");
+    if (!groupStatus) return;
+    groupStatus.dataset.status = status;
+    const titles = { idle: "", loading: "加载中...", loaded: "✓", partial: "部分加载", error: "×" };
+    groupStatus.title = titles[status] || status;
+    groupStatus.textContent = status === "loading" ? "⏳" : status === "loaded" ? "✓" : status === "partial" ? "◐" : status === "error" ? "✕" : "";
+  }
+
+  // 同步图层组的加载状态（根据子图层状态计算）
+  function syncGroupLoadingStatus(groupDiv) {
+    const items = groupDiv.querySelectorAll('.layer-item input[type="checkbox"]');
+    const statusSpans = groupDiv.querySelectorAll('.layer-status');
+    let loadingCount = 0, loadedCount = 0, errorCount = 0, checkedCount = 0;
+
+    items.forEach((cb, idx) => {
+      if (cb.checked) {
+        checkedCount++;
+        const status = statusSpans[idx]?.dataset.status;
+        if (status === "loading") loadingCount++;
+        else if (status === "loaded") loadedCount++;
+        else if (status === "error") errorCount++;
+      }
+    });
+
+    if (loadingCount > 0) {
+      updateGroupStatus(groupDiv, "loading");
+    } else if (errorCount > 0 && loadedCount === 0) {
+      updateGroupStatus(groupDiv, "error");
+    } else if (loadedCount > 0 && loadedCount < checkedCount) {
+      updateGroupStatus(groupDiv, "partial");
+    } else if (loadedCount > 0 && loadedCount === checkedCount) {
+      updateGroupStatus(groupDiv, "loaded");
+    } else {
+      updateGroupStatus(groupDiv, "idle");
+    }
+  }
+
+  // 更新单个图层项的状态显示
+  function updateLayerItemStatus(checkboxId, status) {
+    const layerItem = document.querySelector(`.layer-item[data-layer-id="${checkboxId}"]`);
+    if (!layerItem) return;
+    const statusSpan = layerItem.querySelector(".layer-status");
+    if (!statusSpan) return;
+    statusSpan.dataset.status = status;
+    const titles = { idle: "未加载", loading: "加载中...", loaded: "已加载", error: "加载失败" };
+    statusSpan.title = titles[status] || status;
+
+    // 同步更新所属图层组的状态
+    const groupDiv = layerItem.closest(".layer-group");
+    if (groupDiv) syncGroupLoadingStatus(groupDiv);
+  }
 
   function loadGeoJSONLayer(filePath, checkboxId, fitBoundsAfterLoad) {
     if (layerCache[checkboxId]) {
       layerCache[checkboxId].addTo(map);
+      updateLayerItemStatus(checkboxId, "loaded");
       if (fitBoundsAfterLoad) {
         try {
           const baseLayer = layerBoundsCache[checkboxId];
@@ -517,6 +574,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const fileName = filePath.split("/").pop();
+    updateLayerItemStatus(checkboxId, "loading");
 
     fetch(filePath)
       .then(function (response) {
@@ -560,10 +618,11 @@ document.addEventListener("DOMContentLoaded", function () {
             }
           } catch (e) {}
         }
+        updateLayerItemStatus(checkboxId, "loaded");
       })
       .catch(function (error) {
         console.error("GeoJSON加载失败：", error);
-        alert("图层加载失败：" + filePath);
+        updateLayerItemStatus(checkboxId, "error");
         const checkbox = document.getElementById(checkboxId);
         if (checkbox) {
           checkbox.checked = false;
@@ -580,6 +639,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     const checkbox = document.getElementById(checkboxId);
     if (checkbox) checkbox.style.background = "#fff";
+    updateLayerItemStatus(checkboxId, "idle");
   }
 
   // ========== 定位到图层（手动触发）==========
@@ -685,6 +745,12 @@ document.addEventListener("DOMContentLoaded", function () {
       groupName.className = "layer-group-name";
       groupName.textContent = group.groupName;
 
+      // 组级加载状态指示器
+      const groupStatus = document.createElement("span");
+      groupStatus.className = "group-status";
+      groupStatus.dataset.status = "idle";
+      groupStatus.title = "";
+
       // 组级全选复选框（点击不要展开/折叠）
       const groupCb = document.createElement("input");
       groupCb.type = "checkbox";
@@ -724,6 +790,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       header.appendChild(arrow);
       header.appendChild(groupName);
+      header.appendChild(groupStatus);
       header.appendChild(groupCb);
 
       group.layers.forEach((layerConfig) => {
@@ -735,6 +802,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const layerItem = document.createElement("div");
         layerItem.className = "layer-item";
+        layerItem.dataset.layerId = checkboxId;
 
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
@@ -754,11 +822,17 @@ document.addEventListener("DOMContentLoaded", function () {
         label.textContent = layerConfig.name;
         label.title = layerConfig.name;
 
-        // 定位按钮
+        // 状态指示器
+        const statusSpan = document.createElement("span");
+        statusSpan.className = "layer-status";
+        statusSpan.dataset.status = "idle";
+        statusSpan.title = "未加载";
+
+        // 定位按钮（使用放大镜图标）
         const locateBtn = document.createElement("button");
         locateBtn.className = "layer-locate-btn";
         locateBtn.title = "定位到此图层";
-        locateBtn.innerHTML = "⊕";
+        locateBtn.innerHTML = "🔍";
         locateBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           flyToLayer(checkboxId);
@@ -766,6 +840,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         layerItem.appendChild(checkbox);
         layerItem.appendChild(label);
+        layerItem.appendChild(statusSpan);
         layerItem.appendChild(locateBtn);
         children.appendChild(layerItem);
       });
@@ -880,6 +955,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const userGroup = document.getElementById("userLayerGroup");
     const layerItem = document.createElement("div");
     layerItem.className = "layer-item";
+    layerItem.dataset.layerId = uid;
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -898,10 +974,16 @@ document.addEventListener("DOMContentLoaded", function () {
     label.textContent = fileName;
     label.title = fileName;
 
+    // 状态指示器（用户上传的直接显示已加载）
+    const statusSpan = document.createElement("span");
+    statusSpan.className = "layer-status";
+    statusSpan.dataset.status = "loaded";
+    statusSpan.title = "已加载";
+
     const locateBtn = document.createElement("button");
     locateBtn.className = "layer-locate-btn";
     locateBtn.title = "定位到此图层";
-    locateBtn.innerHTML = "⊕";
+    locateBtn.innerHTML = "🔍";
     locateBtn.addEventListener("click", function () { flyToLayer(uid); });
 
     const removeBtn = document.createElement("button");
@@ -918,6 +1000,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     layerItem.appendChild(checkbox);
     layerItem.appendChild(label);
+    layerItem.appendChild(statusSpan);
     layerItem.appendChild(locateBtn);
     layerItem.appendChild(removeBtn);
     userGroup.appendChild(layerItem);

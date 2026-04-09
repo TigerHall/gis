@@ -167,16 +167,49 @@
   margin-left: 6px;
 }
 
+/* ========== 图层状态指示器 ========== */
+.layer-status {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: #ddd;
+  transition: all 0.3s ease;
+}
+
+.layer-status[data-status="idle"] {
+  background: #ddd;
+}
+
+.layer-status[data-status="loading"] {
+  background: #4a90d9;
+  animation: status-pulse 1s infinite;
+}
+
+.layer-status[data-status="loaded"] {
+  background: #5a9a5a;
+}
+
+.layer-status[data-status="error"] {
+  background: #d9534f;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
 /* ========== 定位按钮 ========== */
 .layer-locate-btn {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border: none;
   background: none;
   cursor: pointer;
-  color: #aaa;
-  font-size: 13px;
+  color: #888;
+  font-size: 12px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -197,6 +230,8 @@
   line-height: 1.7;
   min-width: 160px;
   max-width: 280px;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .feature-popup table {
@@ -235,4 +270,47 @@
   font-size: 12px;
   color: #888;
   padding: 0 10px 4px;
+}
+
+/* ========== 图层组加载状态指示器 ========== */
+.group-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  margin-right: 4px;
+  min-width: 16px;
+  text-align: center;
+  color: #888;
+  transition: all 0.3s ease;
+}
+
+.group-status[data-status="loading"] {
+  color: #4a90d9;
+  animation: status-pulse 1s infinite;
+}
+
+.group-status[data-status="loaded"] {
+  color: #5a9a5a;
+}
+
+.group-status[data-status="partial"] {
+  color: #f0ad4e;
+}
+
+.group-status[data-status="error"] {
+  color: #d9534f;
+}
+
+/* ========== 自定义缩放控件样式 ========== */
+.leaflet-control-zoom a {
+  font-size: 20px !important;
+  font-weight: normal !important;
+  line-height: 26px !important;
+}
+
+.leaflet-control-zoom-in {
+  border-bottom: 1px solid #ccc !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #f4f4f4 !important;
 }
