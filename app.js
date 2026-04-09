@@ -2,7 +2,7 @@
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/service-worker.js")
+      .register("service-worker.js")
       .then((registration) => {
         // 可选：也可以删掉这个Service Worker注册成功的日志
         // console.log('Service Worker注册成功：', registration.scope);
