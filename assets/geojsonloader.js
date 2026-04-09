@@ -350,13 +350,29 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // ========== onEachFeature：绑定弹窗（不再自动缩放）==========
+  // ========== onEachFeature：绑定弹窗 + 点击缩放（线/面要素）==========
   function onEachFeature(feature, layer, fileName) {
     const content = buildPopupContent(feature, fileName);
     if (content) {
       layer.bindPopup(content, { maxWidth: 300 });
     }
-    // 移除点击自动缩放，改由"定位"按钮触发
+    // 点击要素时，对线、面要素进行缩放，点要素不缩放
+    layer.on("click", function (e) {
+      const geomType = (feature.geometry?.type || "").toLowerCase();
+      // 点要素不缩放
+      if (geomType === "point" || geomType === "multipoint") {
+        return;
+      }
+      // 线、面要素缩放到其范围
+      try {
+        const bounds = layer.getBounds ? layer.getBounds() : null;
+        if (bounds && bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [30, 30], animate: true, maxZoom: 16 });
+        }
+      } catch (err) {
+        // 忽略无法获取bounds的情况
+      }
+    });
   }
 
   // ========== 矢量世界副本：连续重复显示（同底图行为）==========
