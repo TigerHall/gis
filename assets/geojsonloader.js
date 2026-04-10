@@ -52,26 +52,21 @@ document.addEventListener("DOMContentLoaded", function () {
       e.stopPropagation();
     });
 
-    // ========== 全选复选框 (替换 h3 为带复选框的标题行) ==========
     const titleH3 = layerPanel.querySelector("h3");
     if (titleH3) {
       const titleRow = document.createElement("div");
       titleRow.id = "selectAllRow";
-
       selectAllCheckbox = document.createElement("input");
       selectAllCheckbox.type = "checkbox";
       selectAllCheckbox.id = "selectAllLayers";
       selectAllCheckbox.title = "全选 / 全不选所有图层";
       selectAllCheckbox.addEventListener("change", function () {
-        // 清除半选状态
         this.classList.remove("indeterminate");
         if (this.checked) selectAllLayers();
         else unselectAllLayers();
       });
-
       const titleSpan = document.createElement("span");
       titleSpan.textContent = titleH3.textContent;
-
       layerPanel.removeChild(titleH3);
       titleRow.appendChild(selectAllCheckbox);
       titleRow.appendChild(titleSpan);
@@ -80,24 +75,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ========== GeoJSON 分组配置 ==========
-  // 需要多边形分色的图层（key = file名, value = 颜色配置策略）
-  // "sequential"：按要素序号生成不同色，"property"：按某个属性字段分色
-  const polygonColorConfig = {
-    "1GlobalOceanicCrust.json": { mode: "sequential" },
-    "2OceanDomian.json": { mode: "sequential" },
-    "3SubOceanDomain.json": { mode: "sequential" },
-    "4RidgeDomain.json": { mode: "sequential" },
-    "DupalOcean.json": { mode: "sequential" },
-    "global_continental_crust.json": { mode: "sequential" },
-    "LLSVP.json": { mode: "sequential" },
-    "LIP_Johansson.json": { mode: "sequential" },
-    "plate_cont.json": { mode: "sequential" },
-    "plate_ocean.json": { mode: "sequential" },
-    "plate16.json": { mode: "sequential" },
-    "RD_plgn1_5.json": { mode: "sequential" },
-  };
-
-  // 分级分组配置
   const geoJsonGroups = [
     {
       groupName: "地壳与大洋域",
@@ -155,15 +132,61 @@ document.addEventListener("DOMContentLoaded", function () {
   const geoJsonBasePath = "./assets/geojson/";
   const layerCache = {};
   const layerColorMap = {};
-  // 用于存储各图层每个要素的颜色（多边形分色）
-  const featureColorCache = {};
+  // ========== 新增：颜色模式管理 ==========
+  // colorMode[checkboxId] = "single" | "sequential" | "field"
+  // fieldKey[checkboxId] = 属性字段名（仅 field 模式）
+  const colorMode = {};
+  const fieldKey = {};
+  // 按属性分色的颜色缓存 fieldColorCache[fieldKey] = { value -> hex }
+  const fieldColorPalette = {};
+  // 高亮状态
+  const highlightState = {};
+  const layerBoundsCache = {};
 
   // ========== 颜色工具 ==========
-  function createFixedSeededRandom(seed = 12230916) {
-    const a = 1664525;
-    const c = 1013904223;
-    const m = Math.pow(2, 32);
-    let current = seed;
+  // 检测 GeoJSON 中的主要几何类型（统计最多的一种）
+  function detectMainGeomType(geojsonData) {
+    if (!geojsonData) return "unknown";
+    if (geojsonData.type === "Feature" && geojsonData.geometry) {
+      return geojsonData.geometry.type || "unknown";
+    }
+    if (
+      geojsonData.type === "FeatureCollection" &&
+      Array.isArray(geojsonData.features)
+    ) {
+      // 统计每种几何类型的数量，返回最多的那种
+      const typeCount = {};
+      for (let i = 0; i < geojsonData.features.length; i++) {
+        const geom = geojsonData.features[i].geometry;
+        if (geom && geom.type) {
+          const t = geom.type.toLowerCase();
+          typeCount[t] = (typeCount[t] || 0) + 1;
+        }
+      }
+      // 优先返回面类型
+      if (typeCount["polygon"] || typeCount["multipolygon"]) return "polygon";
+      if (typeCount["linestring"] || typeCount["multilinestring"])
+        return "linestring";
+      if (typeCount["point"] || typeCount["multipoint"]) return "point";
+      // 返回数量最多的类型
+      let maxType = "unknown",
+        maxCount = 0;
+      for (const t in typeCount) {
+        if (typeCount[t] > maxCount) {
+          maxCount = typeCount[t];
+          maxType = t;
+        }
+      }
+      return maxType;
+    }
+    return "unknown";
+  }
+
+  function createFixedSeededRandom(seed) {
+    const a = 1664525,
+      c = 1013904223,
+      m = Math.pow(2, 32);
+    let current = seed || 12230916;
     return function () {
       current = (a * current + c) % m;
       return current / m;
@@ -171,7 +194,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getFixedColor(index) {
-    const random = createFixedSeededRandom();
+    const random = createFixedSeededRandom(12230916);
     for (let i = 0; i < index; i++) random();
     const r = Math.floor(random() * 256);
     const g = Math.floor(random() * 256);
@@ -179,18 +202,33 @@ document.addEventListener("DOMContentLoaded", function () {
     return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
   }
 
-  // 根据要素索引生成多边形分色（视觉区分度更好的HSL调色）
-  function getFeatureColor(featureIndex, totalHint) {
-    const hue = Math.round((featureIndex * 137.508) % 360); // 黄金角分布
+  // 根据要素索引生成 HSL 颜色（黄金角分布，区分度高）
+  function getFeatureColorByIndex(featureIndex) {
+    const hue = Math.round((featureIndex * 137.508) % 360);
     const sat = 60 + (featureIndex % 3) * 10;
     const lig = 40 + (featureIndex % 4) * 5;
     return `hsl(${hue},${sat}%,${lig}%)`;
   }
 
+  // 按属性字段值生成颜色（同一属性值 → 同一颜色，跨要素一致）
+  function getFeatureColorByField(props, fk, featureIndex) {
+    if (!fieldColorPalette[fk]) fieldColorPalette[fk] = {};
+    const val = props[fk] != null ? String(props[fk]) : "__null__";
+    if (!fieldColorPalette[fk][val]) {
+      // 首次遇到该值，用 featureIndex 生成稳定颜色（同一 fk 下不同值颜色不同）
+      const hash = createFixedSeededRandom(
+        fk.charCodeAt(0) * 1000 + featureIndex,
+      );
+      const r = Math.floor(hash() * 256);
+      const g = Math.floor(hash() * 256);
+      const b = Math.floor(hash() * 256);
+      fieldColorPalette[fk][val] = `rgb(${r},${g},${b})`;
+    }
+    return fieldColorPalette[fk][val];
+  }
+
   // ========== 通用弹窗模板 ==========
-  // 根据文件名/要素类型，决定显示哪些字段，以及显示名称
   const POPUP_FIELD_CONFIG = {
-    // 热点
     "hotspots.json": {
       titleField: "geodesc",
       fields: ["geodesc", "xlong", "xlat", "OBJECTID"],
@@ -201,12 +239,7 @@ document.addEventListener("DOMContentLoaded", function () {
         OBJECTID: "编号",
       },
     },
-    // 火山
-    "volcanos.json": {
-      titleField: null,
-      fields: null, // null = 显示所有字段
-    },
-    // 断层系列
+    "volcanos.json": { titleField: null, fields: null },
     "Atlantic_FZ.json": {
       titleField: "Name",
       fields: ["Name", "断层长", "线方位", "Shape_Leng"],
@@ -227,45 +260,16 @@ document.addEventListener("DOMContentLoaded", function () {
       fields: ["Name", "断层长", "线方位"],
       labels: { Name: "名称", 断层长: "断层长(km)", 线方位: "方位角(°)" },
     },
-    "Pb_transformall.json": {
-      titleField: "Name",
-      fields: null,
-    },
-    "Pb_trench.json": {
-      titleField: "Name",
-      fields: null,
-    },
-    // 板块
-    "plate_cont.json": {
-      titleField: "PlateName",
-      fields: null,
-    },
-    "plate_ocean.json": {
-      titleField: "PlateName",
-      fields: null,
-    },
-    "plate16.json": {
-      titleField: "PlateName",
-      fields: null,
-    },
-    // 洋脊
-    "ridgenew.json": {
-      titleField: "Name",
-      fields: null,
-    },
-    // LIP
-    "LIP_Johansson.json": {
-      titleField: "Name",
-      fields: null,
-    },
-    // 默认：所有字段
-    _default: {
-      titleField: null,
-      fields: null,
-    },
+    "Pb_transformall.json": { titleField: "Name", fields: null },
+    "Pb_trench.json": { titleField: "Name", fields: null },
+    "plate_cont.json": { titleField: "PlateName", fields: null },
+    "plate_ocean.json": { titleField: "PlateName", fields: null },
+    "plate16.json": { titleField: "PlateName", fields: null },
+    "ridgenew.json": { titleField: "Name", fields: null },
+    "LIP_Johansson.json": { titleField: "Name", fields: null },
+    _default: { titleField: null, fields: null },
   };
 
-  // 跳过弹窗显示的字段
   const SKIP_FIELDS = new Set([
     "FID",
     "Shape_Length",
@@ -279,16 +283,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const props = feature.properties;
     const keys = Object.keys(props);
     if (keys.length === 0) return null;
-
     const config = POPUP_FIELD_CONFIG[fileName] || POPUP_FIELD_CONFIG._default;
     let displayKeys;
     if (config.fields) {
-      // 过滤掉不存在或空的字段
       displayKeys = config.fields.filter(
         (k) => props[k] !== undefined && props[k] !== null && props[k] !== "",
       );
     } else {
-      // 显示全部，跳过固定忽略字段
       displayKeys = keys.filter(
         (k) =>
           !SKIP_FIELDS.has(k) &&
@@ -297,17 +298,13 @@ document.addEventListener("DOMContentLoaded", function () {
           props[k] !== "",
       );
     }
-
     if (displayKeys.length === 0) return null;
-
-    // 如果有配置标题字段，先显示标题
     let titleHtml = "";
     if (config.titleField && props[config.titleField]) {
       titleHtml = `<div style="font-weight:bold;font-size:13px;margin-bottom:4px;color:#2a6a2a;border-bottom:1px solid #eee;padding-bottom:3px;">${props[config.titleField]}</div>`;
     }
-
     const rows = displayKeys
-      .filter((k) => !config.titleField || k !== config.titleField) // 标题字段已单独展示，不重复
+      .filter((k) => !config.titleField || k !== config.titleField)
       .map((k) => {
         const label = (config.labels && config.labels[k]) || k;
         let val = props[k];
@@ -316,61 +313,80 @@ document.addEventListener("DOMContentLoaded", function () {
         return `<tr><td>${label}</td><td>${val}</td></tr>`;
       })
       .join("");
-
     return `<div class="feature-popup">${titleHtml}<table><tbody>${rows}</tbody></table></div>`;
   }
 
-  // ========== 多边形分色 ==========
-  function getPolygonFeatureColor(fileName, featureIndex) {
-    const cfg = polygonColorConfig[fileName];
-    if (!cfg) return null;
-    if (cfg.mode === "sequential") {
-      return getFeatureColor(featureIndex, 100);
+  // ========== 核心样式函数（支持三种颜色模式）==========
+  function getFeatureFillColor(feature, checkboxId, fileName, featureIndex) {
+    const mode = colorMode[checkboxId] || "sequential";
+
+    if (mode === "single") {
+      return layerColorMap[checkboxId] || "#8B4513";
+    } else if (mode === "sequential") {
+      return getFeatureColorByIndex(featureIndex || 0);
+    } else if (mode === "field") {
+      const fk = fieldKey[checkboxId];
+      if (fk && feature.properties)
+        return getFeatureColorByField(
+          feature.properties,
+          fk,
+          featureIndex || 0,
+        );
+      return getFeatureColorByIndex(featureIndex || 0);
     }
-    return null;
+    return getFeatureColorByIndex(featureIndex || 0);
   }
 
-  // ========== 样式函数 ==========
   function getGeoJsonStyle(feature, checkboxId, fileName, featureIndex) {
-    const mainColor = layerColorMap[checkboxId] || "#8B4513";
     const geomType = (feature.geometry?.type || "").toLowerCase();
-
-    // 多边形分色
     const isPolygon = geomType === "polygon" || geomType === "multipolygon";
-    let fillColor = mainColor;
-    if (isPolygon && fileName) {
-      const fc = getPolygonFeatureColor(fileName, featureIndex || 0);
-      if (fc) fillColor = fc;
+    const isLine = geomType === "linestring" || geomType === "multilinestring";
+    const isPoint = geomType === "point" || geomType === "multipoint";
+
+    const featureColor = getFeatureFillColor(
+      feature,
+      checkboxId,
+      fileName,
+      featureIndex,
+    );
+
+    if (isLine) {
+      // 线要素：使用 color 显示多颜色，fill 不显示
+      return {
+        color: featureColor,
+        fillColor: featureColor,
+        weight: 2.5,
+        opacity: 0.8,
+        fillOpacity: 0,
+      };
     }
 
-    const baseStyle = {
-      color: isPolygon ? "#555" : mainColor,
-      fillColor: fillColor,
-      weight: isPolygon ? 1 : 2,
+    if (isPoint) {
+      // 点要素：边线和填充都用 featureColor
+      return {
+        color: featureColor,
+        fillColor: featureColor,
+        weight: 1,
+        opacity: 0.8,
+        fillOpacity: 0.8,
+        radius: 8,
+      };
+    }
+
+    // 面要素：边框灰色，填充多颜色
+    return {
+      color: "#555",
+      fillColor: featureColor,
+      weight: 1,
       opacity: 0.8,
-      fillOpacity: isPolygon ? 0.45 : 0.3,
-      radius: 8,
+      fillOpacity: 0.45,
     };
-
-    switch (geomType) {
-      case "point":
-      case "multipoint":
-        return { ...baseStyle, weight: 1, fillOpacity: 0.8 };
-      case "linestring":
-      case "multilinestring":
-        return { ...baseStyle, fillOpacity: 0, weight: 2.5 };
-      case "polygon":
-      case "multipolygon":
-        return baseStyle;
-      default:
-        return baseStyle;
-    }
   }
 
   // ========== 热点五角星图标 ==========
   function createStarIcon(color) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
-      <polygon points="10,1 12.9,7.1 19.5,7.6 14.7,12 16.2,18.5 10,15 3.8,18.5 5.3,12 0.5,7.6 7.1,7.1" 
+      <polygon points="10,1 12.9,7.1 19.5,7.6 14.7,12 16.2,18.5 10,15 3.8,18.5 5.3,12 0.5,7.6 7.1,7.1"
         fill="${color}" fill-opacity="0.65" stroke="${color}" stroke-width="1.2" stroke-opacity="0.9"/>
     </svg>`;
     return L.divIcon({
@@ -382,71 +398,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // ========== onEachFeature：绑定弹窗 + 点击高亮 + 点击缩放（线/面要素）==========
-  // checkboxId 用于管理高亮状态，同一图层同一时刻只高亮一个要素
-  function onEachFeature(feature, layer, fileName, checkboxId) {
-    const content = buildPopupContent(feature, fileName);
-    if (content) {
-      layer.bindPopup(content, { maxWidth: 300 });
-    }
-
-    layer.on("click", function (e) {
-      const geomType = (feature.geometry?.type || "").toLowerCase();
-      const isPoint = geomType === "point" || geomType === "multipoint";
-
-      // ---- 高亮逻辑 ----
-      if (!isPoint && checkboxId) {
-        // 先清除该图层之前的高亮
-        clearHighlight(checkboxId);
-
-        // 获取当前要素的原始样式并应用高亮
-        try {
-          const origStyle =
-            layer.options && layer.options.style
-              ? layer.options.style(feature)
-              : layer.options || {};
-
-          // L.geoJSON 子图层的样式可以直接从 feature 对应的 idx 算出
-          const idx = feature._featureIndex || 0;
-          const computedOrig = getGeoJsonStyle(
-            feature,
-            checkboxId,
-            fileName,
-            idx,
-          );
-          const hlStyle = buildHighlightStyle(computedOrig);
-
-          layer.setStyle(hlStyle);
-          if (!isPoint) layer.bringToFront();
-
-          highlightState[checkboxId] = {
-            leafletLayer: layer,
-            origStyle: computedOrig,
-          };
-        } catch (err) {}
-      }
-
-      // ---- 线、面要素缩放 ----
-      if (!isPoint) {
-        try {
-          const bounds = layer.getBounds ? layer.getBounds() : null;
-          if (bounds && bounds.isValid()) {
-            map.fitBounds(bounds, {
-              padding: [30, 30],
-              animate: true,
-              maxZoom: 16,
-            });
-          }
-        } catch (err) {}
-      }
-
-      // 阻止事件冒泡到地图（避免立刻触发 map click 清除高亮）
-      L.DomEvent.stopPropagation(e);
-    });
-  }
-
-  // ========== 矢量世界副本：连续重复显示（同底图行为）==========
-  // 对坐标环做经度偏移（+offset），生成偏移副本
+  // ========== 坐标偏移与子午线处理 ==========
   function shiftRingCoords(coords, offset) {
     if (!coords || coords.length === 0) return coords;
     return coords.map(function (c) {
@@ -486,9 +438,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return g;
   }
 
-  // 生成经度偏移后的 GeoJSON 数据副本（深拷贝，不污染原始数据）
   function shiftGeoJSON(geojsonData, offset) {
-    // 始终深拷贝，避免三副本共享引用
     const data = JSON.parse(JSON.stringify(geojsonData));
     if (offset === 0) return data;
     if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
@@ -501,13 +451,12 @@ document.addEventListener("DOMContentLoaded", function () {
     return data;
   }
 
-  // 同步对齐相邻坐标点，避免跨子午线断线（对每个副本内部做展开）
   function fixRingCoords(coords) {
     if (!coords || coords.length === 0) return coords;
     const result = [coords[0].slice()];
     for (let i = 1; i < coords.length; i++) {
-      const prev = result[i - 1];
-      const cur = coords[i].slice();
+      const prev = result[i - 1],
+        cur = coords[i].slice();
       let dLng = cur[0] - prev[0];
       while (dLng > 180) {
         cur[0] -= 360;
@@ -557,62 +506,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return data;
   }
 
-  // 创建带 L.geoJSON 参数的单份图层
-  // 使用 feature._featureIndex 确保三副本颜色一致（基于原始索引而非遍历计数）
-  function _buildSingleGeoJsonLayer(
-    data,
-    checkboxId,
-    fileName,
-    geoJsonOptions,
-  ) {
-    // 预处理：给每个要素打上 _featureIndex 标记（如果还没有）
-    if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
-      data.features.forEach(function (f, idx) {
-        f._featureIndex = idx;
-      });
-    }
-    return L.geoJSON(data, {
-      style: function (feature) {
-        const idx = feature._featureIndex || 0;
-        return getGeoJsonStyle(feature, checkboxId, fileName, idx);
-      },
-      onEachFeature: function (feature, layer) {
-        onEachFeature(feature, layer, fileName, checkboxId);
-      },
-      pointToLayer: function (feature, latlng) {
-        const isHotspot = fileName === "hotspots.json";
-        if (isHotspot) return L.marker(latlng, { icon: createStarIcon("red") });
-        const idx = feature._featureIndex || 0;
-        return L.circleMarker(
-          latlng,
-          getGeoJsonStyle(feature, checkboxId, fileName, idx),
-        );
-      },
-    });
-  }
-
-  /**
-   * 创建连续重复的矢量图层组（-360°, 0°, +360° 三份副本）
-   * 使矢量要素像底图瓦片一样在全球范围内连续显示
-   * @param {Object} geojsonData - 原始 GeoJSON 数据（已 fixAntimeridian）
-   * @param {string} checkboxId  - 图层 ID
-   * @param {string} fileName    - 文件名（用于样式/弹窗配置）
-   * @returns {L.LayerGroup}     - 包含三份副本的图层组
-   */
-  function buildWorldCopyLayerGroup(geojsonData, checkboxId, fileName) {
-    const offsets = [-360, 0, 360];
-    const subLayers = offsets.map(function (offset) {
-      const shifted = shiftGeoJSON(geojsonData, offset);
-      return _buildSingleGeoJsonLayer(shifted, checkboxId, fileName, {});
-    });
-    return L.layerGroup(subLayers);
-  }
-
-  // ========== 高亮状态管理（基于 L.geoJSON 图层） ==========
-  // highlightState[checkboxId] = { layer: L.geoJSON, feature: featureObj, origStyle: {...} }
-  const highlightState = {};
-
-  // 高亮样式：黄色边框 + 虚线 + 提升填充透明度
+  // ========== 高亮样式 ==========
   function buildHighlightStyle(origStyle) {
     return Object.assign({}, origStyle, {
       color: "#ffff00",
@@ -623,132 +517,200 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // 清除某图层的高亮
   function clearHighlight(checkboxId) {
     const state = highlightState[checkboxId];
-    if (!state || !state.leafletLayer || !state.origStyle) return;
-    try {
-      state.leafletLayer.setStyle(state.origStyle);
-    } catch (e) {}
-    state.leafletLayer = null;
-    state.origStyle = null;
+    if (!state || state.featureId === null) return;
+    const featureId = state.featureId;
+    state.geoLayers.forEach(function (geoLayer) {
+      geoLayer.eachLayer(function (layer) {
+        if (layer.feature && layer.feature._featureIndex === featureId) {
+          const idx = layer.feature._featureIndex || 0;
+          const fileName = layer.feature._fileName || "";
+          try {
+            layer.setStyle(
+              getGeoJsonStyle(layer.feature, checkboxId, fileName, idx),
+            );
+          } catch (e) {}
+        }
+      });
+    });
+    state.featureId = null;
   }
 
-  // 清除所有高亮
+  function applyHighlight(checkboxId, featureId, hlStyle) {
+    clearHighlight(checkboxId);
+    const state = highlightState[checkboxId];
+    if (!state) return;
+    state.featureId = featureId;
+    state.geoLayers.forEach(function (geoLayer) {
+      geoLayer.eachLayer(function (layer) {
+        if (layer.feature && layer.feature._featureIndex === featureId) {
+          try {
+            layer.setStyle(hlStyle);
+          } catch (e) {}
+        }
+      });
+    });
+  }
+
   function clearAllHighlights() {
     Object.keys(highlightState).forEach(clearHighlight);
   }
 
-  // 地图点击空白处清除所有高亮（只在没有点到要素时触发）
   map.on("click", function () {
     clearAllHighlights();
   });
 
-  // ========== 加载GeoJSON图层 ==========
-  // layerCache[id] 存储的是 L.LayerGroup（包含 -360/0/+360 三份副本）
-  // layerBoundsCache[id] 存储的是原始（0°）副本的 L.geoJSON，用于 getBounds 定位
-  const layerBoundsCache = {};
-  // 当前正在加载的请求计数（按图层组）
-  const groupLoadingCount = {};
-
-  // 更新图层组的加载状态显示
-  function updateGroupStatus(groupDiv, status) {
-    const groupStatus = groupDiv.querySelector(".group-status");
-    if (!groupStatus) return;
-    groupStatus.dataset.status = status;
-    const titles = {
-      idle: "",
-      loading: "加载中...",
-      loaded: "✓",
-      partial: "部分加载",
-      error: "×",
-    };
-    groupStatus.title = titles[status] || status;
-    groupStatus.textContent =
-      status === "loading"
-        ? "⏳"
-        : status === "loaded"
-          ? "✓"
-          : status === "partial"
-            ? "◐"
-            : status === "error"
-              ? "✕"
-              : "";
+  // ========== 获取要素可用属性字段（用于"按字段分色"选项）==========
+  function getAvailableFields(geojsonData) {
+    const fieldSet = new Set();
+    if (
+      geojsonData.type === "FeatureCollection" &&
+      Array.isArray(geojsonData.features)
+    ) {
+      geojsonData.features.slice(0, 50).forEach(function (f) {
+        if (f.properties) {
+          Object.keys(f.properties).forEach(function (k) {
+            if (!SKIP_FIELDS.has(k) && typeof f.properties[k] !== "object") {
+              fieldSet.add(k);
+            }
+          });
+        }
+      });
+    }
+    return Array.from(fieldSet).sort();
   }
 
-  // 同步图层组的加载状态（根据子图层状态计算）
-  function syncGroupLoadingStatus(groupDiv) {
-    const items = groupDiv.querySelectorAll(
-      '.layer-item input[type="checkbox"]',
-    );
-    const statusSpans = groupDiv.querySelectorAll(".layer-status");
-    let loadingCount = 0,
-      loadedCount = 0,
-      errorCount = 0,
-      checkedCount = 0;
+  // ========== 创建 GeoJSON 图层（三世界副本 + 高亮 + 弹窗）==========
+  function buildGeoJsonLayerGroup(geojsonData, checkboxId, fileName) {
+    // 预处理：为每个要素生成索引
+    if (
+      geojsonData.type === "FeatureCollection" &&
+      Array.isArray(geojsonData.features)
+    ) {
+      geojsonData.features.forEach(function (f, idx) {
+        f._featureIndex = idx;
+        if (!f.properties) f.properties = {};
+        f.properties._featureIndex = idx;
+      });
+    }
 
-    items.forEach((cb, idx) => {
-      if (cb.checked) {
-        checkedCount++;
-        const status = statusSpans[idx]?.dataset.status;
-        if (status === "loading") loadingCount++;
-        else if (status === "loaded") loadedCount++;
-        else if (status === "error") errorCount++;
+    const offsets = [-360, 0, 360];
+    const geoLayers = [];
+
+    offsets.forEach(function (offset) {
+      const shifted = shiftGeoJSON(geojsonData, offset);
+      // 为 shifted 副本设置相同的 _featureIndex
+      if (
+        shifted.type === "FeatureCollection" &&
+        Array.isArray(shifted.features)
+      ) {
+        shifted.features.forEach(function (f, idx) {
+          f._featureIndex = geojsonData.features[idx]
+            ? geojsonData.features[idx]._featureIndex
+            : idx;
+        });
       }
+
+      const geoLayer = L.geoJSON(shifted, {
+        style: function (feature) {
+          return getGeoJsonStyle(
+            feature,
+            checkboxId,
+            fileName,
+            feature._featureIndex || 0,
+          );
+        },
+        pointToLayer: function (feature, latlng) {
+          if (fileName === "hotspots.json") {
+            const idx = feature._featureIndex || 0;
+            const color = getFeatureFillColor(
+              feature,
+              checkboxId,
+              fileName,
+              idx,
+            );
+            return L.marker(latlng, { icon: createStarIcon(color) });
+          }
+          return L.circleMarker(
+            latlng,
+            getGeoJsonStyle(
+              feature,
+              checkboxId,
+              fileName,
+              feature._featureIndex || 0,
+            ),
+          );
+        },
+        onEachFeature: function (feature, layer) {
+          layer.on("click", function (e) {
+            const idx = feature._featureIndex || 0;
+            const baseStyle = getGeoJsonStyle(
+              feature,
+              checkboxId,
+              fileName,
+              idx,
+            );
+            const hlStyle = Object.assign({}, baseStyle, {
+              weight: (baseStyle.weight || 1) + 2,
+              opacity: 1,
+              fillOpacity: Math.min(
+                (baseStyle.fillOpacity || 0.45) + 0.3,
+                0.95,
+              ),
+              color: "#ffff00",
+              dashArray: "6, 3",
+            });
+            applyHighlight(checkboxId, feature._featureIndex, hlStyle);
+
+            // 点击时缩放到要素（仅对面/线要素）
+            try {
+              const geomType = (feature.geometry?.type || "").toLowerCase();
+              const isPoint = geomType === "point" || geomType === "multipoint";
+              if (!isPoint && layer.getBounds) {
+                const bounds = layer.getBounds();
+                if (bounds.isValid()) {
+                  map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+                }
+              }
+            } catch (err) {}
+
+            const content = buildPopupContent(feature, fileName);
+            if (content) {
+              L.popup({ maxWidth: 300 })
+                .setContent(content)
+                .setLatLng(e.latlng)
+                .openOn(map);
+            }
+            L.DomEvent.stop(e);
+          });
+        },
+      });
+
+      geoLayer.addTo(map);
+      geoLayers.push(geoLayer);
     });
 
-    if (loadingCount > 0) {
-      updateGroupStatus(groupDiv, "loading");
-    } else if (errorCount > 0 && loadedCount === 0) {
-      updateGroupStatus(groupDiv, "error");
-    } else if (loadedCount > 0 && loadedCount < checkedCount) {
-      updateGroupStatus(groupDiv, "partial");
-    } else if (loadedCount > 0 && loadedCount === checkedCount) {
-      updateGroupStatus(groupDiv, "loaded");
-    } else {
-      updateGroupStatus(groupDiv, "idle");
-    }
-  }
-
-  // 更新单个图层项的状态显示
-  function updateLayerItemStatus(checkboxId, status) {
-    const layerItem = document.querySelector(
-      `.layer-item[data-layer-id="${checkboxId}"]`,
-    );
-    if (!layerItem) return;
-    const statusSpan = layerItem.querySelector(".layer-status");
-    if (!statusSpan) return;
-    statusSpan.dataset.status = status;
-    const titles = {
-      idle: "未加载",
-      loading: "加载中...",
-      loaded: "已加载",
-      error: "加载失败",
+    highlightState[checkboxId] = {
+      geoLayers: geoLayers,
+      featureId: null,
+      fileName: fileName,
     };
-    statusSpan.title = titles[status] || status;
-
-    // 同步更新所属图层组的状态
-    const groupDiv = layerItem.closest(".layer-group");
-    if (groupDiv) syncGroupLoadingStatus(groupDiv);
+    return L.layerGroup(geoLayers);
   }
 
-  // ========== 优先加载 .gz，失败则回退到原始 json ==========
+  // ========== 图层加载 ==========
   function fetchGeoJSON(filePath) {
-    const gzPath = filePath + ".gz";
-
-    return fetch(gzPath)
+    return fetch(filePath + ".gz")
       .then(function (response) {
         if (!response.ok) throw new Error("gz not found");
-        // 用 DecompressionStream 手动解压 gzip
         const ds = new DecompressionStream("gzip");
-        const decompressed = response.body.pipeThrough(ds);
-        return new Response(decompressed).text();
+        return new Response(response.body.pipeThrough(ds)).text();
       })
       .then(function (text) {
         return JSON.parse(text);
       })
       .catch(function () {
-        // 回退：直接加载原始 json
         console.log("gz 不可用，回退至：", filePath);
         return fetch(filePath).then(function (response) {
           if (!response.ok) throw new Error("加载 " + filePath + " 失败");
@@ -758,16 +720,24 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function loadGeoJSONLayer(filePath, checkboxId, fitBoundsAfterLoad) {
+    // 如果图层已在缓存，直接显示
     if (layerCache[checkboxId]) {
       layerCache[checkboxId].addTo(map);
+      const state = highlightState[checkboxId];
+      if (state && state.geoLayers)
+        state.geoLayers.forEach(function (gl) {
+          try {
+            gl.addTo(map);
+          } catch (e) {}
+        });
       updateLayerItemStatus(checkboxId, "loaded");
       if (fitBoundsAfterLoad) {
         try {
-          const baseLayer = layerBoundsCache[checkboxId];
-          if (baseLayer) {
-            const bounds = baseLayer.getBounds();
-            if (bounds.isValid())
-              optimizedFitBounds(bounds, { padding: [30, 30], animate: true });
+          const bl = layerBoundsCache[checkboxId];
+          if (bl) {
+            const b = bl.getBounds();
+            if (b.isValid())
+              optimizedFitBounds(b, { padding: [30, 30], animate: true });
           }
         } catch (e) {}
       }
@@ -779,29 +749,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
     fetchGeoJSON(filePath)
       .then(function (data) {
-        // 先修正原始数据内部的跨子午线断线
         const fixedData = fixAntimeridian(data);
-
-        // 为每个要素打上 _featureIndex（三副本颜色一致的基础）
-        if (
-          fixedData.type === "FeatureCollection" &&
-          Array.isArray(fixedData.features)
-        ) {
-          fixedData.features.forEach(function (f, idx) {
-            f._featureIndex = idx;
-          });
+        // 根据几何类型和文件名设置默认颜色模式（仅在未设置时）：
+        // 热点/火山文件保持 single（红色五角星/圆形）
+        // 面要素（Polygon/MultiPolygon）默认 sequential（多颜色填充）
+        // 其他点/线要素保持 single
+        if (colorMode[checkboxId] === undefined) {
+          const geomType = detectMainGeomType(fixedData);
+          const isPolygon =
+            geomType === "polygon" || geomType === "multipolygon";
+          if (fileName === "hotspots.json" || fileName === "volcanos.json") {
+            colorMode[checkboxId] = "single";
+          } else if (isPolygon) {
+            colorMode[checkboxId] = "sequential";
+          } else {
+            colorMode[checkboxId] = "single";
+          }
         }
 
-        // 创建三份世界副本图层组（实现连续重复，与底图行为一致）
-        const worldCopyGroup = buildWorldCopyLayerGroup(
+        const worldCopyGroup = buildGeoJsonLayerGroup(
           fixedData,
           checkboxId,
           fileName,
         );
-        worldCopyGroup.addTo(map);
         layerCache[checkboxId] = worldCopyGroup;
 
-        // 单独保留 0° 副本用于 getBounds 定位（不加到地图，只做范围计算）
+        // 0° 副本用于 getBounds
         const baseGeoJson = L.geoJSON(fixedData, {
           style: function (feature) {
             return getGeoJsonStyle(
@@ -812,8 +785,16 @@ document.addEventListener("DOMContentLoaded", function () {
             );
           },
           pointToLayer: function (feature, latlng) {
-            if (fileName === "hotspots.json")
-              return L.marker(latlng, { icon: createStarIcon("red") });
+            if (fileName === "hotspots.json") {
+              const idx = feature._featureIndex || 0;
+              const color = getFeatureFillColor(
+                feature,
+                checkboxId,
+                fileName,
+                idx,
+              );
+              return L.marker(latlng, { icon: createStarIcon(color) });
+            }
             return L.circleMarker(
               latlng,
               getGeoJsonStyle(
@@ -829,10 +810,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (fitBoundsAfterLoad) {
           try {
-            const bounds = baseGeoJson.getBounds();
-            if (bounds.isValid()) {
-              optimizedFitBounds(bounds, { padding: [6, 6], animate: true });
-            }
+            const b = baseGeoJson.getBounds();
+            if (b.isValid())
+              optimizedFitBounds(b, { padding: [6, 6], animate: true });
           } catch (e) {}
         }
         updateLayerItemStatus(checkboxId, "loaded");
@@ -850,46 +830,108 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 
-  function removeGeoJSONLayer(checkboxId) {
-    // 清除该图层的高亮状态
+  function reloadLayerWithNewMode(checkboxId, newMode, newColor, newField) {
+    // 清除旧图层（强制从地图移除所有副本）
     clearHighlight(checkboxId);
+    const oldState = highlightState[checkboxId];
+    if (oldState && oldState.geoLayers) {
+      oldState.geoLayers.forEach(function (gl) {
+        try {
+          map.removeLayer(gl);
+        } catch (e) {}
+      });
+      highlightState[checkboxId] = null;
+    }
     if (layerCache[checkboxId]) {
       map.removeLayer(layerCache[checkboxId]);
+      layerCache[checkboxId] = null;
     }
+    // 更新模式/颜色
+    colorMode[checkboxId] = newMode;
+    if (newMode === "single" && newColor) layerColorMap[checkboxId] = newColor;
+    if (newMode === "field") fieldKey[checkboxId] = newField;
+
+    // 重新加载
     const checkbox = document.getElementById(checkboxId);
-    if (checkbox) checkbox.style.background = "#fff";
-    updateLayerItemStatus(checkboxId, "idle");
+    if (checkbox && checkbox.checked) {
+      loadGeoJSONLayer(checkbox.value, checkboxId, false);
+    }
+
+    // 更新颜色按钮提示
+    updateColorBtnHint(checkboxId);
   }
 
-  // ========== 定位到图层（手动触发）==========
-  function flyToLayer(checkboxId) {
-    // 优先用 0° 副本的 bounds 定位，避免跳到偏移副本
-    const baseLayer = layerBoundsCache[checkboxId] || layerCache[checkboxId];
-    if (baseLayer) {
-      try {
-        const bounds = baseLayer.getBounds();
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, {
-            padding: [20, 20],
-            animate: true,
-            maxZoom: 10,
-          });
+  // ========== 刷新图层颜色（不重建图层）==========
+  function refreshLayerColors(checkboxId) {
+    const state = highlightState[checkboxId];
+    if (!state || !state.geoLayers) return;
+    const mode = colorMode[checkboxId] || "single";
+    const fileName = state.fileName || "";
+
+    state.geoLayers.forEach(function (geoLayer) {
+      geoLayer.eachLayer(function (layer) {
+        if (layer.feature) {
+          const idx = layer.feature._featureIndex || 0;
+          const style = getGeoJsonStyle(
+            layer.feature,
+            checkboxId,
+            fileName,
+            idx,
+          );
+          try {
+            layer.setStyle(style);
+          } catch (e) {}
         }
+      });
+    });
+  }
+
+  // ========== 定位、选择、全选 ==========
+  function flyToLayer(checkboxId) {
+    const bl = layerBoundsCache[checkboxId] || layerCache[checkboxId];
+    if (bl) {
+      try {
+        const b = bl.getBounds();
+        if (b.isValid())
+          map.fitBounds(b, { padding: [20, 20], animate: true, maxZoom: 10 });
       } catch (e) {
         console.warn("无法定位：", e);
       }
     }
   }
 
-  // ========== 全开 / 全关 ==========
+  function removeGeoJSONLayer(checkboxId) {
+    clearHighlight(checkboxId);
+    const state = highlightState[checkboxId];
+    if (state && state.geoLayers) {
+      state.geoLayers.forEach(function (gl) {
+        try {
+          map.removeLayer(gl);
+        } catch (e) {}
+      });
+      highlightState[checkboxId] = null;
+    }
+    if (layerCache[checkboxId]) {
+      map.removeLayer(layerCache[checkboxId]);
+      layerCache[checkboxId] = null;
+    }
+    if (layerBoundsCache[checkboxId]) {
+      map.removeLayer(layerBoundsCache[checkboxId]);
+      layerBoundsCache[checkboxId] = null;
+    }
+    const checkbox = document.getElementById(checkboxId);
+    if (checkbox) checkbox.style.background = "#fff";
+    updateLayerItemStatus(checkboxId, "idle");
+  }
+
   function selectAllLayers() {
     document
       .querySelectorAll('.layer-item input[type="checkbox"]')
-      .forEach((checkbox) => {
-        if (!checkbox.checked) {
-          checkbox.checked = true;
-          checkbox.style.background = layerColorMap[checkbox.id] || "#fff";
-          loadGeoJSONLayer(checkbox.value, checkbox.id, false);
+      .forEach(function (cb) {
+        if (!cb.checked) {
+          cb.checked = true;
+          cb.style.background = layerColorMap[cb.id] || "#fff";
+          loadGeoJSONLayer(cb.value, cb.id, false);
         }
       });
     syncAllGroupStatus();
@@ -898,24 +940,26 @@ document.addEventListener("DOMContentLoaded", function () {
   function unselectAllLayers() {
     document
       .querySelectorAll('.layer-item input[type="checkbox"]')
-      .forEach((checkbox) => {
-        if (checkbox.checked) {
-          checkbox.checked = false;
-          checkbox.style.background = "#fff";
-          removeGeoJSONLayer(checkbox.id);
+      .forEach(function (cb) {
+        if (cb.checked) {
+          cb.checked = false;
+          cb.style.background = "#fff";
+          removeGeoJSONLayer(cb.id);
         }
       });
     syncAllGroupStatus();
   }
 
-  // 同步某一分组的全选状态
+  // ========== 状态同步 ==========
   function syncGroupStatus(groupDiv) {
     const groupCb = groupDiv.querySelector(".group-select-all");
     if (!groupCb) return;
     const items = groupDiv.querySelectorAll(
       '.layer-item input[type="checkbox"]',
     );
-    const checkedCount = Array.from(items).filter((c) => c.checked).length;
+    const checkedCount = Array.from(items).filter(function (c) {
+      return c.checked;
+    }).length;
     if (checkedCount === 0) {
       groupCb.checked = false;
       groupCb.classList.remove("indeterminate");
@@ -928,7 +972,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // 同步所有组 + 顶部全选状态
   function syncAllGroupStatus() {
     document.querySelectorAll(".layer-group").forEach(syncGroupStatus);
     syncSelectAllStatus();
@@ -939,7 +982,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const all = Array.from(
       document.querySelectorAll('.layer-item input[type="checkbox"]'),
     );
-    const checkedCount = all.filter((c) => c.checked).length;
+    const checkedCount = all.filter(function (c) {
+      return c.checked;
+    }).length;
     if (checkedCount === 0) {
       selectAllCheckbox.checked = false;
       selectAllCheckbox.classList.remove("indeterminate");
@@ -952,55 +997,309 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  function updateGroupStatus(groupDiv, status) {
+    const gs = groupDiv.querySelector(".group-status");
+    if (!gs) return;
+    gs.dataset.status = status;
+    gs.title =
+      {
+        idle: "",
+        loading: "加载中...",
+        loaded: "✓",
+        partial: "部分加载",
+        error: "×",
+      }[status] || status;
+    gs.textContent =
+      status === "loading"
+        ? "⏳"
+        : status === "loaded"
+          ? "✓"
+          : status === "partial"
+            ? "◐"
+            : status === "error"
+              ? "✕"
+              : "";
+  }
+
+  function syncGroupLoadingStatus(groupDiv) {
+    const items = groupDiv.querySelectorAll(
+      '.layer-item input[type="checkbox"]',
+    );
+    const statusSpans = groupDiv.querySelectorAll(".layer-status");
+    let loadingCount = 0,
+      loadedCount = 0,
+      errorCount = 0,
+      checkedCount = 0;
+    items.forEach(function (cb, idx) {
+      if (cb.checked) {
+        checkedCount++;
+        const s = statusSpans[idx] && statusSpans[idx].dataset.status;
+        if (s === "loading") loadingCount++;
+        else if (s === "loaded") loadedCount++;
+        else if (s === "error") errorCount++;
+      }
+    });
+    if (loadingCount > 0) updateGroupStatus(groupDiv, "loading");
+    else if (errorCount > 0 && loadedCount === 0)
+      updateGroupStatus(groupDiv, "error");
+    else if (loadedCount > 0 && loadedCount < checkedCount)
+      updateGroupStatus(groupDiv, "partial");
+    else if (loadedCount > 0 && loadedCount === checkedCount)
+      updateGroupStatus(groupDiv, "loaded");
+    else updateGroupStatus(groupDiv, "idle");
+  }
+
+  function updateLayerItemStatus(checkboxId, status) {
+    const li = document.querySelector(
+      `.layer-item[data-layer-id="${checkboxId}"]`,
+    );
+    if (!li) return;
+    const ss = li.querySelector(".layer-status");
+    if (!ss) return;
+    ss.dataset.status = status;
+    ss.title =
+      {
+        idle: "未加载",
+        loading: "加载中...",
+        loaded: "已加载",
+        error: "加载失败",
+      }[status] || status;
+    const gd = li.closest(".layer-group");
+    if (gd) syncGroupLoadingStatus(gd);
+  }
+
+  // ========== 颜色按钮提示文字 ==========
+  function getColorModeLabel(checkboxId) {
+    const mode = colorMode[checkboxId] || "sequential";
+    if (mode === "single") return "单一颜色";
+    if (mode === "sequential") return "内部多颜色";
+    if (mode === "field") return "按: " + (fieldKey[checkboxId] || "");
+    return "内部多颜色";
+  }
+
+  function updateColorBtnHint(checkboxId) {
+    const li = document.querySelector(
+      `.layer-item[data-layer-id="${checkboxId}"]`,
+    );
+    if (!li) return;
+    const btn = li.querySelector(".layer-color-btn");
+    if (btn) btn.title = "颜色模式：" + getColorModeLabel(checkboxId);
+  }
+
+  // ========== 颜色设置弹窗 ==========
+  let colorModalOverlay = null;
+  let colorModalData = null; // { checkboxId, fileName }
+
+  function getColorModalHTML(
+    checkboxId,
+    fileName,
+    availableFields,
+    geojsonData,
+  ) {
+    const mode = colorMode[checkboxId] || "sequential";
+    const currentField = fieldKey[checkboxId] || "";
+    const currentColor = layerColorMap[checkboxId] || "#8B4513";
+
+    const fieldOptions = availableFields
+      .map(function (f) {
+        return `<option value="${f}" ${f === currentField ? "selected" : ""}>${f}</option>`;
+      })
+      .join("");
+
+    return `
+      <div class="color-modal-content">
+        <div class="color-modal-header">
+          <span>颜色设置</span>
+          <button class="color-modal-close" id="colorModalClose">&times;</button>
+        </div>
+        <div class="color-modal-body">
+          <div class="color-mode-group">
+            <label class="color-mode-option">
+              <input type="radio" name="colorModeRadio" value="single" ${mode === "single" ? "checked" : ""}>
+              <span>单一颜色</span>
+            </label>
+            <label class="color-mode-option">
+              <input type="radio" name="colorModeRadio" value="sequential" ${mode === "sequential" ? "checked" : ""}>
+              <span>内部多颜色（全部不同）</span>
+            </label>
+            <label class="color-mode-option">
+              <input type="radio" name="colorModeRadio" value="field" ${mode === "field" ? "checked" : ""}>
+              <span>内部多颜色（按字段分色）</span>
+            </label>
+          </div>
+          <div id="singleColorPanel" style="display:${mode === "single" ? "block" : "none"};margin-top:10px;">
+            <label style="font-size:12px;color:#555;">选择颜色：</label>
+            <input type="color" id="modalColorPicker" value="${currentColor}" style="margin-left:8px;cursor:pointer;">
+            <span id="modalColorHex" style="font-size:12px;color:#888;margin-left:6px;">${currentColor}</span>
+          </div>
+          <div id="fieldColorPanel" style="display:${mode === "field" ? "block" : "none"};margin-top:10px;">
+            <label style="font-size:12px;color:#555;">选择字段：</label>
+            <select id="modalFieldSelect" style="margin-left:8px;max-width:180px;">
+              ${fieldOptions || "<option value=''>无可用字段</option>"}
+            </select>
+          </div>
+        </div>
+        <div class="color-modal-footer">
+          <button id="colorModalCancel" style="padding:5px 12px;cursor:pointer;">取消</button>
+          <button id="colorModalConfirm" style="padding:5px 12px;cursor:pointer;background:#4a8c4a;color:#fff;border:1px solid #3a6c3a;border-radius:3px;">确认</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function openColorModal(checkboxId, fileName, filePath) {
+    // 移除旧的
+    if (colorModalOverlay) {
+      colorModalOverlay.remove();
+      colorModalOverlay = null;
+    }
+
+    // 先获取字段列表（从已加载的数据或重新获取）
+    fetchGeoJSON(filePath)
+      .then(function (data) {
+        const fixed = fixAntimeridian(data);
+        const fields = getAvailableFields(fixed);
+
+        colorModalData = {
+          checkboxId: checkboxId,
+          fileName: fileName,
+          filePath: filePath,
+        };
+
+        colorModalOverlay = document.createElement("div");
+        colorModalOverlay.id = "colorModalOverlay";
+        colorModalOverlay.innerHTML = getColorModalHTML(
+          checkboxId,
+          fileName,
+          fields,
+          fixed,
+        );
+
+        // 样式
+        colorModalOverlay.style.cssText =
+          "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:99999;display:flex;align-items:center;justify-content:center;";
+        document.body.appendChild(colorModalOverlay);
+
+        // 模式切换
+        document
+          .querySelectorAll('input[name="colorModeRadio"]')
+          .forEach(function (r) {
+            r.addEventListener("change", function () {
+              document.getElementById("singleColorPanel").style.display =
+                this.value === "single" ? "block" : "none";
+              document.getElementById("fieldColorPanel").style.display =
+                this.value === "field" ? "block" : "none";
+            });
+          });
+
+        // 颜色选择器 - 即时预览（不依赖"应用"按钮）
+        var colorPicker = document.getElementById("modalColorPicker");
+        if (colorPicker) {
+          colorPicker.addEventListener("input", function () {
+            var hexSpan = document.getElementById("modalColorHex");
+            if (hexSpan) hexSpan.textContent = this.value;
+            // 即时更新 hex 显示
+          });
+          colorPicker.addEventListener("change", function () {
+            // 颜色变化时直接更新图层（不需要点"应用"）
+            var selMode = document.querySelector(
+              'input[name="colorModeRadio"]:checked',
+            );
+            var newMode = selMode ? selMode.value : "sequential";
+            if (newMode === "single") {
+              layerColorMap[colorModalData.checkboxId] = this.value;
+              refreshLayerColors(colorModalData.checkboxId);
+            }
+          });
+        }
+
+        // 关闭
+        document.getElementById("colorModalClose").onclick = closeColorModal;
+        document.getElementById("colorModalCancel").onclick = closeColorModal;
+        colorModalOverlay.addEventListener("click", function (e) {
+          if (e.target === colorModalOverlay) closeColorModal();
+        });
+
+        // 确认
+        document.getElementById("colorModalConfirm").onclick = function () {
+          if (!colorModalData) return;
+          const selMode = document.querySelector(
+            'input[name="colorModeRadio"]:checked',
+          );
+          const newMode = selMode ? selMode.value : "sequential";
+          const newColor = document.getElementById("modalColorPicker")
+            ? document.getElementById("modalColorPicker").value
+            : layerColorMap[colorModalData.checkboxId];
+          const newField = document.getElementById("modalFieldSelect")
+            ? document.getElementById("modalFieldSelect").value
+            : "";
+          reloadLayerWithNewMode(
+            colorModalData.checkboxId,
+            newMode,
+            newColor,
+            newField,
+          );
+          closeColorModal();
+        };
+      })
+      .catch(function (e) {
+        console.error("无法加载字段列表：", e);
+      });
+  }
+
+  function closeColorModal() {
+    if (colorModalOverlay) {
+      colorModalOverlay.remove();
+      colorModalOverlay = null;
+    }
+    colorModalData = null;
+  }
+
   // ========== 生成分组图层面板 ==========
   let globalLayerIndex = 0;
 
   function generateLayerItems() {
     const container = document.getElementById("layerItemsContainer");
 
-    geoJsonGroups.forEach((group, gi) => {
+    geoJsonGroups.forEach(function (group) {
       const groupDiv = document.createElement("div");
       groupDiv.className = "layer-group";
 
-      // 组头
       const header = document.createElement("div");
       header.className = "layer-group-header";
 
-      // 展开箭头
       const arrow = document.createElement("span");
       arrow.className = "layer-group-arrow";
       arrow.textContent = "▶";
 
-      // 组名
       const groupName = document.createElement("span");
       groupName.className = "layer-group-name";
       groupName.textContent = group.groupName;
 
-      // 组级加载状态指示器
       const groupStatus = document.createElement("span");
       groupStatus.className = "group-status";
       groupStatus.dataset.status = "idle";
       groupStatus.title = "";
 
-      // 组级全选复选框（点击不要展开/折叠）
       const groupCb = document.createElement("input");
       groupCb.type = "checkbox";
       groupCb.className = "group-select-all";
-      groupCb.title = `全选/全不选「${group.groupName}」`;
-      groupCb.addEventListener("click", (e) => {
-        e.stopPropagation(); // 防止触发组折叠
+      groupCb.title = "全选/全不选「" + group.groupName + "」";
+      groupCb.addEventListener("click", function (e) {
+        e.stopPropagation();
       });
       groupCb.addEventListener("change", function () {
         this.classList.remove("indeterminate");
-        const items = groupDiv.querySelectorAll(
+        var items = groupDiv.querySelectorAll(
           '.layer-item input[type="checkbox"]',
         );
-        items.forEach((cb) => {
-          if (this.checked && !cb.checked) {
+        var isChecked = this.checked;
+        items.forEach(function (cb) {
+          if (isChecked && !cb.checked) {
             cb.checked = true;
             cb.style.background = layerColorMap[cb.id] || "#fff";
             loadGeoJSONLayer(cb.value, cb.id, false);
-          } else if (!this.checked && cb.checked) {
+          } else if (!isChecked && cb.checked) {
             cb.checked = false;
             cb.style.background = "#fff";
             removeGeoJSONLayer(cb.id);
@@ -1009,15 +1308,12 @@ document.addEventListener("DOMContentLoaded", function () {
         syncSelectAllStatus();
       });
 
-      // 子项容器（默认折叠）
       const children = document.createElement("div");
       children.className = "layer-group-children";
 
-      // 点击组头（箭头或名称区域）展开/折叠
-      header.addEventListener("click", (e) => {
-        // 点到复选框时不触发折叠
+      header.addEventListener("click", function (e) {
         if (e.target === groupCb) return;
-        const isOpen = children.classList.toggle("open");
+        var isOpen = children.classList.toggle("open");
         arrow.classList.toggle("open", isOpen);
       });
 
@@ -1026,18 +1322,25 @@ document.addEventListener("DOMContentLoaded", function () {
       header.appendChild(groupStatus);
       header.appendChild(groupCb);
 
-      group.layers.forEach((layerConfig) => {
-        const index = globalLayerIndex++;
-        const checkboxId = `layer_${index}`;
-        const fullPath = `${geoJsonBasePath}${layerConfig.file}`;
-        const fixedColor = getFixedColor(index);
+      group.layers.forEach(function (layerConfig) {
+        var idx = globalLayerIndex++;
+        var checkboxId = "layer_" + idx;
+        var fullPath = geoJsonBasePath + layerConfig.file;
+        var fileName = layerConfig.file;
+        // 热点/火山使用固定红色，其他图层使用随机固定色
+        var fixedColor =
+          fileName === "hotspots.json" || fileName === "volcanos.json"
+            ? "#FF3333"
+            : getFixedColor(idx);
         layerColorMap[checkboxId] = fixedColor;
+        // colorMode 由 loadGeoJSONLayer 根据几何类型决定：
+        // 热点/火山 → single，面要素 → sequential，其他 → single
 
-        const layerItem = document.createElement("div");
+        var layerItem = document.createElement("div");
         layerItem.className = "layer-item";
         layerItem.dataset.layerId = checkboxId;
 
-        const checkbox = document.createElement("input");
+        var checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.id = checkboxId;
         checkbox.value = fullPath;
@@ -1046,27 +1349,39 @@ document.addEventListener("DOMContentLoaded", function () {
         checkbox.addEventListener("change", function () {
           this.style.background = this.checked ? fixedColor : "#fff";
           syncAllGroupStatus();
-          if (this.checked) loadGeoJSONLayer(fullPath, checkboxId, false);
-          else removeGeoJSONLayer(checkboxId);
+          if (this.checked) {
+            loadGeoJSONLayer(fullPath, checkboxId, false); // 加载时不自动缩放
+          } else {
+            removeGeoJSONLayer(checkboxId);
+          }
         });
 
-        const label = document.createElement("label");
+        var label = document.createElement("label");
         label.htmlFor = checkboxId;
         label.textContent = layerConfig.name;
         label.title = layerConfig.name;
 
-        // 状态指示器
-        const statusSpan = document.createElement("span");
+        var statusSpan = document.createElement("span");
         statusSpan.className = "layer-status";
         statusSpan.dataset.status = "idle";
         statusSpan.title = "未加载";
 
-        // 定位按钮（使用放大镜图标）
-        const locateBtn = document.createElement("button");
+        // 颜色设置按钮（新增）
+        var colorBtn = document.createElement("button");
+        colorBtn.className = "layer-color-btn";
+        colorBtn.title = "颜色模式：内部多颜色";
+        colorBtn.innerHTML = "🎨";
+        colorBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openColorModal(checkboxId, layerConfig.file, fullPath);
+        });
+
+        // 定位按钮
+        var locateBtn = document.createElement("button");
         locateBtn.className = "layer-locate-btn";
         locateBtn.title = "定位到此图层";
         locateBtn.innerHTML = "🔍";
-        locateBtn.addEventListener("click", (e) => {
+        locateBtn.addEventListener("click", function (e) {
           e.stopPropagation();
           flyToLayer(checkboxId);
         });
@@ -1074,6 +1389,7 @@ document.addEventListener("DOMContentLoaded", function () {
         layerItem.appendChild(checkbox);
         layerItem.appendChild(label);
         layerItem.appendChild(statusSpan);
+        layerItem.appendChild(colorBtn);
         layerItem.appendChild(locateBtn);
         children.appendChild(layerItem);
       });
@@ -1083,58 +1399,50 @@ document.addEventListener("DOMContentLoaded", function () {
       container.appendChild(groupDiv);
     });
 
-    // ========== 用户上传图层区 ==========
-    const userGroup = document.createElement("div");
+    // 用户上传图层区
+    var userGroup = document.createElement("div");
     userGroup.id = "userLayerGroup";
-    userGroup.innerHTML = `<div style="font-size:12px;color:#888;padding:0 10px 4px;">用户上传图层</div>`;
+    userGroup.innerHTML =
+      '<div style="font-size:12px;color:#888;padding:0 10px 4px;">用户上传图层</div>';
     container.appendChild(userGroup);
 
-    // ========== 上传按钮 ==========
-    const uploadDiv = document.createElement("div");
-    uploadDiv.style.padding = "10px";
-    uploadDiv.style.borderTop = "1px dashed #ccc";
-    uploadDiv.style.marginTop = "8px";
-
-    const uploadBtn = document.createElement("button");
+    // 上传按钮
+    var uploadDiv = document.createElement("div");
+    uploadDiv.style.cssText =
+      "padding:10px;border-top:1px dashed #ccc;margin-top:8px;";
+    var uploadBtn = document.createElement("button");
     uploadBtn.textContent = "📂 上传 GeoJSON";
-    uploadBtn.style.cssText = `
-      width: 100%;
-      padding: 8px 12px;
-      background: #f0f7f0;
-      border: 1px solid #99cc99;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      color: #3a7a3a;
-      transition: background 0.15s;
-    `;
-    uploadBtn.onmouseover = () => (uploadBtn.style.background = "#e2f0e2");
-    uploadBtn.onmouseout = () => (uploadBtn.style.background = "#f0f7f0");
-
-    const fileInput = document.createElement("input");
+    uploadBtn.style.cssText =
+      "width:100%;padding:8px 12px;background:#f0f7f0;border:1px solid #99cc99;border-radius:4px;cursor:pointer;font-size:12px;color:#3a7a3a;transition:background 0.15s;";
+    uploadBtn.onmouseover = function () {
+      uploadBtn.style.background = "#e2f0e2";
+    };
+    uploadBtn.onmouseout = function () {
+      uploadBtn.style.background = "#f0f7f0";
+    };
+    var fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".geojson,.json";
     fileInput.multiple = true;
     fileInput.style.display = "none";
-
-    uploadBtn.addEventListener("click", () => fileInput.click());
+    uploadBtn.addEventListener("click", function () {
+      fileInput.click();
+    });
     fileInput.addEventListener("change", handleFileUpload);
-
     uploadDiv.appendChild(uploadBtn);
     uploadDiv.appendChild(fileInput);
     container.appendChild(uploadDiv);
   }
 
-  // ========== 文件上传处理 ==========
+  // ========== 文件上传 ==========
   function handleFileUpload(e) {
-    const files = Array.from(e.target.files);
-    e.target.value = ""; // 允许重复上传
-
+    var files = Array.from(e.target.files);
+    e.target.value = "";
     files.forEach(function (file) {
-      const reader = new FileReader();
+      var reader = new FileReader();
       reader.onload = function (ev) {
         try {
-          const data = JSON.parse(ev.target.result);
+          var data = JSON.parse(ev.target.result);
           addUserLayer(data, file.name);
         } catch (err) {
           alert("文件解析失败：" + file.name + "\n" + err.message);
@@ -1144,24 +1452,20 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // ========== 用户上传GeoJSON ==========
   let userLayerIndex = 0;
 
   function addUserLayer(geojsonData, fileName) {
-    const uid = `user_layer_${userLayerIndex++}`;
-    const fixedColor = getFixedColor(globalLayerIndex++);
+    var uid = "user_layer_" + userLayerIndex++;
+    var fixedColor = getFixedColor(globalLayerIndex++);
     layerColorMap[uid] = fixedColor;
 
-    // 修正原始数据内部的跨子午线断线
-    const fixedData = fixAntimeridian(geojsonData);
-
-    // 创建三份世界副本图层组，实现连续重复显示
-    const worldCopyGroup = buildWorldCopyLayerGroup(fixedData, uid, fileName);
-    worldCopyGroup.addTo(map);
-    layerCache[uid] = worldCopyGroup;
-
-    // 保留 0° 副本用于 getBounds 定位
-    // 同样使用 _featureIndex 确保颜色一致
+    var fixedData = fixAntimeridian(geojsonData);
+    // 根据几何类型设置默认颜色模式：点/线 → 单色，面 → 多颜色
+    var mainGeomType = detectMainGeomType(fixedData);
+    colorMode[uid] =
+      mainGeomType === "polygon" || mainGeomType === "multipolygon"
+        ? "sequential"
+        : "single";
     if (
       fixedData.type === "FeatureCollection" &&
       Array.isArray(fixedData.features)
@@ -1170,42 +1474,40 @@ document.addEventListener("DOMContentLoaded", function () {
         f._featureIndex = idx;
       });
     }
-    const baseGeoJson = L.geoJSON(fixedData, {
+    var worldCopyGroup = buildGeoJsonLayerGroup(fixedData, uid, fileName);
+    worldCopyGroup.addTo(map);
+    layerCache[uid] = worldCopyGroup;
+
+    var baseGeoJson = L.geoJSON(fixedData, {
       style: function (feature) {
-        const idx = feature._featureIndex || 0;
-        return getGeoJsonStyle(feature, uid, fileName, idx);
-      },
-      onEachFeature: function (feature, layer) {
-        onEachFeature(feature, layer, fileName);
+        return getGeoJsonStyle(
+          feature,
+          uid,
+          fileName,
+          feature._featureIndex || 0,
+        );
       },
       pointToLayer: function (feature, latlng) {
-        const idx = feature._featureIndex || 0;
         return L.circleMarker(
           latlng,
-          getGeoJsonStyle(feature, uid, fileName, idx),
+          getGeoJsonStyle(feature, uid, fileName, feature._featureIndex || 0),
         );
       },
     });
     layerBoundsCache[uid] = baseGeoJson;
 
-    // 自动缩放到上传图层
     try {
-      const bounds = baseGeoJson.getBounds();
-      if (bounds.isValid())
-        map.fitBounds(bounds, {
-          padding: [20, 20],
-          animate: true,
-          maxZoom: 12,
-        });
+      var b = baseGeoJson.getBounds();
+      if (b.isValid())
+        map.fitBounds(b, { padding: [20, 20], animate: true, maxZoom: 12 });
     } catch (e) {}
 
-    // 在用户图层区域添加控制项
-    const userGroup = document.getElementById("userLayerGroup");
-    const layerItem = document.createElement("div");
+    var userGroup = document.getElementById("userLayerGroup");
+    var layerItem = document.createElement("div");
     layerItem.className = "layer-item";
     layerItem.dataset.layerId = uid;
 
-    const checkbox = document.createElement("input");
+    var checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.id = uid;
     checkbox.checked = true;
@@ -1217,46 +1519,57 @@ document.addEventListener("DOMContentLoaded", function () {
       else map.removeLayer(layerCache[uid]);
     });
 
-    const label = document.createElement("label");
+    var label = document.createElement("label");
     label.htmlFor = uid;
     label.textContent = fileName;
     label.title = fileName;
 
-    // 状态指示器（用户上传的直接显示已加载）
-    const statusSpan = document.createElement("span");
+    var statusSpan = document.createElement("span");
     statusSpan.className = "layer-status";
     statusSpan.dataset.status = "loaded";
     statusSpan.title = "已加载";
 
-    const locateBtn = document.createElement("button");
+    var colorBtn = document.createElement("button");
+    colorBtn.className = "layer-color-btn";
+    colorBtn.title = "颜色模式：内部多颜色";
+    colorBtn.innerHTML = "🎨";
+    colorBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      openColorModal(uid, fileName, null);
+    });
+
+    var locateBtn = document.createElement("button");
     locateBtn.className = "layer-locate-btn";
     locateBtn.title = "定位到此图层";
     locateBtn.innerHTML = "🔍";
-    locateBtn.addEventListener("click", function () {
+    locateBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
       flyToLayer(uid);
     });
 
-    const removeBtn = document.createElement("button");
+    var removeBtn = document.createElement("button");
     removeBtn.className = "layer-locate-btn";
     removeBtn.title = "删除此图层";
     removeBtn.innerHTML = "✕";
     removeBtn.style.color = "#cc6666";
     removeBtn.addEventListener("click", function () {
+      clearHighlight(uid);
       if (layerCache[uid]) map.removeLayer(layerCache[uid]);
       delete layerCache[uid];
       delete layerBoundsCache[uid];
+      delete highlightState[uid];
       layerItem.remove();
     });
 
     layerItem.appendChild(checkbox);
     layerItem.appendChild(label);
     layerItem.appendChild(statusSpan);
+    layerItem.appendChild(colorBtn);
     layerItem.appendChild(locateBtn);
     layerItem.appendChild(removeBtn);
     userGroup.appendChild(layerItem);
   }
 
-  // 暴露 addUserLayer 到全局
   window.addUserLayer = addUserLayer;
 
   // ========== 初始化 ==========

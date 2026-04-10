@@ -308,3 +308,106 @@
 .group-status[data-status="error"] {
   color: #d9534f;
 }
+
+/* ========== 颜色设置按钮 ========== */
+.layer-color-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #888;
+  font-size: 12px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  margin-left: 2px;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.layer-color-btn:hover {
+  color: #cc7722;
+  background: #fff3e0;
+}
+
+/* ========== 颜色设置弹窗 ========== */
+.color-modal-content {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  min-width: 320px;
+  max-width: 400px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.color-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f0f7f0;
+  border-bottom: 1px solid #d0e0d0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3a7a3a;
+}
+
+.color-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #888;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.color-modal-close:hover {
+  color: #c44;
+}
+
+.color-modal-body {
+  padding: 14px 16px;
+}
+
+.color-mode-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #444;
+  padding: 4px 0;
+}
+
+.color-mode-option input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #4a8c4a;
+  cursor: pointer;
+}
+
+.color-mode-option span {
+  user-select: none;
+}
+
+.color-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+}
