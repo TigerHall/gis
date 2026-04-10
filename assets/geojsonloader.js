@@ -573,6 +573,31 @@ document.addEventListener("DOMContentLoaded", function () {
     if (groupDiv) syncGroupLoadingStatus(groupDiv);
   }
 
+  // ========== 优先加载 .gz，失败则回退到原始 json ==========
+  function fetchGeoJSON(filePath) {
+    const gzPath = filePath + ".gz";
+
+    return fetch(gzPath)
+      .then(function (response) {
+        if (!response.ok) throw new Error("gz not found");
+        // 用 DecompressionStream 手动解压 gzip
+        const ds = new DecompressionStream("gzip");
+        const decompressed = response.body.pipeThrough(ds);
+        return new Response(decompressed).text();
+      })
+      .then(function (text) {
+        return JSON.parse(text);
+      })
+      .catch(function () {
+        // 回退：直接加载原始 json
+        console.log("gz 不可用，回退至：", filePath);
+        return fetch(filePath).then(function (response) {
+          if (!response.ok) throw new Error("加载 " + filePath + " 失败");
+          return response.json();
+        });
+      });
+  }
+
   function loadGeoJSONLayer(filePath, checkboxId, fitBoundsAfterLoad) {
     if (layerCache[checkboxId]) {
       layerCache[checkboxId].addTo(map);
@@ -592,11 +617,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const fileName = filePath.split("/").pop();
     updateLayerItemStatus(checkboxId, "loading");
 
-    fetch(filePath)
-      .then(function (response) {
-        if (!response.ok) throw new Error("加载" + filePath + "失败");
-        return response.json();
-      })
+    fetchGeoJSON(filePath)
       .then(function (data) {
         // 先修正原始数据内部的跨子午线断线
         const fixedData = fixAntimeridian(data);
