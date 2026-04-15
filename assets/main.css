@@ -118,3 +118,40 @@ body {
 #map:active {
   box-shadow: 0 0 16px rgba(153, 204, 153, 0.6);
 }
+
+/* 悬停弹窗样式 */
+.leaflet-popup.hover-popup {
+  pointer-events: none; /* 防止悬停弹窗干扰交互 */
+}
+
+.leaflet-popup.hover-popup .leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #4a8c4a;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-popup.hover-popup .leaflet-popup-content {
+  font-size: 12px;
+  color: #333;
+  margin: 8px 10px;
+}
+
+.leaflet-popup.hover-popup .leaflet-popup-tip-container {
+  display: none; /* 隐藏箭头 */
+}
+
+/* 悬停弹窗中的表格样式 */
+.leaflet-popup.hover-popup .feature-popup table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaflet-popup.hover-popup .feature-popup table td {
+  padding: 3px 5px;
+  border-bottom: 1px solid #eee;
+}
+
+.leaflet-popup.hover-popup .feature-popup table tr:last-child td {
+  border-bottom: none;
+}

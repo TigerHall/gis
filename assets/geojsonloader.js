@@ -29,6 +29,80 @@ document.addEventListener("DOMContentLoaded", function () {
     }, options.duration || 200);
   }, 100);
 
+  // ========== 悬停功能管理 ==========
+  let hoverTimer = null;
+  let hoverPopup = null;
+  let hoveredLayer = null;
+  let hoveredFeature = null;
+  let hoveredFileName = null;
+  let hoveredCheckboxId = null;
+
+  // 清除悬停定时器
+  function clearHoverTimer() {
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  }
+
+  // 关闭悬停弹窗
+  function closeHoverPopup() {
+    if (hoverPopup) {
+      hoverPopup.remove();
+      hoverPopup = null;
+    }
+    hoveredLayer = null;
+    hoveredFeature = null;
+    hoveredFileName = null;
+    hoveredCheckboxId = null;
+  }
+
+  // 显示悬停弹窗
+  function showHoverPopup(latlng) {
+    if (!hoveredFeature || !hoveredFileName) return;
+    
+    const content = buildPopupContent(hoveredFeature, hoveredFileName);
+    if (!content) return;
+    
+    // 关闭之前的弹窗
+    closeHoverPopup();
+    
+    // 创建新弹窗
+    hoverPopup = L.popup({ 
+      maxWidth: 300,
+      className: 'hover-popup',
+      closeButton: false,
+      autoClose: false,
+      closeOnClick: false
+    })
+      .setContent(content)
+      .setLatLng(latlng)
+      .openOn(map);
+  }
+
+  // 处理鼠标悬停
+  function handleMouseOver(feature, layer, fileName, checkboxId, e) {
+    // 清除之前的定时器
+    clearHoverTimer();
+    
+    // 保存悬停状态
+    hoveredLayer = layer;
+    hoveredFeature = feature;
+    hoveredFileName = fileName;
+    hoveredCheckboxId = checkboxId;
+    
+    // 设置定时器，1秒后显示弹窗
+    hoverTimer = setTimeout(() => {
+      showHoverPopup(e.latlng);
+    }, 1000);
+  }
+
+  // 处理鼠标离开
+  function handleMouseOut(e) {
+    clearHoverTimer();
+    closeHoverPopup();
+  }
+
   // ========== 面板交互逻辑 ==========
   const layerTrigger = document.getElementById("layerTrigger");
   const layerPanel = document.getElementById("layerPanel");
@@ -559,6 +633,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   map.on("click", function () {
     clearAllHighlights();
+    closeHoverPopup();
+    clearHoverTimer();
   });
 
   // ========== 获取要素可用属性字段（用于"按字段分色"选项）==========
@@ -643,6 +719,7 @@ document.addEventListener("DOMContentLoaded", function () {
           );
         },
         onEachFeature: function (feature, layer) {
+          // 点击事件
           layer.on("click", function (e) {
             const idx = feature._featureIndex || 0;
             const baseStyle = getGeoJsonStyle(
@@ -683,6 +760,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 .openOn(map);
             }
             L.DomEvent.stop(e);
+            
+            // 点击时关闭悬停弹窗（如果存在）
+            closeHoverPopup();
+            clearHoverTimer();
+          });
+          
+          // 鼠标悬停事件
+          layer.on("mouseover", function (e) {
+            handleMouseOver(feature, layer, fileName, checkboxId, e);
+          });
+          
+          // 鼠标离开事件
+          layer.on("mouseout", function (e) {
+            handleMouseOut(e);
           });
         },
       });
