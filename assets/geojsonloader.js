@@ -148,60 +148,64 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // ========== GeoJSON 分组配置 ==========
+ // ========== GeoJSON 分组配置 ==========
   const geoJsonGroups = [
+
     {
-      groupName: "地壳与大洋域",
+      groupName: "全球板块构造",
       layers: [
-        {
-          name: "全球洋壳 GlobalOceanicCrust",
-          file: "1GlobalOceanicCrust.json",
-        },
-        { name: "大洋域 OceanDomian", file: "2OceanDomian.json" },
-        { name: "次大洋域 SubOceanDomain", file: "3SubOceanDomain.json" },
-        { name: "洋脊域 RidgeDomain", file: "4RidgeDomain.json" },
-        {
-          name: "全球陆壳 GlobalContinentalCrust",
-          file: "global_continental_crust.json",
-        },
-      ],
-    },
-    {
-      groupName: "板块",
-      layers: [
+        {name: "全球16大板块 plate16", file: "plate16.json" },
         { name: "大陆板块 plate_cont", file: "plate_cont.json" },
         { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
-        { name: "16板块 plate16", file: "plate16.json" },
-      ],
-    },
-    {
-      groupName: "断层与转换断层",
-      layers: [
+        { name: "洋中脊 Mid-Ocean Ridge", file: "ridgenew.json" },
+        { name: "海沟 Trench", file: "Pb_trench.json" },
+        { name: "转换断层 Transform", file: "Pb_transformall.json" },
         { name: "大西洋转换断层 Atlantic_FZ", file: "Atlantic_FZ.json" },
         { name: "印度洋转换断层 Indian_FZ", file: "Indian_FZ.json" },
         { name: "太平洋转换断层 Pacific_FZ", file: "Pacific_FZ.json" },
-        { name: "板块转换断层 Pb_transformall", file: "Pb_transformall.json" },
-        { name: "海沟 Pb_trench", file: "Pb_trench.json" },
+
       ],
-    },
+},
+
     {
-      groupName: "洋脊与火成岩",
+      groupName: "洋中脊作用域",
       layers: [
-        { name: "洋脊 (plgn1_5)", file: "RD_plgn1_5.json" },
-        { name: "洋脊 (新) ridgenew", file: "ridgenew.json" },
-        { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
-        { name: "LLSVP", file: "LLSVP.json" },
+        {name: "1全球洋壳 GlobalOceanicCrust", file: "1GlobalOceanicCrust.json", },
+        { name: "2大洋域 OceanDomian", file: "2OceanDomian.json" },
+        { name: "3次大洋域 SubOceanDomain", file: "3SubOceanDomain.json" },
+        { name: "4洋中脊作用域 RidgeDomain", file: "4RidgeDomain.json" },
+        { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.json" },
+        {name: "全球陆壳 GlobalContinentalCrust", file: "global_continental_crust.json",},
       ],
-    },
+},
+
+
     {
-      groupName: "地质活动点",
+      groupName: "火山地震与热点",
       layers: [
-        { name: "热点 hotspots", file: "hotspots.json" },
         { name: "火山 volcanos", file: "volcanos.json" },
+        { name: "热点 hotspots", file: "hotspots.json" },
+        { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
+      ],
+},
+
+    {
+      groupName: "大型异常区",
+      layers: [
+        { name: "LLSVP", file: "LLSVP.json" },
         { name: "Dupal异常洋 DupalOcean", file: "DupalOcean.json" },
       ],
     },
+
+    {
+      groupName: "海底矿产资源",
+      layers: [
+
+      ],
+},
+
   ];
+
 
   const geoJsonBasePath = "./assets/geojson/";
   const layerCache = {};
