@@ -163,9 +163,8 @@ document.addEventListener("DOMContentLoaded", function () {
         { name: "大西洋转换断层 Atlantic_FZ", file: "Atlantic_FZ.json" },
         { name: "印度洋转换断层 Indian_FZ", file: "Indian_FZ.json" },
         { name: "太平洋转换断层 Pacific_FZ", file: "Pacific_FZ.json" },
-
       ],
-},
+    },
 
     {
       groupName: "洋中脊作用域",
@@ -177,7 +176,7 @@ document.addEventListener("DOMContentLoaded", function () {
         { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.json" },
         {name: "全球陆壳 GlobalContinentalCrust", file: "global_continental_crust.json",},
       ],
-},
+    },
 
 
     {
@@ -187,7 +186,7 @@ document.addEventListener("DOMContentLoaded", function () {
         { name: "热点 hotspots", file: "hotspots.json" },
         { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
       ],
-},
+    },
 
     {
       groupName: "大型异常区",
@@ -202,7 +201,7 @@ document.addEventListener("DOMContentLoaded", function () {
       layers: [
 
       ],
-},
+    },
 
   ];
 
