@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.3.3";
+const CACHE_NAME = "v1.3.31";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
