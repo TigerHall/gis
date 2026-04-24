@@ -8,7 +8,9 @@ $folder = $PSScriptRoot
 Write-Host "工作目录: $folder`n" -ForegroundColor Cyan
 
 # 获取所有 .json 文件
-$files = Get-ChildItem -Path $folder -Filter "*.json" -File
+$files = Get-ChildItem -Path $folder -File | Where-Object {
+  $_.Extension -eq '.json' -or $_.Extension -eq '.geojson'
+}
 
 if (-not $files) {
   Write-Warning "未找到任何 .json 文件"
@@ -18,7 +20,8 @@ if (-not $files) {
 
 # 循环压缩
 foreach ($file in $files) {
-  $outFile = "$($file.FullName).gz"
+  $baseName = $file.BaseName
+  $outFile = Join-Path $file.DirectoryName "$baseName.json.gz"
     
   try {
     $inStream = [System.IO.File]::OpenRead($file.FullName)
