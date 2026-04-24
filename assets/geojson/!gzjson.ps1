@@ -20,8 +20,7 @@ if (-not $files) {
 
 # 循环压缩
 foreach ($file in $files) {
-  $baseName = $file.BaseName
-  $outFile = Join-Path $file.DirectoryName "$baseName.json.gz"
+  $outFile = "$($file.FullName).gz"
     
   try {
     $inStream = [System.IO.File]::OpenRead($file.FullName)
