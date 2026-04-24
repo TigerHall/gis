@@ -203,6 +203,16 @@ document.addEventListener("DOMContentLoaded", function () {
       ],
     },
 
+        {
+      groupName: "地质站位",
+      layers: [
+        { name: "DSDP", file: "DSDP.geojson" },
+        { name: "ODP", file: "ODP.geojson" },
+        { name: "IODP03-13", file: "IODP03-13.geojson" },
+        { name: "IODP13-26", file: "IODP13-26.geojson" }, 
+      ],
+    },
+    
   ];
 
 
