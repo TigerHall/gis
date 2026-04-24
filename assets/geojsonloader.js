@@ -183,7 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {
       groupName: "海底基础信息",
       layers: [
         { name: "火山 volcanos", file: "volcanos.json" },
-        { name: "地震 10-23_5 )", file: "earthquake10_23_5.json" },
+        { name: "地震 10-23_5 )", file: "earthquake10-23_5.geojson" },
         { name: "热点 hotspots", file: "hotspots.json" },
         { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
         { name: "洋壳年龄30Ma", file: "seafloor_age_30.geojson" },
