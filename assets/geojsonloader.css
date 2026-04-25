@@ -411,3 +411,93 @@
   border-top: 1px solid #eee;
   background: #fafafa;
 }
+
+/* ========== 站点标签样式 ========== */
+/* 站点图标容器 */
+.station-icon-container {
+  background: transparent;
+  border: none;
+}
+
+/* 组合标记：圆点 + 标签 */
+.station-marker-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none; /* 让点击穿透到 marker 本身 */
+}
+
+/* 站点圆点 */
+.station-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  border-color: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+/* 站点标签文字 */
+.station-label {
+  color: #222;
+  font-size: 10px;
+  font-family: "Microsoft YaHei", Arial, sans-serif;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 1px 5px;
+  border-radius: 2px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  /* 四方向白色描边 */
+  text-shadow:
+    1px 1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px -1px 0 #fff;
+  transition: opacity 0.2s;
+}
+
+/* 缩放级别不足时隐藏标签 */
+.station-label.hidden {
+  opacity: 0;
+  width: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ========== 聚类样式 ========== */
+.cluster-marker {
+  background: transparent;
+}
+
+.cluster-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3388ff;
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: 2px solid white;
+}
+
+.cluster-small {
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+}
+
+.cluster-medium {
+  width: 38px;
+  height: 38px;
+  font-size: 13px;
+}
+
+.cluster-large {
+  width: 46px;
+  height: 46px;
+  font-size: 14px;
+}

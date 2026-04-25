@@ -29,80 +29,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }, options.duration || 200);
   }, 100);
 
-  // ========== 悬停功能管理 ==========
-  let hoverTimer = null;
-  let hoverPopup = null;
-  let hoveredLayer = null;
-  let hoveredFeature = null;
-  let hoveredFileName = null;
-  let hoveredCheckboxId = null;
-
-  // 清除悬停定时器
-  function clearHoverTimer() {
-    if (hoverTimer) {
-      clearTimeout(hoverTimer);
-      hoverTimer = null;
-    }
-  }
-
-  // 关闭悬停弹窗
-  function closeHoverPopup() {
-    if (hoverPopup) {
-      hoverPopup.remove();
-      hoverPopup = null;
-    }
-    hoveredLayer = null;
-    hoveredFeature = null;
-    hoveredFileName = null;
-    hoveredCheckboxId = null;
-  }
-
-  // 显示悬停弹窗
-  function showHoverPopup(latlng) {
-    if (!hoveredFeature || !hoveredFileName) return;
-    
-    const content = buildPopupContent(hoveredFeature, hoveredFileName);
-    if (!content) return;
-    
-    // 关闭之前的弹窗
-    closeHoverPopup();
-    
-    // 创建新弹窗
-    hoverPopup = L.popup({ 
-      maxWidth: 300,
-      className: 'hover-popup',
-      closeButton: false,
-      autoClose: false,
-      closeOnClick: false
-    })
-      .setContent(content)
-      .setLatLng(latlng)
-      .openOn(map);
-  }
-
-  // 处理鼠标悬停
-  function handleMouseOver(feature, layer, fileName, checkboxId, e) {
-    // 清除之前的定时器
-    clearHoverTimer();
-    
-    // 保存悬停状态
-    hoveredLayer = layer;
-    hoveredFeature = feature;
-    hoveredFileName = fileName;
-    hoveredCheckboxId = checkboxId;
-    
-    // 设置定时器，1秒后显示弹窗
-    hoverTimer = setTimeout(() => {
-      showHoverPopup(e.latlng);
-    }, 1000);
-  }
-
-  // 处理鼠标离开
-  function handleMouseOut(e) {
-    clearHoverTimer();
-    closeHoverPopup();
-  }
-
   // ========== 面板交互逻辑 ==========
   const layerTrigger = document.getElementById("layerTrigger");
   const layerPanel = document.getElementById("layerPanel");
@@ -148,13 +74,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
- // ========== GeoJSON 分组配置 ==========
+  // ========== GeoJSON 分组配置 ==========
   const geoJsonGroups = [
-
     {
       groupName: "全球板块构造",
       layers: [
-        {name: "全球16大板块 plate16", file: "plate16.json" },
+        { name: "全球16大板块 plate16", file: "plate16.json" },
         { name: "大陆板块 plate_cont", file: "plate_cont.json" },
         { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
         { name: "洋中脊 Mid-Ocean Ridge", file: "ridgenew.json" },
@@ -169,15 +94,20 @@ document.addEventListener("DOMContentLoaded", function () {
     {
       groupName: "洋中脊作用域",
       layers: [
-        {name: "1全球洋壳 GlobalOceanicCrust", file: "1GlobalOceanicCrust.json", },
+        {
+          name: "1全球洋壳 GlobalOceanicCrust",
+          file: "1GlobalOceanicCrust.json",
+        },
         { name: "2大洋域 OceanDomian", file: "2OceanDomian.json" },
         { name: "3次大洋域 SubOceanDomain", file: "3SubOceanDomain.json" },
         { name: "4洋中脊作用域 RidgeDomain", file: "4RidgeDomain.json" },
         { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.json" },
-        {name: "全球陆壳 GlobalContinentalCrust", file: "global_continental_crust.json",},
+        {
+          name: "全球陆壳 GlobalContinentalCrust",
+          file: "global_continental_crust.json",
+        },
       ],
     },
-
 
     {
       groupName: "海底基础信息",
@@ -186,7 +116,6 @@ document.addEventListener("DOMContentLoaded", function () {
         { name: "热点 hotspots", file: "hotspots.json" },
         { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
         { name: "洋壳年龄30Ma", file: "seafloor_age_30.geojson" },
-
       ],
     },
 
@@ -200,23 +129,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
     {
       groupName: "海底矿产资源",
-      layers: [
-
-      ],
+      layers: [],
     },
 
-        {
+    {
       groupName: "地质站位",
       layers: [
         { name: "DSDP", file: "DSDP.geojson" },
         { name: "ODP", file: "ODP.geojson" },
         { name: "IODP03-13", file: "IODP03-13.geojson" },
-        { name: "IODP13-26", file: "IODP13-26.geojson" }, 
+        { name: "IODP13-26", file: "IODP13-26.geojson" },
       ],
     },
-    
   ];
-
 
   const geoJsonBasePath = "./assets/geojson/";
   const layerCache = {};
@@ -231,6 +156,21 @@ document.addEventListener("DOMContentLoaded", function () {
   // 高亮状态
   const highlightState = {};
   const layerBoundsCache = {};
+  // 站点图层标签配置（文件名 → 标签字段名）
+  // 缩放 ≥7 级时显示标签，字段为对应名称字段
+  const STATION_LABEL_CONFIG = {
+    "DSDP.geojson": { field: "Hole" },
+    "ODP.geojson": { field: "Fullname" },
+    "IODP03-13.geojson": { field: "Name" },
+    "IODP13-26.geojson": { field: "site" },
+  };
+  // 缩放 7 级以上停止聚类
+  const CLUSTER_MIN_ZOOM = 7;
+  // 不参与聚类的文件（热点、火山，保持独立图标）
+  const NO_CLUSTER_FILES = new Set(["hotspots.json", "volcanos.json"]);
+  // 默认标签字段
+  const DEFAULT_LABEL_FIELD = "Name";
+  const DEFAULT_MIN_ZOOM = 7;
 
   // ========== 颜色工具 ==========
   // 检测 GeoJSON 中的主要几何类型（统计最多的一种）
@@ -452,13 +392,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (isPoint) {
       // 点要素：边线和填充都用 featureColor
+      // 火山用小圆点（5px），其他点要素默认 8px
+      const isVolcano = fileName === "volcanos.json";
       return {
         color: featureColor,
         fillColor: featureColor,
         weight: 1,
         opacity: 0.8,
         fillOpacity: 0.8,
-        radius: 8,
+        radius: isVolcano ? 5 : 8,
       };
     }
 
@@ -472,11 +414,12 @@ document.addEventListener("DOMContentLoaded", function () {
     };
   }
 
-  // ========== 热点五角星图标 ==========
+  // ========== 图标工厂函数 ==========
+  // 热点五角星图标（带 outline，小尺寸）
   function createStarIcon(color) {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20">
       <polygon points="10,1 12.9,7.1 19.5,7.6 14.7,12 16.2,18.5 10,15 3.8,18.5 5.3,12 0.5,7.6 7.1,7.1"
-        fill="${color}" fill-opacity="0.65" stroke="${color}" stroke-width="1.2" stroke-opacity="0.9"/>
+        fill="${color}" fill-opacity="0.8" stroke="white" stroke-width="1.5" stroke-opacity="0.95"/>
     </svg>`;
     return L.divIcon({
       html: svg,
@@ -484,6 +427,23 @@ document.addEventListener("DOMContentLoaded", function () {
       iconSize: [20, 20],
       iconAnchor: [10, 10],
       popupAnchor: [0, -10],
+    });
+  }
+
+  // 普通点要素图标（外圈描边 + 内圈填充）
+  function createPointIcon(color, size) {
+    var r = size || 8;
+    var outline = r + 2;
+    var svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${outline * 2}" height="${outline * 2}" viewBox="0 0 ${outline * 2} ${outline * 2}">
+      <circle cx="${outline}" cy="${outline}" r="${outline - 1}"
+        fill="${color}" fill-opacity="0.85" stroke="white" stroke-width="1.5"/>
+    </svg>`;
+    return L.divIcon({
+      html: svg,
+      className: "",
+      iconSize: [outline * 2, outline * 2],
+      iconAnchor: [outline, outline],
+      popupAnchor: [0, -(outline + 2)],
     });
   }
 
@@ -541,94 +501,24 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
-   * rewindRingStart - 起始点旋转：
-   * 将多边形环的起始点旋转到经度绝对值最小（最远离±180°）的点。
-   * 这样 fixRingCoords 的展开算法从"最安全"的位置出发，
-   * 避免起点落在±180°附近时产生的边界歧义。
-   * 仅对 Polygon/MultiPolygon 的环有意义（LineString 不需要）。
-   * 注意：环的首尾点相同（闭合环）时保持闭合。
-   */
-  function rewindRingStart(coords) {
-    if (!coords || coords.length < 2) return coords;
-    // 判断是否是闭合环（首尾坐标相同）
-    const n = coords.length;
-    const isClosed =
-      coords[0][0] === coords[n - 1][0] &&
-      coords[0][1] === coords[n - 1][1];
-    // 实际点列（去掉闭合重复的末点）
-    const pts = isClosed ? coords.slice(0, n - 1) : coords.slice();
-    // 找到经度绝对值最小的点作为新起点
-    let bestIdx = 0;
-    let bestAbs = Math.abs(pts[0][0]);
-    for (let i = 1; i < pts.length; i++) {
-      // 规范化到 (-180, 180] 后比较
-      const lng = ((((pts[i][0] + 180) % 360) + 360) % 360) - 180;
-      if (Math.abs(lng) < bestAbs) {
-        bestAbs = Math.abs(lng);
-        bestIdx = i;
-      }
-    }
-    if (bestIdx === 0) return coords; // 已是最优起点，不旋转
-    // 旋转数组
-    const rotated = pts.slice(bestIdx).concat(pts.slice(0, bestIdx));
-    // 恢复闭合
-    if (isClosed) rotated.push(rotated[0].slice());
-    return rotated;
-  }
-
-  /**
    * fixRingCoords - "展开"策略：消除相邻点之间的 >180° 跳变。
-   * 结果坐标可能超出 [-180, 180]，这是允许的，Leaflet 能正确处理
-   * 超出范围的坐标（将其渲染在对应的世界副本上）。
+   * 结果坐标可能超出 [-180, 180]，这是允许的，Leaflet 能正确处理。
    */
   function fixRingCoords(coords) {
     if (!coords || coords.length === 0) return coords;
-    // 第一个点规范化到 (-180, 180]
     const first = coords[0].slice();
     first[0] = ((((first[0] + 180) % 360) + 360) % 360) - 180;
     const result = [first];
     for (let i = 1; i < coords.length; i++) {
       const prev = result[i - 1];
       const cur = coords[i].slice();
-      // 计算最短路径跳变并补偿——允许 cur[0] 超出 ±180
       let dLng = cur[0] - prev[0];
-      dLng = ((dLng % 360) + 360) % 360; // 规范到 [0, 360)
-      if (dLng > 180) dLng -= 360;        // 取最短路径 → (-180, 180]
+      dLng = ((dLng % 360) + 360) % 360;
+      if (dLng > 180) dLng -= 360;
       cur[0] = prev[0] + dLng;
       result.push(cur);
     }
     return result;
-  }
-
-  /**
-   * 计算多边形环的有符号面积（Shoelace 公式）。
-   * 正值 = 逆时针（GeoJSON 外环正确方向）；负值 = 顺时针（需要反转）。
-   * 注意：对于跨180°的展开坐标同样有效，因为 Shoelace 公式与绝对坐标无关。
-   */
-  function ringSignedArea(coords) {
-    let area = 0;
-    const n = coords.length;
-    for (let i = 0, j = n - 1; i < n; j = i++) {
-      area += (coords[j][0] + coords[i][0]) * (coords[j][1] - coords[i][1]);
-    }
-    return area / 2;
-  }
-
-  /**
-   * 按照 GeoJSON RFC 7946 右手定则修正多边形环方向：
-   * - 外环（rings[0]）必须是逆时针（signedArea > 0）
-   * - 内环（holes，rings[1+]）必须是顺时针（signedArea < 0）
-   * 如果方向错误则原地反转。
-   */
-  function fixRingWinding(rings) {
-    return rings.map(function (ring, idx) {
-      const area = ringSignedArea(ring);
-      const isOuter = idx === 0;
-      // 外环：area 应 > 0（逆时针）；内环：area 应 < 0（顺时针）
-      if (isOuter && area < 0) return ring.slice().reverse();
-      if (!isOuter && area > 0) return ring.slice().reverse();
-      return ring;
-    });
   }
 
   function fixGeometryCoords(geometry) {
@@ -641,20 +531,11 @@ document.addEventListener("DOMContentLoaded", function () {
         geometry.coordinates = geometry.coordinates.map(fixRingCoords);
         break;
       case "Polygon":
-        // 处理链：① 起始点旋转（远离±180°）→ ② 展开坐标 → ③ 修正绕向
-        geometry.coordinates = fixRingWinding(
-          geometry.coordinates.map(function (ring) {
-            return fixRingCoords(rewindRingStart(ring));
-          })
-        );
+        geometry.coordinates = geometry.coordinates.map(fixRingCoords);
         break;
       case "MultiPolygon":
         geometry.coordinates = geometry.coordinates.map(function (rings) {
-          return fixRingWinding(
-            rings.map(function (ring) {
-              return fixRingCoords(rewindRingStart(ring));
-            })
-          );
+          return rings.map(fixRingCoords);
         });
         break;
       default:
@@ -726,10 +607,16 @@ document.addEventListener("DOMContentLoaded", function () {
     Object.keys(highlightState).forEach(clearHighlight);
   }
 
+  map.on("zoomend", function () {
+    // 【方案A】站点标签已改用 Tooltip permanent，Leaflet 自动处理可见性，无需手动更新
+  });
+
   map.on("click", function () {
     clearAllHighlights();
-    closeHoverPopup();
-    clearHoverTimer();
+    // 安全关闭所有打开的 tooltip
+    try {
+      map.closeTooltip();
+    } catch (e) {}
   });
 
   // ========== 获取要素可用属性字段（用于"按字段分色"选项）==========
@@ -752,8 +639,13 @@ document.addEventListener("DOMContentLoaded", function () {
     return Array.from(fieldSet).sort();
   }
 
-  // ========== 创建 GeoJSON 图层（三世界副本 + 高亮 + 弹窗）==========
-  function buildGeoJsonLayerGroup(geojsonData, checkboxId, fileName) {
+  // ========== 创建 GeoJSON 图层（聚类 + 三世界副本）==========
+  function buildGeoJsonLayerGroup(
+    geojsonData,
+    checkboxId,
+    fileName,
+    forceCluster,
+  ) {
     // 预处理：为每个要素生成索引
     if (
       geojsonData.type === "FeatureCollection" &&
@@ -765,13 +657,125 @@ document.addEventListener("DOMContentLoaded", function () {
         f.properties._featureIndex = idx;
       });
     }
+    console.log(
+      `[DEBUG] buildGeoJsonLayerGroup: ${fileName}, features: ${geojsonData.features?.length}`,
+    );
+
+    // 判断是否需要聚类：
+    // 1. forceCluster=true（点要素）→ 聚类
+    // 2. 火山、热点 → 不聚类
+    // 3. 其他（非点要素）→ 不聚类
+    const isNoCluster =
+      NO_CLUSTER_FILES.has(fileName) || forceCluster === false;
+    // 标签配置：使用配置的字段或默认 Name
+    const cfg = STATION_LABEL_CONFIG[fileName];
+    const labelField = cfg ? cfg.field : DEFAULT_LABEL_FIELD;
+    const minZoom = DEFAULT_MIN_ZOOM;
+
+    // 创建聚类组
+    function createClusterGroup() {
+      return L.markerClusterGroup({
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        // 缩放 >=7 时停止聚类，展开显示标签
+        disableClusteringAtZoom: minZoom,
+        iconCreateFunction: function (cluster) {
+          const count = cluster.getChildCount();
+          const size = count < 10 ? "small" : count < 100 ? "medium" : "large";
+          return L.divIcon({
+            html: `<div class="cluster-icon cluster-${size}">${count}</div>`,
+            className: "cluster-marker",
+            iconSize: L.point(40, 40),
+          });
+        },
+      });
+    }
+
+    // 创建带标签的点标记（缩放 >=7 显示标签）
+    function createLabeledMarker(feature, latlng, color, labelText) {
+      const currentZoom = map.getZoom();
+      const showLabel = currentZoom >= minZoom;
+
+      const html = `<div class="station-marker-wrapper">
+        <span class="station-dot" style="background:${color};border-color:white;"></span>
+        <span class="station-label ${showLabel ? "" : "hidden"}">${labelText}</span>
+      </div>`;
+
+      const marker = L.marker(latlng, {
+        icon: L.divIcon({
+          html: html,
+          className: "station-icon-container",
+          iconSize: [120, 20],
+          iconAnchor: [5, 10],
+          popupAnchor: [8, -5],
+        }),
+        interactive: true,
+      });
+
+      // 绑定弹窗
+      const content = buildPopupContent(feature, fileName);
+      if (content) {
+        marker.bindPopup(content, { maxWidth: 300 });
+      }
+
+      // 缩放变化时更新标签显示
+      marker._updateLabelVisibility = function () {
+        const zoom = map.getZoom();
+        const el = marker.getElement();
+        if (el) {
+          const labelSpan = el.querySelector(".station-label");
+          if (labelSpan) {
+            if (zoom >= minZoom) {
+              labelSpan.classList.remove("hidden");
+            } else {
+              labelSpan.classList.add("hidden");
+            }
+          }
+        }
+      };
+
+      return marker;
+    }
+
+    // 创建热点/火山标记（最轻量方式，无标签）
+    function createPointMarker(feature, latlng, color, idx) {
+      let marker;
+      if (fileName === "hotspots.json") {
+        // 热点：marker + 五角星
+        marker = L.marker(latlng, { icon: createStarIcon(color) });
+      } else {
+        // 火山：原生 circleMarker（最轻量）
+        marker = L.circleMarker(
+          latlng,
+          getGeoJsonStyle(feature, checkboxId, fileName, idx),
+        );
+      }
+
+      const content = buildPopupContent(feature, fileName);
+      if (content) {
+        marker.bindPopup(content, { maxWidth: 300 });
+      }
+      return marker;
+    }
 
     const offsets = [-360, 0, 360];
     const geoLayers = [];
+    const clusterGroups = [];
+    const allMarkers = []; // 用于缩放时更新标签
+
+    // 缩放事件处理：更新标签可见性
+    const zoomHandler = function () {
+      allMarkers.forEach(function (marker) {
+        if (marker._updateLabelVisibility) {
+          marker._updateLabelVisibility();
+        }
+      });
+    };
 
     offsets.forEach(function (offset) {
       const shifted = shiftGeoJSON(geojsonData, offset);
-      // 为 shifted 副本设置相同的 _featureIndex
       if (
         shifted.type === "FeatureCollection" &&
         Array.isArray(shifted.features)
@@ -783,17 +787,20 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
 
-      const geoLayer = L.geoJSON(shifted, {
-        style: function (feature) {
-          return getGeoJsonStyle(
-            feature,
-            checkboxId,
-            fileName,
-            feature._featureIndex || 0,
-          );
-        },
-        pointToLayer: function (feature, latlng) {
-          if (fileName === "hotspots.json") {
+      // 检测当前副本中的要素类型（以第一个有效要素为准）
+      const firstFeature = shifted.features?.find((f) => f.geometry);
+      const firstGeomType = (firstFeature?.geometry?.type || "").toLowerCase();
+      const isPointType =
+        firstGeomType === "point" || firstGeomType === "multipoint";
+
+      if (isPointType && !isNoCluster) {
+        // 【点要素】使用聚类，>=7级展开显示标签
+        const clusterGroup = createClusterGroup();
+        clusterGroup.addTo(map);
+
+        const markers = [];
+        L.geoJSON(shifted, {
+          pointToLayer: function (feature, latlng) {
             const idx = feature._featureIndex || 0;
             const color = getFeatureFillColor(
               feature,
@@ -801,86 +808,175 @@ document.addEventListener("DOMContentLoaded", function () {
               fileName,
               idx,
             );
-            return L.marker(latlng, { icon: createStarIcon(color) });
-          }
-          return L.circleMarker(
-            latlng,
-            getGeoJsonStyle(
-              feature,
-              checkboxId,
-              fileName,
-              feature._featureIndex || 0,
-            ),
-          );
-        },
-        onEachFeature: function (feature, layer) {
-          // 点击事件
-          layer.on("click", function (e) {
+            const labelText = feature.properties
+              ? feature.properties[labelField] || null
+              : null;
+
+            let marker;
+            if (labelText) {
+              marker = createLabeledMarker(feature, latlng, color, labelText);
+            } else {
+              marker = createPointMarker(feature, latlng, color);
+            }
+            marker.feature = feature;
+
+            marker.on("click", function (e) {
+              const hlStyle = {
+                color: "#ffff00",
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 0.9,
+                dashArray: "6, 3",
+              };
+              try {
+                marker.setStyle(hlStyle);
+              } catch (err) {}
+              const content = buildPopupContent(feature, fileName);
+              if (content) {
+                marker.bindPopup(content, { maxWidth: 300 }).openPopup();
+              }
+              L.DomEvent.stop(e);
+            });
+
+            marker.on("dblclick", function (e) {
+              const hlStyle = {
+                color: "#ffff00",
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 0.9,
+                dashArray: "6, 3",
+              };
+              try {
+                marker.setStyle(hlStyle);
+              } catch (err) {}
+              try {
+                map.setView(latlng, map.getZoom() + 2, { animate: true });
+              } catch (err) {}
+              const content = buildPopupContent(feature, fileName);
+              if (content) {
+                marker.bindPopup(content, { maxWidth: 300 }).openPopup();
+              }
+              L.DomEvent.stop(e);
+            });
+
+            return marker;
+          },
+        }).eachLayer(function (layer) {
+          markers.push(layer);
+          allMarkers.push(layer);
+        });
+
+        clusterGroup.addLayers(markers);
+        clusterGroups.push(clusterGroup);
+        geoLayers.push(clusterGroup);
+      } else {
+        // 【面/线要素 + 热点/火山】不使用聚类，带交互事件
+        const geoLayer = L.geoJSON(shifted, {
+          pointToLayer: function (feature, latlng) {
             const idx = feature._featureIndex || 0;
-            const baseStyle = getGeoJsonStyle(
+            const color = getFeatureFillColor(
               feature,
               checkboxId,
               fileName,
               idx,
             );
-            const hlStyle = Object.assign({}, baseStyle, {
-              weight: (baseStyle.weight || 1) + 2,
-              opacity: 1,
-              fillOpacity: Math.min(
-                (baseStyle.fillOpacity || 0.45) + 0.3,
-                0.95,
-              ),
-              color: "#ffff00",
-              dashArray: "6, 3",
-            });
-            applyHighlight(checkboxId, feature._featureIndex, hlStyle);
 
-            // 点击时缩放到要素（仅对面/线要素）
-            try {
-              const geomType = (feature.geometry?.type || "").toLowerCase();
-              const isPoint = geomType === "point" || geomType === "multipoint";
-              if (!isPoint && layer.getBounds) {
-                const bounds = layer.getBounds();
-                if (bounds.isValid()) {
-                  map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-                }
+            // 热点/火山：最轻量方式（无标签）
+            const marker = createPointMarker(feature, latlng, color, idx);
+            marker.feature = feature;
+            return marker;
+          },
+          style: function (feature) {
+            return getGeoJsonStyle(
+              feature,
+              checkboxId,
+              fileName,
+              feature._featureIndex || 0,
+            );
+          },
+          onEachFeature: function (feature, layer) {
+            const geomType = (feature.geometry?.type || "").toLowerCase();
+            const isPoint = geomType === "point" || geomType === "multipoint";
+            if (isPoint) return; // 点已在 pointToLayer 处理
+
+            // 面/线要素交互
+            layer.on("click", function (e) {
+              const idx = feature._featureIndex || 0;
+              const baseStyle = getGeoJsonStyle(
+                feature,
+                checkboxId,
+                fileName,
+                idx,
+              );
+              const hlStyle = Object.assign({}, baseStyle, {
+                weight: (baseStyle.weight || 1) + 2,
+                opacity: 1,
+                fillOpacity: Math.min(
+                  (baseStyle.fillOpacity || 0.45) + 0.3,
+                  0.95,
+                ),
+                color: "#ffff00",
+                dashArray: "6, 3",
+              });
+              applyHighlight(checkboxId, feature._featureIndex, hlStyle);
+              const content = buildPopupContent(feature, fileName);
+              if (content) {
+                layer.bindPopup(content, { maxWidth: 300 }).openPopup();
               }
-            } catch (err) {}
+              L.DomEvent.stop(e);
+            });
 
-            const content = buildPopupContent(feature, fileName);
-            if (content) {
-              L.popup({ maxWidth: 300 })
-                .setContent(content)
-                .setLatLng(e.latlng)
-                .openOn(map);
-            }
-            L.DomEvent.stop(e);
-            
-            // 点击时关闭悬停弹窗（如果存在）
-            closeHoverPopup();
-            clearHoverTimer();
-          });
-          
-          // 鼠标悬停事件
-          layer.on("mouseover", function (e) {
-            handleMouseOver(feature, layer, fileName, checkboxId, e);
-          });
-          
-          // 鼠标离开事件
-          layer.on("mouseout", function (e) {
-            handleMouseOut(e);
-          });
-        },
-      });
+            layer.on("dblclick", function (e) {
+              const idx = feature._featureIndex || 0;
+              const baseStyle = getGeoJsonStyle(
+                feature,
+                checkboxId,
+                fileName,
+                idx,
+              );
+              const hlStyle = Object.assign({}, baseStyle, {
+                weight: (baseStyle.weight || 1) + 2,
+                opacity: 1,
+                fillOpacity: Math.min(
+                  (baseStyle.fillOpacity || 0.45) + 0.3,
+                  0.95,
+                ),
+                color: "#ffff00",
+                dashArray: "6, 3",
+              });
+              applyHighlight(checkboxId, feature._featureIndex, hlStyle);
+              try {
+                if (layer.getBounds) {
+                  const bounds = layer.getBounds();
+                  if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+                  }
+                }
+              } catch (err) {}
+              const content = buildPopupContent(feature, fileName);
+              if (content) {
+                layer.bindPopup(content, { maxWidth: 300 }).openPopup();
+              }
+              L.DomEvent.stop(e);
+            });
+          },
+        });
 
-      geoLayer.addTo(map);
-      geoLayers.push(geoLayer);
+        geoLayer.addTo(map);
+        geoLayers.push(geoLayer);
+      }
     });
+
+    // 监听缩放事件
+    map.on("zoomend", zoomHandler);
 
     highlightState[checkboxId] = {
       geoLayers: geoLayers,
+      clusterGroups: clusterGroups,
+      allMarkers: allMarkers,
       featureId: null,
       fileName: fileName,
+      zoomHandler: zoomHandler,
     };
     return L.layerGroup(geoLayers);
   }
@@ -936,6 +1032,9 @@ document.addEventListener("DOMContentLoaded", function () {
     fetchGeoJSON(filePath)
       .then(function (data) {
         const fixedData = fixAntimeridian(data);
+        console.log(
+          `[DEBUG] ${fileName}: 加载成功, features: ${fixedData.features?.length || 0}`,
+        );
         // 根据几何类型和文件名设置默认颜色模式（仅在未设置时）：
         // 热点/火山文件保持 single（红色五角星/圆形）
         // 面要素（Polygon/MultiPolygon）默认 sequential（多颜色填充）
@@ -961,6 +1060,7 @@ document.addEventListener("DOMContentLoaded", function () {
         layerCache[checkboxId] = worldCopyGroup;
 
         // 0° 副本用于 getBounds
+        // baseGeoJson 仅用于获取 bounds，无需完整渲染
         const baseGeoJson = L.geoJSON(fixedData, {
           style: function (feature) {
             return getGeoJsonStyle(
@@ -970,29 +1070,10 @@ document.addEventListener("DOMContentLoaded", function () {
               feature._featureIndex || 0,
             );
           },
-          pointToLayer: function (feature, latlng) {
-            if (fileName === "hotspots.json") {
-              const idx = feature._featureIndex || 0;
-              const color = getFeatureFillColor(
-                feature,
-                checkboxId,
-                fileName,
-                idx,
-              );
-              return L.marker(latlng, { icon: createStarIcon(color) });
-            }
-            return L.circleMarker(
-              latlng,
-              getGeoJsonStyle(
-                feature,
-                checkboxId,
-                fileName,
-                feature._featureIndex || 0,
-              ),
-            );
-          },
         });
         layerBoundsCache[checkboxId] = baseGeoJson;
+
+        // 【方案A】站点标签已移至 pointToLayer，无需单独创建标签图层
 
         if (fitBoundsAfterLoad) {
           try {
@@ -1020,12 +1101,24 @@ document.addEventListener("DOMContentLoaded", function () {
     // 清除旧图层（强制从地图移除所有副本）
     clearHighlight(checkboxId);
     const oldState = highlightState[checkboxId];
-    if (oldState && oldState.geoLayers) {
-      oldState.geoLayers.forEach(function (gl) {
-        try {
-          map.removeLayer(gl);
-        } catch (e) {}
-      });
+    if (oldState) {
+      if (oldState.zoomHandler) {
+        map.off("zoomend", oldState.zoomHandler);
+      }
+      if (oldState.geoLayers) {
+        oldState.geoLayers.forEach(function (gl) {
+          try {
+            map.removeLayer(gl);
+          } catch (e) {}
+        });
+      }
+      if (oldState.clusterGroups) {
+        oldState.clusterGroups.forEach(function (cg) {
+          try {
+            map.removeLayer(cg);
+          } catch (e) {}
+        });
+      }
       highlightState[checkboxId] = null;
     }
     if (layerCache[checkboxId]) {
@@ -1086,15 +1179,42 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // 【方案A】站点标签管理已简化
+  // - isStationFile, getStationLabel 仍保留用于判断
+  // - buildStationLabelLayer 等已移除，标签直接通过 bindTooltip permanent 创建
+  function isStationFile(fileName) {
+    return !!STATION_LABEL_CONFIG[fileName];
+  }
+
+  // 获取站点标签文本（优先使用配置字段）
+  function getStationLabel(feature, fileName) {
+    const cfg = STATION_LABEL_CONFIG[fileName];
+    if (!cfg || !feature.properties) return null;
+    return feature.properties[cfg.field] || null;
+  }
+
   function removeGeoJSONLayer(checkboxId) {
     clearHighlight(checkboxId);
     const state = highlightState[checkboxId];
-    if (state && state.geoLayers) {
-      state.geoLayers.forEach(function (gl) {
-        try {
-          map.removeLayer(gl);
-        } catch (e) {}
-      });
+    if (state) {
+      // 移除缩放事件监听器
+      if (state.zoomHandler) {
+        map.off("zoomend", state.zoomHandler);
+      }
+      if (state.geoLayers) {
+        state.geoLayers.forEach(function (gl) {
+          try {
+            map.removeLayer(gl);
+          } catch (e) {}
+        });
+      }
+      if (state.clusterGroups) {
+        state.clusterGroups.forEach(function (cg) {
+          try {
+            map.removeLayer(cg);
+          } catch (e) {}
+        });
+      }
       highlightState[checkboxId] = null;
     }
     if (layerCache[checkboxId]) {
@@ -1652,6 +1772,9 @@ document.addEventListener("DOMContentLoaded", function () {
       mainGeomType === "polygon" || mainGeomType === "multipolygon"
         ? "sequential"
         : "single";
+    // 点要素启用聚类，面/线要素不启用
+    var isPointLayer =
+      mainGeomType === "point" || mainGeomType === "multipoint";
     if (
       fixedData.type === "FeatureCollection" &&
       Array.isArray(fixedData.features)
@@ -1660,7 +1783,12 @@ document.addEventListener("DOMContentLoaded", function () {
         f._featureIndex = idx;
       });
     }
-    var worldCopyGroup = buildGeoJsonLayerGroup(fixedData, uid, fileName);
+    var worldCopyGroup = buildGeoJsonLayerGroup(
+      fixedData,
+      uid,
+      fileName,
+      isPointLayer,
+    );
     worldCopyGroup.addTo(map);
     layerCache[uid] = worldCopyGroup;
 
@@ -1674,13 +1802,18 @@ document.addEventListener("DOMContentLoaded", function () {
         );
       },
       pointToLayer: function (feature, latlng) {
-        return L.circleMarker(
-          latlng,
-          getGeoJsonStyle(feature, uid, fileName, feature._featureIndex || 0),
+        const color = getFeatureFillColor(
+          feature,
+          uid,
+          fileName,
+          feature._featureIndex || 0,
         );
+        return L.marker(latlng, { icon: createPointIcon(color, 6) });
       },
     });
     layerBoundsCache[uid] = baseGeoJson;
+
+    // 【方案A】站点标签已移至 pointToLayer，无需单独创建标签图层
 
     try {
       var b = baseGeoJson.getBounds();

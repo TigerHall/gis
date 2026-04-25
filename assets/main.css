@@ -119,9 +119,65 @@ body {
   box-shadow: 0 0 16px rgba(153, 204, 153, 0.6);
 }
 
-/* 悬停弹窗样式 */
+/* ========== 【方案A】Tooltip 样式（替代旧 Popup 样式）========== */
+
+/* 悬停提示 Tooltip */
+.leaflet-tooltip.hover-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #4a8c4a;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  color: #333;
+  padding: 0;
+  max-width: 300px;
+}
+
+.leaflet-tooltip.hover-tooltip::before {
+  display: none; /* 隐藏箭头 */
+}
+
+.leaflet-tooltip.hover-tooltip .feature-popup table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaflet-tooltip.hover-tooltip .feature-popup table td {
+  padding: 3px 5px;
+  border-bottom: 1px solid #eee;
+}
+
+.leaflet-tooltip.hover-tooltip .feature-popup table tr:last-child td {
+  border-bottom: none;
+}
+
+.leaflet-tooltip.hover-tooltip .feature-popup {
+  margin: 8px 10px;
+}
+
+/* 站点标签 Tooltip */
+.leaflet-tooltip.station-label-tooltip {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #8b7355;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-size: 11px;
+  color: #5a4a3a;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.leaflet-tooltip.station-label-tooltip::before {
+  border-right-color: #8b7355;
+}
+
+.leaflet-tooltip.station-label-tooltip.top::before {
+  border-top-color: #8b7355;
+}
+
+/* 旧样式保留兼容性（如果之前有使用） */
 .leaflet-popup.hover-popup {
-  pointer-events: none; /* 防止悬停弹窗干扰交互 */
+  pointer-events: none;
 }
 
 .leaflet-popup.hover-popup .leaflet-popup-content-wrapper {
@@ -138,10 +194,9 @@ body {
 }
 
 .leaflet-popup.hover-popup .leaflet-popup-tip-container {
-  display: none; /* 隐藏箭头 */
+  display: none;
 }
 
-/* 悬停弹窗中的表格样式 */
 .leaflet-popup.hover-popup .feature-popup table {
   width: 100%;
   border-collapse: collapse;
