@@ -540,24 +540,95 @@ document.addEventListener("DOMContentLoaded", function () {
     return data;
   }
 
+  /**
+   * rewindRingStart - 起始点旋转：
+   * 将多边形环的起始点旋转到经度绝对值最小（最远离±180°）的点。
+   * 这样 fixRingCoords 的展开算法从"最安全"的位置出发，
+   * 避免起点落在±180°附近时产生的边界歧义。
+   * 仅对 Polygon/MultiPolygon 的环有意义（LineString 不需要）。
+   * 注意：环的首尾点相同（闭合环）时保持闭合。
+   */
+  function rewindRingStart(coords) {
+    if (!coords || coords.length < 2) return coords;
+    // 判断是否是闭合环（首尾坐标相同）
+    const n = coords.length;
+    const isClosed =
+      coords[0][0] === coords[n - 1][0] &&
+      coords[0][1] === coords[n - 1][1];
+    // 实际点列（去掉闭合重复的末点）
+    const pts = isClosed ? coords.slice(0, n - 1) : coords.slice();
+    // 找到经度绝对值最小的点作为新起点
+    let bestIdx = 0;
+    let bestAbs = Math.abs(pts[0][0]);
+    for (let i = 1; i < pts.length; i++) {
+      // 规范化到 (-180, 180] 后比较
+      const lng = ((((pts[i][0] + 180) % 360) + 360) % 360) - 180;
+      if (Math.abs(lng) < bestAbs) {
+        bestAbs = Math.abs(lng);
+        bestIdx = i;
+      }
+    }
+    if (bestIdx === 0) return coords; // 已是最优起点，不旋转
+    // 旋转数组
+    const rotated = pts.slice(bestIdx).concat(pts.slice(0, bestIdx));
+    // 恢复闭合
+    if (isClosed) rotated.push(rotated[0].slice());
+    return rotated;
+  }
+
+  /**
+   * fixRingCoords - "展开"策略：消除相邻点之间的 >180° 跳变。
+   * 结果坐标可能超出 [-180, 180]，这是允许的，Leaflet 能正确处理
+   * 超出范围的坐标（将其渲染在对应的世界副本上）。
+   */
   function fixRingCoords(coords) {
     if (!coords || coords.length === 0) return coords;
-    const result = [coords[0].slice()];
+    // 第一个点规范化到 (-180, 180]
+    const first = coords[0].slice();
+    first[0] = ((((first[0] + 180) % 360) + 360) % 360) - 180;
+    const result = [first];
     for (let i = 1; i < coords.length; i++) {
-      const prev = result[i - 1],
-        cur = coords[i].slice();
+      const prev = result[i - 1];
+      const cur = coords[i].slice();
+      // 计算最短路径跳变并补偿——允许 cur[0] 超出 ±180
       let dLng = cur[0] - prev[0];
-      while (dLng > 180) {
-        cur[0] -= 360;
-        dLng = cur[0] - prev[0];
-      }
-      while (dLng < -180) {
-        cur[0] += 360;
-        dLng = cur[0] - prev[0];
-      }
+      dLng = ((dLng % 360) + 360) % 360; // 规范到 [0, 360)
+      if (dLng > 180) dLng -= 360;        // 取最短路径 → (-180, 180]
+      cur[0] = prev[0] + dLng;
       result.push(cur);
     }
     return result;
+  }
+
+  /**
+   * 计算多边形环的有符号面积（Shoelace 公式）。
+   * 正值 = 逆时针（GeoJSON 外环正确方向）；负值 = 顺时针（需要反转）。
+   * 注意：对于跨180°的展开坐标同样有效，因为 Shoelace 公式与绝对坐标无关。
+   */
+  function ringSignedArea(coords) {
+    let area = 0;
+    const n = coords.length;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      area += (coords[j][0] + coords[i][0]) * (coords[j][1] - coords[i][1]);
+    }
+    return area / 2;
+  }
+
+  /**
+   * 按照 GeoJSON RFC 7946 右手定则修正多边形环方向：
+   * - 外环（rings[0]）必须是逆时针（signedArea > 0）
+   * - 内环（holes，rings[1+]）必须是顺时针（signedArea < 0）
+   * 如果方向错误则原地反转。
+   */
+  function fixRingWinding(rings) {
+    return rings.map(function (ring, idx) {
+      const area = ringSignedArea(ring);
+      const isOuter = idx === 0;
+      // 外环：area 应 > 0（逆时针）；内环：area 应 < 0（顺时针）
+      if (isOuter && area < 0) return ring.slice().reverse();
+      if (!isOuter && area > 0) return ring.slice().reverse();
+      return ring;
+    });
   }
 
   function fixGeometryCoords(geometry) {
@@ -570,11 +641,20 @@ document.addEventListener("DOMContentLoaded", function () {
         geometry.coordinates = geometry.coordinates.map(fixRingCoords);
         break;
       case "Polygon":
-        geometry.coordinates = geometry.coordinates.map(fixRingCoords);
+        // 处理链：① 起始点旋转（远离±180°）→ ② 展开坐标 → ③ 修正绕向
+        geometry.coordinates = fixRingWinding(
+          geometry.coordinates.map(function (ring) {
+            return fixRingCoords(rewindRingStart(ring));
+          })
+        );
         break;
       case "MultiPolygon":
         geometry.coordinates = geometry.coordinates.map(function (rings) {
-          return rings.map(fixRingCoords);
+          return fixRingWinding(
+            rings.map(function (ring) {
+              return fixRingCoords(rewindRingStart(ring));
+            })
+          );
         });
         break;
       default:
