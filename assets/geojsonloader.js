@@ -1,9 +1,20 @@
-document.addEventListener("DOMContentLoaded", function () {
-  // 检查map和L是否存在
-  if (typeof L === "undefined" || typeof map === "undefined") {
-    alert("依赖库加载失败，请检查脚本是否正常执行！");
-    return;
+(function () {
+  // 检查map和L是否存在（延迟检查，等内联脚本执行完map就绪）
+  function waitForMap(callback, attempts) {
+    if (attempts === undefined) attempts = 50;
+    if (typeof L === "undefined" || typeof map === "undefined") {
+      if (attempts > 0) {
+        setTimeout(function () { waitForMap(callback, attempts - 1); }, 10);
+      } else {
+        console.warn("[GeoJSONLoader] map对象未就绪，跳过初始化");
+      }
+      return;
+    }
+    callback();
   }
+  waitForMap(function () {
+    // 等待最多 500ms（50次 x 10ms），内联脚本应在此之前执行完
+    // 如果 map 仍未就绪，说明 HTML 结构异常
 
   // ========== 防抖函数 + 全局缩放锁 ==========
   function debounce(func, wait) {
@@ -2181,14 +2192,13 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // 在图层面板初始化时同时初始化搜索
-  var _origInitGeoJsonLayer = window.initGeoJsonLayer;
-  window.addEventListener("load", initSearch);
-
-  // ========== 初始化 ==========
+  // ========== 初始化（直接在 map 就绪后执行，不等在线地图 load 事件）==========
   function initGeoJsonLayer() {
     generateLayerItems();
+    initSearch();
   }
 
-  window.addEventListener("load", initGeoJsonLayer);
-});
+  initGeoJsonLayer();
+  }); // 闭合 waitForMap 回调
+  })(); // 闭合并调用 IIFE
+
