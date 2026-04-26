@@ -193,6 +193,7 @@ body {
   transition:
     border-color 0.2s,
     background 0.2s;
+  appearance: none;
   -webkit-appearance: none;
 }
 
