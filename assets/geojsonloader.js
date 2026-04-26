@@ -688,6 +688,8 @@
 
     // 创建聚类组
     function createClusterGroup() {
+      // 获取该图层的默认颜色
+      const layerColor = layerColorMap[checkboxId] || "#8B6914";
       return L.markerClusterGroup({
         maxClusterRadius: 50,
         spiderfyOnMaxZoom: true,
@@ -699,7 +701,7 @@
           const count = cluster.getChildCount();
           const size = count < 10 ? "small" : count < 100 ? "medium" : "large";
           return L.divIcon({
-            html: `<div class="cluster-icon cluster-${size}">${count}</div>`,
+            html: `<div class="cluster-icon cluster-${size}" style="background:${layerColor};">${count}</div>`,
             className: "cluster-marker",
             iconSize: L.point(40, 40),
           });
