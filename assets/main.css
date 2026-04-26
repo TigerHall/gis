@@ -175,7 +175,103 @@ body {
   border-top-color: #8b7355;
 }
 
-/* 旧样式保留兼容性（如果之前有使用） */
+/* ========== 搜索框（侧边栏内） ========== */
+.search-bar {
+  padding: 0 5px 8px;
+}
+
+.search-bar input[type="text"] {
+  width: 100%;
+  padding: 7px 12px;
+  font-size: 13px;
+  border: 1px solid #99cc99;
+  border-radius: 16px;
+  background: #f8fcf8;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+  outline: none;
+  color: #333;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  -webkit-appearance: none;
+}
+
+.search-bar input[type="text"]:focus {
+  border-color: #4a8c4a;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+}
+
+.search-results {
+  display: none;
+  background: #fff;
+  border: 1px solid #c8e0c8;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 260px;
+  overflow-y: auto;
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  z-index: 2000;
+}
+
+.search-results.open {
+  display: block;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background: #f0f7f0;
+}
+
+.search-result-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #fff;
+  background: #6aaa6a;
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+.search-result-text {
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.search-result-text mark {
+  background: #ffe066;
+  color: #333;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.search-empty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+}
+
 .leaflet-popup.hover-popup {
   pointer-events: none;
 }

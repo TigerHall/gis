@@ -146,6 +146,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const geoJsonBasePath = "./assets/geojson/";
   const layerCache = {};
   const layerColorMap = {};
+  // ========== 搜索注册表 ==========
+  // 每条：{ layerLabel, checkboxId, fileName, features }
+  const searchRegistry = [];
   // ========== 新增：颜色模式管理 ==========
   // colorMode[checkboxId] = "single" | "sequential" | "field"
   // fieldKey[checkboxId] = 属性字段名（仅 field 模式）
@@ -1083,6 +1086,22 @@ document.addEventListener("DOMContentLoaded", function () {
           } catch (e) {}
         }
         updateLayerItemStatus(checkboxId, "loaded");
+
+        // 注册到搜索注册表（去重，同一 checkboxId 只注册一次）
+        if (
+          !searchRegistry.find(function (e) {
+            return e.checkboxId === checkboxId;
+          })
+        ) {
+          const cb = document.getElementById(checkboxId);
+          const layerLabel = cb ? cb.dataset.layerName || fileName : fileName;
+          searchRegistry.push({
+            layerLabel: layerLabel,
+            checkboxId: checkboxId,
+            fileName: fileName,
+            features: fixedData.features || [],
+          });
+        }
       })
       .catch(function (error) {
         console.error("GeoJSON加载失败：", error);
@@ -1887,9 +1906,284 @@ document.addEventListener("DOMContentLoaded", function () {
     layerItem.appendChild(locateBtn);
     layerItem.appendChild(removeBtn);
     userGroup.appendChild(layerItem);
+
+    // 注册到搜索注册表
+    if (
+      !searchRegistry.find(function (e) {
+        return e.checkboxId === uid;
+      })
+    ) {
+      searchRegistry.push({
+        layerLabel: fileName,
+        checkboxId: uid,
+        fileName: fileName,
+        features: fixedData.features || [],
+      });
+    }
   }
 
   window.addUserLayer = addUserLayer;
+
+  // ========== 搜索功能 ==========
+  function initSearch() {
+    var input = document.getElementById("searchInput");
+    var resultsBox = document.getElementById("searchResults");
+    if (!input || !resultsBox) return;
+
+    // 把 feature.properties 序列化为字符串（忽略坐标，仅用 properties）
+    function featureToSearchStr(f) {
+      if (!f || !f.properties) return "";
+      return JSON.stringify(f.properties).toLowerCase();
+    }
+
+    // 取 properties 前几个值拼成摘要（跳过内部字段，最多取 4 个非空值）
+    var INTERNAL_SKIP = new Set(["_featureindex"]);
+    function buildSummary(props) {
+      if (!props) return "";
+      var parts = [];
+      var keys = Object.keys(props);
+      for (var i = 0; i < keys.length && parts.length < 4; i++) {
+        var k = keys[i];
+        if (INTERNAL_SKIP.has(k.toLowerCase())) continue;
+        var v = props[k];
+        if (v === null || v === undefined || v === "") continue;
+        parts.push(String(v));
+      }
+      return parts.join("  |  ");
+    }
+
+    // 执行搜索：遍历所有已注册图层，全字段模糊匹配
+    function runSearch(query) {
+      var q = query.toLowerCase().trim();
+      var results = []; // [{ label, summary, feature, entryIndex }]
+
+      searchRegistry.forEach(function (entry, entryIndex) {
+        // 只搜索已勾选的图层
+        var cb = document.getElementById(entry.checkboxId);
+        if (!cb || !cb.checked) return;
+        entry.features.forEach(function (f) {
+          if (featureToSearchStr(f).includes(q)) {
+            results.push({
+              label: entry.layerLabel,
+              summary: buildSummary(f.properties),
+              feature: f,
+              checkboxId: entry.checkboxId,
+            });
+          }
+        });
+      });
+
+      return results;
+    }
+
+    // 从 coordinates 提取 Leaflet LatLng 数组（归一化经度）
+    function extractCoords(geom) {
+      var raw = geom.coordinates;
+      if (!raw || raw.length === 0) return [];
+      // 坐标可能是 [lng, lat] 或嵌套数组
+      var result = [];
+      var flat = [];
+      function normalize(v) {
+        return (((v % 360) + 540) % 360) - 180;
+      }
+      if (geom.type === "Point") {
+        return [
+          [
+            normalize(raw[1] === undefined ? raw[0] : raw[1]),
+            normalize(raw[1] === undefined ? raw[1] : raw[0]),
+          ],
+        ];
+      }
+      // 其余类型：尝试展开成 [lat, lng] 对列表
+      function walk(arr) {
+        if (!Array.isArray(arr)) return;
+        if (typeof arr[0] === "number" && typeof arr[1] === "number") {
+          // [lng, lat] → [lat, lng]
+          flat.push([arr[1], normalize(arr[0])]);
+        } else {
+          arr.forEach(walk);
+        }
+      }
+      walk(raw);
+      return flat;
+    }
+
+    // 飞到某个 feature
+    function flyToFeature(feature) {
+      if (!feature || !feature.geometry) return;
+      var geom = feature.geometry;
+      var type = (geom.type || "").toLowerCase();
+      var isPoint = type === "point" || type === "multipoint";
+      var coords = extractCoords(geom);
+
+      try {
+        if (isPoint && coords.length > 0) {
+          // 点要素：飞到该点，保持当前缩放或最低 8 级
+          map.setView(coords[0], Math.max(map.getZoom(), 8), { animate: true });
+        } else if (coords.length > 0) {
+          // 线/面要素：fitBounds 自动缩放至要素范围
+          var latlngs = coords.map(function (c) {
+            return L.latLng(c[0], c[1]);
+          });
+          var bounds = L.latLngBounds(latlngs);
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, {
+              padding: [50, 50],
+              maxZoom: 14,
+              animate: true,
+            });
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 渲染结果列表
+    function renderResults(results, query) {
+      resultsBox.innerHTML = "";
+      if (results.length === 0) {
+        resultsBox.innerHTML = '<div class="search-empty">无匹配结果</div>';
+        resultsBox.classList.add("open");
+        return;
+      }
+
+      // 最多展示 30 条，超出提示
+      var MAX = 30;
+      var shown = results.slice(0, MAX);
+      shown.forEach(function (r) {
+        var item = document.createElement("div");
+        item.className = "search-result-item";
+
+        var tag = document.createElement("span");
+        tag.className = "search-result-tag";
+        tag.textContent = r.label;
+
+        var text = document.createElement("span");
+        text.className = "search-result-text";
+        // 高亮匹配词
+        var raw = r.summary || "(无属性)";
+        var idx = raw.toLowerCase().indexOf(query.toLowerCase().trim());
+        if (idx >= 0 && query.trim()) {
+          var before = raw.slice(0, idx);
+          var match = raw.slice(idx, idx + query.trim().length);
+          var after = raw.slice(idx + query.trim().length);
+          text.innerHTML =
+            escapeHtml(before) +
+            "<mark>" +
+            escapeHtml(match) +
+            "</mark>" +
+            escapeHtml(after);
+        } else {
+          text.textContent = raw;
+        }
+
+        item.appendChild(tag);
+        item.appendChild(text);
+        item.addEventListener("click", function () {
+          var feat = r.feature;
+          var cbId = r.checkboxId;
+          var state = highlightState[cbId];
+          if (state) {
+            // 直接触发双击事件，让 Leaflet 执行完整的 dblclick 处理逻辑
+            state.geoLayers.forEach(function (gl) {
+              gl.eachLayer(function (layer) {
+                if (
+                  layer.feature &&
+                  layer.feature._featureIndex === feat._featureIndex
+                ) {
+                  // 获取要素的中心/首点坐标
+                  var center;
+                  try {
+                    if (layer.getBounds) {
+                      var b = layer.getBounds();
+                      if (b.isValid()) center = b.getCenter();
+                    }
+                  } catch (e) {}
+                  if (!center && layer.getLatLng) center = layer.getLatLng();
+                  if (!center && feat.geometry && feat.geometry.coordinates) {
+                    var coords = feat.geometry.coordinates;
+                    if (feat.geometry.type === "Point") {
+                      center = L.latLng(coords[1], coords[0]);
+                    }
+                  }
+                  // 构造双击事件并触发（propagate=true 让事件正常冒泡）
+                  var dblclickEvent = {
+                    latlng: center || map.getCenter(),
+                    layer: layer,
+                    originalEvent: null,
+                  };
+                  layer.fire("dblclick", dblclickEvent, true);
+                }
+              });
+            });
+          }
+          resultsBox.classList.remove("open");
+          input.blur();
+        });
+        resultsBox.appendChild(item);
+      });
+
+      if (results.length > MAX) {
+        var more = document.createElement("div");
+        more.className = "search-empty";
+        more.textContent =
+          "还有 " + (results.length - MAX) + " 条，请精确关键词";
+        resultsBox.appendChild(more);
+      }
+
+      resultsBox.classList.add("open");
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    // 输入事件
+    var searchTimer = null;
+    input.addEventListener("input", function () {
+      clearTimeout(searchTimer);
+      var q = this.value.trim();
+      if (!q) {
+        resultsBox.innerHTML = "";
+        resultsBox.classList.remove("open");
+        return;
+      }
+      if (q.length < 1) return;
+      searchTimer = setTimeout(function () {
+        var results = runSearch(q);
+        renderResults(results, q);
+      }, 150);
+    });
+
+    // 获得焦点时，若有内容则重新显示
+    input.addEventListener("focus", function () {
+      if (this.value.trim() && resultsBox.children.length > 0) {
+        resultsBox.classList.add("open");
+      }
+    });
+
+    // 点击外部关闭
+    document.addEventListener("click", function (e) {
+      var bar = document.getElementById("searchBar");
+      if (bar && !bar.contains(e.target)) {
+        resultsBox.classList.remove("open");
+      }
+    });
+
+    // ESC 关闭
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        resultsBox.classList.remove("open");
+        this.blur();
+      }
+    });
+  }
+
+  // 在图层面板初始化时同时初始化搜索
+  var _origInitGeoJsonLayer = window.initGeoJsonLayer;
+  window.addEventListener("load", initSearch);
 
   // ========== 初始化 ==========
   function initGeoJsonLayer() {
