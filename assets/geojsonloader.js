@@ -185,6 +185,40 @@
   // 默认标签字段
   const DEFAULT_LABEL_FIELD = "Name";
   const DEFAULT_MIN_ZOOM = 7;
+  // 聚类开关：全局开关控制
+  let clusterEnabled = true; // 由侧边栏开关控制
+
+  // ========== SVG 图标工厂（使用 assets/images/ 下的 SVG）==========
+  // 火山图标：三角形山峰，带填充色
+  function createVolcanoIcon(color) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">' +
+      '<polygon points="10,2 18,18 2,18" fill="' + color + '" fill-opacity="0.85" stroke="white" stroke-width="1.5" stroke-opacity="0.9"/>' +
+      '<polygon points="10,6 14,14 6,14" fill="' + color + '" fill-opacity="0.5" stroke="none"/>' +
+      '</svg>';
+    return L.divIcon({
+      html: svg,
+      className: "",
+      iconSize: [20, 20],
+      iconAnchor: [10, 18],
+      popupAnchor: [0, -18],
+    });
+  }
+
+  // 热点图标：放射状星形/热力点，带填充色
+  function createHotspotIcon(color) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">' +
+      '<circle cx="9" cy="9" r="3.5" fill="' + color + '" fill-opacity="0.9" stroke="white" stroke-width="1.2"/>' +
+      '<circle cx="9" cy="9" r="6" fill="none" stroke="' + color + '" stroke-opacity="0.5" stroke-width="1"/>' +
+      '<circle cx="9" cy="9" r="8.5" fill="none" stroke="' + color + '" stroke-opacity="0.25" stroke-width="0.8"/>' +
+      '</svg>';
+    return L.divIcon({
+      html: svg,
+      className: "",
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+      popupAnchor: [0, -9],
+    });
+  }
 
   // ========== 颜色工具 ==========
   // 检测 GeoJSON 中的主要几何类型（统计最多的一种）
@@ -675,21 +709,39 @@
       `[DEBUG] buildGeoJsonLayerGroup: ${fileName}, features: ${geojsonData.features?.length}`,
     );
 
+    // 点要素类型检测
+    const isPointType = (() => {
+      const firstFeature = geojsonData.features?.find((f) => f.geometry);
+      const gType = (firstFeature?.geometry?.type || "").toLowerCase();
+      return gType === "point" || gType === "multipoint";
+    })();
     // 判断是否需要聚类：
-    // 1. forceCluster=true（点要素）→ 聚类
-    // 2. 火山、热点 → 不聚类
-    // 3. 其他（非点要素）→ 不聚类
+    // 1. 非点要素 → 不聚类
+    // 2. 全局聚类开关关闭 → 不聚类
+    // 3. 其他 → 聚类
     const isNoCluster =
-      NO_CLUSTER_FILES.has(fileName) || forceCluster === false;
-    // 标签配置：使用配置的字段或默认 Name
+      !isPointType || !clusterEnabled;
+    // 标签配置：火山用 NAME，热点用 geodesc，其他用配置或默认 Name
     const cfg = STATION_LABEL_CONFIG[fileName];
-    const labelField = cfg ? cfg.field : DEFAULT_LABEL_FIELD;
+    let labelField = cfg ? cfg.field : DEFAULT_LABEL_FIELD;
+    if (fileName === "volcanos.json") {
+      labelField = "NAME";
+    } else if (fileName === "hotspots.json") {
+      labelField = "geodesc";
+    }
+    // 是否为火山/热点图层（始终使用 SVG 图标）
+    const isVolcanoLayer = fileName === "volcanos.json";
+    const isHotspotLayer = fileName === "hotspots.json";
     const minZoom = DEFAULT_MIN_ZOOM;
 
     // 创建聚类组
     function createClusterGroup() {
       // 获取该图层的默认颜色
       const layerColor = layerColorMap[checkboxId] || "#8B6914";
+      // 是否为特殊图层（火山/热点），使用 SVG 聚类图标
+      const isVolcanoCluster = fileName === "volcanos.json";
+      const isHotspotCluster = fileName === "hotspots.json";
+
       return L.markerClusterGroup({
         maxClusterRadius: 50,
         spiderfyOnMaxZoom: true,
@@ -700,16 +752,70 @@
         iconCreateFunction: function (cluster) {
           const count = cluster.getChildCount();
           const size = count < 10 ? "small" : count < 100 ? "medium" : "large";
-          return L.divIcon({
-            html: `<div class="cluster-icon cluster-${size}" style="background:${layerColor};">${count}</div>`,
-            className: "cluster-marker",
-            iconSize: L.point(40, 40),
-          });
+
+          let clusterHtml;
+          if (isVolcanoCluster) {
+            // 火山聚类：三角形山峰 + 数字
+            const iconSize = size === "small" ? 44 : size === "medium" ? 52 : 60;
+            const scale = iconSize / 60;
+            const fontSize = count >= 100 ? 10 : count >= 10 ? 12 : 14;
+            clusterHtml =
+              `<svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 60 60">` +
+              `<polygon points="30,8 54,52 6,52" fill="${layerColor}" fill-opacity="0.9" stroke="white" stroke-width="2.5"/>` +
+              `<polygon points="30,16 44,46 16,46" fill="${layerColor}" fill-opacity="0.5" stroke="none"/>` +
+              `<text x="30" y="33" text-anchor="middle" dominant-baseline="central" fill="white" font-size="${fontSize}" font-weight="bold" font-family="Arial,sans-serif">${count}</text>` +
+              `</svg>`;
+            return L.divIcon({
+              html: `<div class="cluster-icon cluster-svg">${clusterHtml}</div>`,
+              className: "cluster-marker cluster-svg-marker",
+              iconSize: L.point(iconSize, iconSize),
+              iconAnchor: L.point(iconSize / 2, iconSize / 2),
+            });
+          } else if (isHotspotCluster) {
+            // 热点聚类：同心圆 + 数字
+            const iconSize = size === "small" ? 44 : size === "medium" ? 52 : 60;
+            const cx = iconSize / 2;
+            const cy = iconSize / 2;
+            const r1 = iconSize / 2 - 4;
+            const r2 = r1 * 0.65;
+            const r3 = r1 * 0.35;
+            const fontSize = count >= 100 ? 10 : count >= 10 ? 12 : 14;
+            clusterHtml =
+              `<svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 ${iconSize} ${iconSize}">` +
+              `<circle cx="${cx}" cy="${cy}" r="${r1}" fill="${layerColor}" fill-opacity="0.25" stroke="${layerColor}" stroke-width="2"/>` +
+              `<circle cx="${cx}" cy="${cy}" r="${r2}" fill="${layerColor}" fill-opacity="0.5" stroke="${layerColor}" stroke-width="1.5"/>` +
+              `<circle cx="${cx}" cy="${cy}" r="${r3}" fill="${layerColor}" fill-opacity="0.9"/>` +
+              `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="white" font-size="${fontSize}" font-weight="bold" font-family="Arial,sans-serif">${count}</text>` +
+              `</svg>`;
+            return L.divIcon({
+              html: `<div class="cluster-icon cluster-svg">${clusterHtml}</div>`,
+              className: "cluster-marker cluster-svg-marker",
+              iconSize: L.point(iconSize, iconSize),
+              iconAnchor: L.point(iconSize / 2, iconSize / 2),
+            });
+          } else {
+            // 其他点：默认圆形聚类图标
+            return L.divIcon({
+              html: `<div class="cluster-icon cluster-${size}" style="background:${layerColor};">${count}</div>`,
+              className: "cluster-marker",
+              iconSize: L.point(40, 40),
+            });
+          }
         },
       });
     }
 
     // 创建带标签的点标记（缩放 >=7 显示标签）
+    // ========== 点要素标记工厂函数 ==========
+
+    /**
+     * 创建带标签的圆形点标记
+     * @param {object} feature - GeoJSON feature
+     * @param {L.LatLng} latlng - 坐标
+     * @param {string} color - 颜色
+     * @param {string} labelText - 标签文字
+     * @returns {L.Marker}
+     */
     function createLabeledMarker(feature, latlng, color, labelText) {
       const currentZoom = map.getZoom();
       const showLabel = currentZoom >= minZoom;
@@ -755,25 +861,104 @@
       return marker;
     }
 
-    // 创建热点/火山标记（最轻量方式，无标签）
-    function createPointMarker(feature, latlng, color, idx) {
-      let marker;
-      if (fileName === "hotspots.json") {
-        // 热点：marker + 五角星
-        marker = L.marker(latlng, { icon: createStarIcon(color) });
-      } else {
-        // 火山：原生 circleMarker（最轻量）
-        marker = L.circleMarker(
-          latlng,
-          getGeoJsonStyle(feature, checkboxId, fileName, idx),
-        );
-      }
+    /**
+     * 创建带标签的 SVG 图标标记（通用函数，火山/热点通用）
+     * @param {function} svgIconFn - SVG 图标工厂函数，如 createVolcanoIcon, createHotspotIcon
+     * @param {object} feature - GeoJSON feature
+     * @param {L.LatLng} latlng - 坐标
+     * @param {string} color - 颜色
+     * @param {string} labelText - 标签文字
+     * @returns {L.Marker}
+     */
+    function createSvgLabeledMarker(svgIconFn, feature, latlng, color, labelText) {
+      const currentZoom = map.getZoom();
+      const showLabel = currentZoom >= minZoom;
 
-      const content = buildPopupContent(feature, fileName);
-      if (content) {
-        marker.bindPopup(content, { maxWidth: 300 });
-      }
+      const svgStr = svgIconFn(color).options.html;
+      const html = `<div class="station-marker-wrapper">
+        <span class="station-icon-svg">${svgStr}</span>
+        <span class="station-label ${showLabel ? "" : "hidden"}">${labelText}</span>
+      </div>`;
+
+      const marker = L.marker(latlng, {
+        icon: L.divIcon({
+          html: html,
+          className: "station-icon-container",
+          iconSize: [120, 20],
+          iconAnchor: [5, 10],
+          popupAnchor: [8, -5],
+        }),
+        interactive: true,
+      });
+
+      // 缩放变化时更新标签显示
+      marker._updateLabelVisibility = function () {
+        const zoom = map.getZoom();
+        const el = marker.getElement();
+        if (el) {
+          const labelSpan = el.querySelector(".station-label");
+          if (labelSpan) {
+            if (zoom >= minZoom) {
+              labelSpan.classList.remove("hidden");
+            } else {
+              labelSpan.classList.add("hidden");
+            }
+          }
+        }
+      };
+
       return marker;
+    }
+
+    /**
+     * 创建无标签的纯图标标记（通用函数）
+     * @param {L.LatLng} latlng - 坐标
+     * @param {string} color - 颜色
+     * @param {function} [iconFn] - 可选的图标工厂函数，默认使用圆形点
+     * @returns {L.Marker}
+     */
+    function createPureIconMarker(latlng, color, iconFn) {
+      if (iconFn) {
+        return L.marker(latlng, { icon: iconFn(color) });
+      }
+      return L.marker(latlng, { icon: createPointIcon(color, 8) });
+    }
+
+    /**
+     * 根据图层类型获取点标记
+     * @param {object} feature - GeoJSON feature
+     * @param {L.LatLng} latlng - 坐标
+     * @param {string} color - 颜色
+     * @param {string} labelText - 标签文字（如果有）
+     * @param {boolean} isVolcanoLayer - 是否为火山图层
+     * @param {boolean} isHotspotLayer - 是否为热点图层
+     * @returns {L.Marker}
+     */
+    function createPointMarkerByType(feature, latlng, color, labelText, isVolcanoLayer, isHotspotLayer) {
+      // 火山图层
+      if (isVolcanoLayer) {
+        if (labelText) {
+          return createSvgLabeledMarker(createVolcanoIcon, feature, latlng, color, labelText);
+        }
+        return createPureIconMarker(latlng, color, createVolcanoIcon);
+      }
+      // 热点图层
+      if (isHotspotLayer) {
+        if (labelText) {
+          return createSvgLabeledMarker(createHotspotIcon, feature, latlng, color, labelText);
+        }
+        return createPureIconMarker(latlng, color, createHotspotIcon);
+      }
+      // 普通点图层
+      if (labelText) {
+        return createLabeledMarker(feature, latlng, color, labelText);
+      }
+      return createPointMarker(feature, latlng, color);
+    }
+
+    // 保留原有函数以兼容外部调用
+    function createPointMarker(feature, latlng, color, idx) {
+      return createPureIconMarker(latlng, color);
     }
 
     const offsets = [-360, 0, 360];
@@ -828,14 +1013,15 @@
               ? feature.properties[labelField] || null
               : null;
 
-            let marker;
-            if (labelText) {
-              marker = createLabeledMarker(feature, latlng, color, labelText);
-            } else {
-              marker = createPointMarker(feature, latlng, color);
-            }
+            // 使用统一函数创建标记
+            const marker = createPointMarkerByType(
+              feature, latlng, color, labelText,
+              isVolcanoLayer, isHotspotLayer
+            );
             marker.feature = feature;
-
+            // 为 SVG 图标绑定弹窗
+            const content = buildPopupContent(feature, fileName);
+            if (content) { marker.bindPopup(content, { maxWidth: 300 }); }
             marker.on("click", function (e) {
               const hlStyle = {
                 color: "#ffff00",
@@ -886,7 +1072,7 @@
         clusterGroups.push(clusterGroup);
         geoLayers.push(clusterGroup);
       } else {
-        // 【面/线要素 + 热点/火山】不使用聚类，带交互事件
+        // 【面/线要素 + 点要素（聚类关闭时）】统一渲染
         const geoLayer = L.geoJSON(shifted, {
           pointToLayer: function (feature, latlng) {
             const idx = feature._featureIndex || 0;
@@ -896,10 +1082,17 @@
               fileName,
               idx,
             );
+            const labelText = feature.properties
+              ? feature.properties[labelField] || null
+              : null;
 
-            // 热点/火山：最轻量方式（无标签）
-            const marker = createPointMarker(feature, latlng, color, idx);
+            // 使用统一函数创建标记
+            const marker = createPointMarkerByType(
+              feature, latlng, color, labelText,
+              isVolcanoLayer, isHotspotLayer
+            );
             marker.feature = feature;
+            marker.bindPopup(buildPopupContent(feature, fileName), { maxWidth: 300 });
             return marker;
           },
           style: function (feature) {
@@ -1051,6 +1244,9 @@
         console.log(
           `[DEBUG] ${fileName}: 加载成功, features: ${fixedData.features?.length || 0}`,
         );
+        // 缓存几何类型，供 rebuildLoadedPointLayers 使用
+        const geomType = detectMainGeomType(fixedData);
+        _geomTypeCache[fileName] = geomType;
         // 根据几何类型和文件名设置默认颜色模式（仅在未设置时）：
         // 热点/火山文件保持 single（红色五角星/圆形）
         // 面要素（Polygon/MultiPolygon）默认 sequential（多颜色填充）
@@ -2194,10 +2390,59 @@
     });
   }
 
+  // ========== 聚类开关初始化 ==========
+  function initClusterToggle() {
+    var toggle = document.getElementById("clusterToggle");
+    if (!toggle) return;
+    // 读取本地存储的偏好（默认 true）
+    var saved = localStorage.getItem("clusterEnabled");
+    if (saved !== null) {
+      clusterEnabled = saved === "true";
+      toggle.checked = clusterEnabled;
+    } else {
+      clusterEnabled = true;
+    }
+    // 开关切换时：重建所有已加载的点要素图层
+    toggle.addEventListener("change", function () {
+      clusterEnabled = this.checked;
+      localStorage.setItem("clusterEnabled", String(clusterEnabled));
+      // 重建所有已加载的点图层（仅已勾选的）
+      rebuildLoadedPointLayers();
+    });
+  }
+
+  // 重建所有已加载的点图层（用于聚类开关切换）
+  function rebuildLoadedPointLayers() {
+    document.querySelectorAll('.layer-item input[type="checkbox"]').forEach(function (cb) {
+      if (cb.checked) {
+        var checkboxId = cb.id;
+        var filePath = cb.value;
+        var fileName = filePath.split("/").pop();
+        // 仅重建点图层
+        var mainType = detectMainGeomTypeInCache(fileName) || "";
+        var isPoint = mainType === "point" || mainType === "multipoint";
+        if (isPoint) {
+          // 强制重新加载（清除旧图层，重新 buildGeoJsonLayerGroup）
+          reloadLayerWithNewMode(checkboxId, colorMode[checkboxId],
+            layerColorMap[checkboxId],
+            fieldKey[checkboxId]);
+        }
+      }
+    });
+  }
+
+  // 从已加载的固定数据中检测几何类型（缓存）
+  var _geomTypeCache = {};
+  function detectMainGeomTypeInCache(fileName) {
+    if (_geomTypeCache[fileName]) return _geomTypeCache[fileName];
+    return null;
+  }
+
   // ========== 初始化（直接在 map 就绪后执行，不等在线地图 load 事件）==========
   function initGeoJsonLayer() {
     generateLayerItems();
     initSearch();
+    initClusterToggle();
   }
 
   initGeoJsonLayer();

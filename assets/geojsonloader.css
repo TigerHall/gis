@@ -413,10 +413,11 @@
 }
 
 /* ========== 站点标签样式 ========== */
-/* 站点图标容器 */
+/* 站点图标容器 - Leaflet divIcon 默认样式会干扰透明背景 */
 .station-icon-container {
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* 组合标记：圆点 + 标签 */
@@ -425,17 +426,6 @@
   align-items: center;
   gap: 4px;
   pointer-events: none; /* 让点击穿透到 marker 本身 */
-}
-
-/* 站点圆点 */
-.station-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1.5px solid;
-  border-color: inherit;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  flex-shrink: 0;
 }
 
 /* 站点标签文字 */
@@ -464,6 +454,29 @@
   padding: 0;
   margin: 0;
   overflow: hidden;
+}
+
+/* SVG 图标嵌入标签容器 */
+.station-icon-svg {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.station-icon-svg svg {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+}
+
+/* 站点圆点 */
+.station-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  border-color: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 /* ========== 聚类样式 ========== */
@@ -499,4 +512,24 @@
   width: 46px;
   height: 46px;
   font-size: 14px;
+}
+
+/* SVG 聚类图标样式 */
+.cluster-svg-marker {
+  background: transparent;
+}
+
+.cluster-icon.cluster-svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border-radius: 0;
+}
+
+.cluster-icon.cluster-svg svg {
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
