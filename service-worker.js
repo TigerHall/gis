@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.3.7";
+const CACHE_NAME = "v1.3.9";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -27,6 +27,9 @@ const STATIC_ASSETS = [
   "./assets/geojsonloader.js",
   // 图标
   "./assets/images/icon.svg",
+  // 截图
+  "./assets/images/screenshot-desktop.jpg",
+  "./assets/images/screenshot-mobile.jpg",
 ];
 
 // 安装阶段：只缓存小文件（快速）
@@ -80,8 +83,9 @@ self.addEventListener("fetch", (event) => {
       // 未命中，请求网络
       return fetch(event.request)
         .then((networkResponse) => {
-          // 所有同源请求都动态缓存
-          if (networkResponse.ok) {
+          // 动态缓存：只缓存静态资源，跳过 .gz 数据文件（由 GzIdbLoader 管理）
+          const isGzFile = /\.gz$/.test(url);
+          if (networkResponse.ok && !isGzFile) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseToCache);

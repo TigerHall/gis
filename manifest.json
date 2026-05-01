@@ -1,15 +1,69 @@
 {
   "name": "YuGroup WebGIS",
   "short_name": "YuGIS",
+  "description": "海洋地质一张图 WebGIS 应用",
   "start_url": "./",
-  "display": "standalone", 
+  "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#99cc99",
+  "orientation": "any",
   "icons": [
     {
       "src": "./assets/images/icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/images/icon/android/launchericon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/images/icon/android/launchericon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/images/icon/android/launchericon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/images/icon/android/launchericon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/images/icon/android/launchericon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/images/icon/icon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/images/icon/ios/512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./assets/images/screenshot-desktop.jpg",
+      "sizes": "1920x1080",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "桌面端视图"
+    },
+    {
+      "src": "./assets/images/screenshot-mobile.jpg",
+      "sizes": "390x844",
+      "type": "image/jpeg",
+      "label": "移动端视图"
     }
   ]
 }
