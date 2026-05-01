@@ -47,10 +47,10 @@
 
 ```
 gis/
-├── index.html          # 主页面
-├── app.js              # PWA 注册脚本
-├── service-worker.js   # Service Worker
+├── index.html          # 主页面（含 Service Worker 注册）
+├── service-worker.js   # Service Worker 离线缓存
 ├── manifest.json       # PWA 配置
+├── browserconfig.xml   # Windows 瓷砖配置
 └── assets/
     ├── geojsonloader.js    # 核心功能脚本
     ├── geojsonloader.css   # 样式
