@@ -15,6 +15,11 @@
       "purpose": "any"
     },
     {
+      "src": "./assets/images/icon/ios/512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
       "src": "./assets/images/icon/android/launchericon-72x72.png",
       "sizes": "72x72",
       "type": "image/png"
@@ -44,24 +49,19 @@
       "sizes": "any",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "./assets/images/icon/ios/512.png",
-      "sizes": "512x512",
-      "type": "image/png"
     }
   ],
   "screenshots": [
     {
       "src": "./assets/images/screenshot-desktop.jpg",
-      "sizes": "1920x1080",
+      "sizes": "373x188",
       "type": "image/jpeg",
       "form_factor": "wide",
       "label": "桌面端视图"
     },
     {
       "src": "./assets/images/screenshot-mobile.jpg",
-      "sizes": "390x844",
+      "sizes": "57x101",
       "type": "image/jpeg",
       "label": "移动端视图"
     }
