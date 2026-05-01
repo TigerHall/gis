@@ -29,10 +29,22 @@
     <link rel="stylesheet" href="./assets/main.css" />
 
     <!-- WPA -->
-    <!-- 静态兜底（优先被覆盖，仅JS失败时生效） -->
     <link rel="manifest" href="./manifest.json" />
-    <!-- 包含动态生成manifest.json的主脚本 -->
-    <script src="./app.js"></script>
+    <script>
+      // 检查浏览器是否支持Service Worker
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("service-worker.js")
+            .then((registration) => {
+              // Service Worker注册成功
+            })
+            .catch((error) => {
+              console.error("Service Worker注册失败：", error);
+            });
+        });
+      }
+    </script>
     <!-- 适配iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
