@@ -465,7 +465,7 @@
 
 .station-icon-svg svg {
   display: block;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
 }
 
 /* 站点圆点 */
@@ -480,56 +480,30 @@
 }
 
 /* ========== 聚类样式 ========== */
-.cluster-marker {
+
+/* 默认聚类图标：纯色圆形 + 白色边框 */
+.default-cluster-icon {
   background: transparent;
 }
-
-.cluster-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  border-radius: 50%;
-  font-weight: bold;
-  font-family: Arial, sans-serif;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  border: 2px solid white;
+.default-cluster-icon svg {
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-.cluster-small {
-  width: 30px;
-  height: 30px;
-  font-size: 11px;
-}
-
-.cluster-medium {
-  width: 38px;
-  height: 38px;
-  font-size: 13px;
-}
-
-.cluster-large {
-  width: 46px;
-  height: 46px;
-  font-size: 14px;
-}
-
-/* SVG 聚类图标样式 */
-.cluster-svg-marker {
+/* 火山聚类图标样式 */
+.volcano-cluster-icon {
   background: transparent;
 }
-
-.cluster-icon.cluster-svg {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  border-radius: 0;
+.volcano-cluster-icon svg {
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-.cluster-icon.cluster-svg svg {
+/* 热点聚类图标样式 */
+.hotspot-cluster-icon {
+  background: transparent;
+}
+.hotspot-cluster-icon svg {
   display: block;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }

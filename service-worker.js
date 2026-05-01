@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.3.6";
+const CACHE_NAME = "v1.3.7";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -7,16 +7,25 @@ const STATIC_ASSETS = [
   "./index.html",
   "./app.js",
   "./manifest.json",
+  // 样式
   "./assets/main.css",
-  "./assets/leaflet.js",
   "./assets/leaflet.css",
-  "./assets/geojsonloader.js",
+  "./assets/leaflet.markercluster.css",
+  "./assets/leaflet.markercluster.default.css",
   "./assets/geojsonloader.css",
   "./assets/Leaflet.MousePosition.css",
-  "./assets/Leaflet.MousePosition.js",
   "./assets/leaflet-geoman.css",
+  // 脚本（按依赖顺序）
+  "./assets/leaflet.js",
+  "./assets/geo-utils.js",
+  "./assets/Leaflet.GeoMarker.js",
+  "./assets/Leaflet.GzIdbLoader.js",
+  "./assets/leaflet.markercluster.js",
+  "./assets/Leaflet.MousePosition.js",
   "./assets/leaflet-geoman.js",
   "./assets/Leaflet.VectorGrid.bundled.min.js",
+  "./assets/geojsonloader.js",
+  // 图标
   "./assets/images/icon.svg",
 ];
 

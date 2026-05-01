@@ -7,6 +7,12 @@
     <!-- Leaflet核心库 -->
     <script src="./assets/leaflet.js"></script>
     <link rel="stylesheet" href="./assets/leaflet.css" />
+    <!-- 纯函数工具（无外部依赖） -->
+    <script src="./assets/geo-utils.js"></script>
+    <!-- Leaflet 插件：GeoMarker 图标工厂 -->
+    <script src="./assets/Leaflet.GeoMarker.js"></script>
+    <!-- Leaflet 插件：GZ 加载器 + IDB 缓存 -->
+    <script src="./assets/Leaflet.GzIdbLoader.js"></script>
     <!-- Leaflet点聚类插件 -->
     <link rel="stylesheet" href="./assets/leaflet.markercluster.css" />
     <link rel="stylesheet" href="./assets/leaflet.markercluster.default.css" />
@@ -54,7 +60,11 @@
         <div class="search-results" id="searchResults"></div>
       </div>
       <!-- 聚类开关 -->
-      <div class="cluster-toggle-bar" id="clusterToggleBar" title="关闭后所有点要素展开显示">
+      <div
+        class="cluster-toggle-bar"
+        id="clusterToggleBar"
+        title="关闭后所有点要素展开显示"
+      >
         <label class="cluster-toggle-label">
           <span class="cluster-toggle-text">点要素聚类</span>
           <input type="checkbox" id="clusterToggle" checked />
