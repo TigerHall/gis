@@ -54,14 +54,14 @@
   "screenshots": [
     {
       "src": "./assets/images/screenshot-desktop.jpg",
-      "sizes": "373x188",
+      "sizes": "3725x1875",
       "type": "image/jpeg",
       "form_factor": "wide",
       "label": "桌面端视图"
     },
     {
       "src": "./assets/images/screenshot-mobile.jpg",
-      "sizes": "57x101",
+      "sizes": "767x1362",
       "type": "image/jpeg",
       "label": "移动端视图"
     }
