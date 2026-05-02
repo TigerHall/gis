@@ -65,5 +65,20 @@
       "type": "image/jpeg",
       "label": "移动端视图"
     }
+  ],
+  "file_handlers": [
+    {
+      "action": "./index.html",
+      "accept": {
+        "application/geo+json": [
+          ".geojson",
+          ".json"
+        ],
+        "application/json": [
+          ".geojson",
+          ".json"
+        ]
+      }
+    }
   ]
 }

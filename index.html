@@ -416,6 +416,68 @@
         area = (Math.abs(area) * R * R) / 2;
         return area;
       }
+
+      // ========== 外部GeoJSON文件处理（统一走 geojsonloader 的 addUserLayer）==========
+      // 解析文件内容并调用 addUserLayer
+      function loadFileAsUserLayer(file) {
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          try {
+            var data = JSON.parse(ev.target.result);
+            if (typeof window.addUserLayer === "function") {
+              window.addUserLayer(data, file.name);
+              // 确保左侧面板打开，让用户看到新图层
+              var layerPanel = document.getElementById("layerPanel");
+              if (layerPanel) layerPanel.classList.add("active");
+            }
+          } catch (err) {
+            alert("GeoJSON 解析失败：" + file.name + "\n" + err.message);
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      // 暂存：geojsonloader.js 尚未就绪时收到的文件
+      var _pendingFiles = [];
+
+      // File Handling API：PWA 关联打开文件
+      if ("launchQueue" in window) {
+        launchQueue.setConsumer(function (launchParams) {
+          launchParams.files.forEach(function (fileHandle) {
+            fileHandle
+              .getFile()
+              .then(function (file) {
+                if (typeof window.addUserLayer === "function") {
+                  loadFileAsUserLayer(file);
+                } else {
+                  // geojsonloader 还未就绪，先暂存
+                  _pendingFiles.push(file);
+                }
+              })
+              .catch(function (err) {
+                console.error("读取文件失败：", err);
+              });
+          });
+        });
+      }
+
+      // 拖放支持：拖入地图页面
+      document.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      document.addEventListener("drop", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        Array.from(e.dataTransfer.files).forEach(function (file) {
+          if (/\.(geojson|json)$/i.test(file.name)) {
+            loadFileAsUserLayer(file);
+            // 确保左侧面板打开
+            var layerPanel = document.getElementById("layerPanel");
+            if (layerPanel) layerPanel.classList.add("active");
+          }
+        });
+      });
     </script>
     <!-- geojson图层加载器 -->
     <script src="./assets/geojsonloader.js"></script>

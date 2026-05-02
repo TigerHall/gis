@@ -245,7 +245,7 @@
     // ========== 高亮相关 ==========
     function clearHighlight(checkboxId) {
       const state = highlightState[checkboxId];
-      if (!state || state.featureId === null) return;
+      if (!state || state.featureId == null || !state.geoLayers) return;
       const featureId = state.featureId;
       state.geoLayers.forEach(function (geoLayer) {
         geoLayer.eachLayer(function (layer) {
@@ -266,7 +266,7 @@
     function applyHighlight(checkboxId, featureId, hlStyle) {
       clearHighlight(checkboxId);
       const state = highlightState[checkboxId];
-      if (!state) return;
+      if (!state || !state.geoLayers) return;
       state.featureId = featureId;
       state.geoLayers.forEach(function (geoLayer) {
         geoLayer.eachLayer(function (layer) {
@@ -678,6 +678,9 @@
     }
 
     function reloadLayerWithNewMode(checkboxId, newMode, newColor, newField) {
+      // 保存用户上传图层的数据
+      const savedData = userLayerGeoJson[checkboxId] || null;
+
       clearHighlight(checkboxId);
       const oldState = highlightState[checkboxId];
       if (oldState) {
@@ -707,8 +710,23 @@
       if (newMode === "field") fieldKey[checkboxId] = newField;
 
       const checkbox = document.getElementById(checkboxId);
-      if (checkbox && checkbox.checked)
-        loadGeoJSONLayer(checkbox.value, checkboxId, false);
+      if (checkbox && checkbox.checked) {
+        if (savedData) {
+          // 用户上传的图层：直接从保存的 GeoJSON 数据重新构建
+          const fixedData = window.GeoUtils.fixAntimeridian(
+            savedData.geoJsonData,
+          );
+          const worldCopyGroup = buildGeoJsonLayerGroup(
+            fixedData,
+            checkboxId,
+            savedData.fileName,
+          );
+          worldCopyGroup.addTo(map);
+          layerCache[checkboxId] = worldCopyGroup;
+        } else {
+          loadGeoJSONLayer(checkbox.value, checkboxId, false);
+        }
+      }
       updateColorBtnHint(checkboxId);
     }
 
@@ -787,7 +805,12 @@
           if (!cb.checked) {
             cb.checked = true;
             cb.style.background = layerColorMap[cb.id] || "#fff";
-            loadGeoJSONLayer(cb.value, cb.id, false);
+            // 用户上传图层无需加载，直接显示即可（已有 layerCache）
+            if (!cb.dataset.userLayer) {
+              loadGeoJSONLayer(cb.value, cb.id, false);
+            } else if (layerCache[cb.id]) {
+              layerCache[cb.id].addTo(map);
+            }
           }
         });
       syncAllGroupStatus();
@@ -800,7 +823,20 @@
           if (cb.checked) {
             cb.checked = false;
             cb.style.background = "#fff";
-            removeGeoJSONLayer(cb.id);
+            if (cb.dataset.userLayer) {
+              if (layerCache[cb.id]) {
+                try {
+                  map.removeLayer(layerCache[cb.id]);
+                } catch (e) {}
+              }
+              if (layerBoundsCache[cb.id]) {
+                try {
+                  map.removeLayer(layerBoundsCache[cb.id]);
+                } catch (e) {}
+              }
+            } else {
+              removeGeoJSONLayer(cb.id);
+            }
           }
         });
       syncAllGroupStatus();
@@ -1003,7 +1039,18 @@
         colorModalOverlay = null;
       }
 
-      fetchGeoJSON(filePath)
+      // 获取 GeoJSON 数据：有 filePath 则从 URL 加载，否则从 highlightState 读取（用户上传的图层）
+      var dataPromise;
+      if (filePath) {
+        dataPromise = fetchGeoJSON(filePath);
+      } else if (userLayerGeoJson[checkboxId]) {
+        dataPromise = Promise.resolve(userLayerGeoJson[checkboxId].geoJsonData);
+      } else {
+        alert("无法加载图层数据，请尝试重新添加图层。");
+        return;
+      }
+
+      dataPromise
         .then(function (data) {
           const fixed = window.GeoUtils.fixAntimeridian(data);
           const fields = window.GeoUtils.getAvailableFields(fixed);
@@ -1280,6 +1327,7 @@
     }
 
     let userLayerIndex = 0;
+    const userLayerGeoJson = {};
 
     function addUserLayer(geojsonData, fileName) {
       var uid = "user_layer_" + userLayerIndex++;
@@ -1305,6 +1353,7 @@
       var worldCopyGroup = buildGeoJsonLayerGroup(fixedData, uid, fileName);
       worldCopyGroup.addTo(map);
       layerCache[uid] = worldCopyGroup;
+      userLayerGeoJson[uid] = { geoJsonData: fixedData, fileName: fileName };
 
       var baseGeoJson = L.geoJSON(fixedData, {
         style: function (feature) {
@@ -1342,12 +1391,16 @@
       checkbox.type = "checkbox";
       checkbox.id = uid;
       checkbox.checked = true;
+      checkbox.dataset.userLayer = "true";
       checkbox.style.setProperty("--layer-color", fixedColor);
       checkbox.style.background = fixedColor;
       checkbox.addEventListener("change", function () {
         this.style.background = this.checked ? fixedColor : "#fff";
-        if (this.checked) layerCache[uid] && layerCache[uid].addTo(map);
-        else map.removeLayer(layerCache[uid]);
+        if (this.checked) {
+          if (layerCache[uid]) layerCache[uid].addTo(map);
+        } else {
+          if (layerCache[uid]) map.removeLayer(layerCache[uid]);
+        }
       });
 
       var label = document.createElement("label");
@@ -1411,6 +1464,28 @@
     }
 
     window.addUserLayer = addUserLayer;
+
+    // 处理 geojsonloader 就绪前收到的文件（File Handling API 早于脚本加载时）
+    if (
+      Array.isArray(window._pendingFiles) &&
+      window._pendingFiles.length > 0
+    ) {
+      window._pendingFiles.forEach(function (file) {
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          try {
+            var data = JSON.parse(ev.target.result);
+            addUserLayer(data, file.name);
+            var layerPanel = document.getElementById("layerPanel");
+            if (layerPanel) layerPanel.classList.add("active");
+          } catch (err) {
+            alert("GeoJSON 解析失败：" + file.name + "\n" + err.message);
+          }
+        };
+        reader.readAsText(file);
+      });
+      window._pendingFiles = [];
+    }
 
     // ========== 搜索功能 ==========
     function initSearch() {
@@ -1668,7 +1743,7 @@
       document
         .querySelectorAll('.layer-item input[type="checkbox"]')
         .forEach(function (cb) {
-          if (cb.checked) {
+          if (cb.checked && !cb.dataset.userLayer) {
             var checkboxId = cb.id;
             var filePath = cb.value;
             var fileName = filePath.split("/").pop();
