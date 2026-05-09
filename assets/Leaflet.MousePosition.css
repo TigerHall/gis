@@ -1,7 +1,18 @@
 .leaflet-mouse-position {
-  background: rgba(255, 255, 255, 0.8);
-  color: black;
+  background: rgba(255, 255, 255, 0.85);
+  color: #444;
   border-radius: 4px;
-  padding: 2px 6px;
-  text-align: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* 启用全屏时，整个控件悬停变色提示可点击 */
+.leaflet-mouse-position[title] {
+  transition: color 0.15s;
+}
+
+.leaflet-mouse-position[title]:hover {
+  color: #4a8c4a;
 }
