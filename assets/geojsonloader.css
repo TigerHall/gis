@@ -90,6 +90,12 @@
   background: var(--layer-color, #4caf50);
 }
 
+/* ========== 无分组图层容器（直接显示，无折叠头）========== */
+.layer-plain {
+  margin-bottom: 4px;
+  padding: 0 5px;
+}
+
 /* ========== 图层组样式 ========== */
 .layer-group {
   margin-bottom: 4px;

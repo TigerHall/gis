@@ -69,6 +69,10 @@
         { name: "IODP13-26", file: "IODP13-26.geojson" },
       ],
     },
+    {
+      groupName: null, // 无分组名 = 直接显示图层，不渲染分组头
+      layers: [{ name: "PIC 45万点", file: "pic.geojson.gz" }],
+    },
   ];
 
   // 检查 map 和 L 是否存在（延迟检查）
@@ -172,8 +176,8 @@
     const STATION_LABEL_CONFIG = window.GeoUtils.STATION_LABEL_CONFIG;
     // 缩放相关常量
     const DEFAULT_LABEL_FIELD = "Name";
-      let clusterEnabled = true;
-      let labelEnabled = false;
+    let clusterEnabled = true;
+    let labelEnabled = false;
 
     // ========== 核心样式函数（支持三种颜色模式）==========
     function getFeatureFillColor(feature, checkboxId, fileName, featureIndex) {
@@ -1131,64 +1135,75 @@
     function generateLayerItems() {
       const container = document.getElementById("layerItemsContainer");
       geoJsonGroups.forEach(function (group) {
+        const isPlain = !group.groupName; // 无分组名 = 直接显示图层
         const groupDiv = document.createElement("div");
-        groupDiv.className = "layer-group";
+        groupDiv.className = isPlain ? "layer-plain" : "layer-group";
 
-        const header = document.createElement("div");
-        header.className = "layer-group-header";
+        let header = null;
+        let children;
 
-        const arrow = document.createElement("span");
-        arrow.className = "layer-group-arrow";
-        arrow.textContent = "▶";
+        if (!isPlain) {
+          header = document.createElement("div");
+          header.className = "layer-group-header";
 
-        const groupName = document.createElement("span");
-        groupName.className = "layer-group-name";
-        groupName.textContent = group.groupName;
+          const arrow = document.createElement("span");
+          arrow.className = "layer-group-arrow";
+          arrow.textContent = "▶";
 
-        const groupStatus = document.createElement("span");
-        groupStatus.className = "group-status";
-        groupStatus.dataset.status = "idle";
+          const groupName = document.createElement("span");
+          groupName.className = "layer-group-name";
+          groupName.textContent = group.groupName;
 
-        const groupCb = document.createElement("input");
-        groupCb.type = "checkbox";
-        groupCb.className = "group-select-all";
-        groupCb.title = "全选/全不选「" + group.groupName + "」";
-        groupCb.addEventListener("click", function (e) {
-          e.stopPropagation();
-        });
-        groupCb.addEventListener("change", function () {
-          this.classList.remove("indeterminate");
-          var items = groupDiv.querySelectorAll(
-            '.layer-item input[type="checkbox"]',
-          );
-          var isChecked = this.checked;
-          items.forEach(function (cb) {
-            if (isChecked && !cb.checked) {
-              cb.checked = true;
-              cb.style.background = layerColorMap[cb.id] || "#fff";
-              loadGeoJSONLayer(cb.value, cb.id, false);
-            } else if (!isChecked && cb.checked) {
-              cb.checked = false;
-              cb.style.background = "#fff";
-              removeGeoJSONLayer(cb.id);
-            }
+          const groupStatus = document.createElement("span");
+          groupStatus.className = "group-status";
+          groupStatus.dataset.status = "idle";
+
+          const groupCb = document.createElement("input");
+          groupCb.type = "checkbox";
+          groupCb.className = "group-select-all";
+          groupCb.title = "全选/全不选「" + group.groupName + "」";
+          groupCb.addEventListener("click", function (e) {
+            e.stopPropagation();
           });
-          syncSelectAllStatus();
-        });
+          groupCb.addEventListener("change", function () {
+            this.classList.remove("indeterminate");
+            var items = groupDiv.querySelectorAll(
+              '.layer-item input[type="checkbox"]',
+            );
+            var isChecked = this.checked;
+            items.forEach(function (cb) {
+              if (isChecked && !cb.checked) {
+                cb.checked = true;
+                cb.style.background = layerColorMap[cb.id] || "#fff";
+                loadGeoJSONLayer(cb.value, cb.id, false);
+              } else if (!isChecked && cb.checked) {
+                cb.checked = false;
+                cb.style.background = "#fff";
+                removeGeoJSONLayer(cb.id);
+              }
+            });
+            syncSelectAllStatus();
+          });
 
-        const children = document.createElement("div");
-        children.className = "layer-group-children";
+          children = document.createElement("div");
+          children.className = "layer-group-children";
 
-        header.addEventListener("click", function (e) {
-          if (e.target === groupCb) return;
-          var isOpen = children.classList.toggle("open");
-          arrow.classList.toggle("open", isOpen);
-        });
+          header.addEventListener("click", function (e) {
+            if (e.target === groupCb) return;
+            var isOpen = children.classList.toggle("open");
+            arrow.classList.toggle("open", isOpen);
+          });
 
-        header.appendChild(arrow);
-        header.appendChild(groupName);
-        header.appendChild(groupStatus);
-        header.appendChild(groupCb);
+          header.appendChild(arrow);
+          header.appendChild(groupName);
+          header.appendChild(groupStatus);
+          header.appendChild(groupCb);
+          groupDiv.appendChild(header);
+        }
+
+        if (isPlain) {
+          children = groupDiv;
+        }
 
         group.layers.forEach(function (layerConfig) {
           var idx = globalLayerIndex++;
@@ -1253,8 +1268,9 @@
           children.appendChild(layerItem);
         });
 
-        groupDiv.appendChild(header);
-        groupDiv.appendChild(children);
+        if (!isPlain) {
+          groupDiv.appendChild(children);
+        }
         container.appendChild(groupDiv);
       });
 
