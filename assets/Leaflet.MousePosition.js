@@ -27,10 +27,19 @@
       fullscreenTarget: null,
     },
 
-    // 缓存：上一次的有效坐标（保证经纬度不消失）+ 当前缩放级别（单独管理）
+    // 缓存：上一次的有效坐标 + 当前缩放级别
     _lastValidLatLng: null,
     _currentZoom: null,
     _lastText: "",
+
+    // 设备/能力检测
+    _isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+    _fsSupported: !!(
+      document.documentElement.requestFullscreen ||
+      document.documentElement.webkitRequestFullscreen ||
+      document.documentElement.mozRequestFullScreen ||
+      document.documentElement.msRequestFullscreen
+    ),
 
     // 初始化控件
     onAdd: function (map) {
@@ -61,7 +70,6 @@
 
       // 初始化缩放级别
       this._currentZoom = this._map.getZoom();
-      // 绑定事件：经纬度实时更新 + 缩放级别单独处理
       this._bindEvents();
 
       // 初始化显示
@@ -90,6 +98,7 @@
           document.removeEventListener("MSFullscreenChange", this._fsChangeHandler);
           this._fsChangeHandler = null;
         }
+        this._removeIosHint();
       }
       this._lastValidLatLng = null;
       this._currentZoom = null;
@@ -109,6 +118,12 @@
     _onFullscreenClick: function (e) {
       L.DomEvent.preventDefault(e);
       L.DomEvent.stopPropagation(e);
+
+      // iOS 不支持网页全屏 API，显示引导提示
+      if (this._isIOS || !this._fsSupported) {
+        this._showIosHint();
+        return;
+      }
 
       if (this._isFullscreen()) {
         const exitFn =
@@ -131,11 +146,50 @@
       }
     },
 
+    // ========== iOS 全屏引导提示 ==========
+    _showIosHint: function () {
+      this._removeIosHint(); // 防止重复
+
+      var overlay = L.DomUtil.create("div", "lmp-ios-hint-overlay");
+      var box = L.DomUtil.create("div", "lmp-ios-hint-box", overlay);
+
+      box.innerHTML =
+        '<div class="lmp-ios-hint-title">全屏提示</div>' +
+        '<div class="lmp-ios-hint-body">' +
+          "iOS 浏览器不支持网页全屏，" +
+          "如需全屏体验，请按以下步骤操作：" +
+          '<ol class="lmp-ios-hint-steps">' +
+            "<li>点击底部工具栏的 <b>分享按钮</b> △</li>" +
+            "<li>选择 <b>「添加到主屏幕」</b></li>" +
+            "<li>从桌面图标重新打开即可全屏运行</li>" +
+          "</ol>" +
+        "</div>" +
+        '<button class="lmp-ios-hint-close">知道了</button>';
+
+      document.body.appendChild(overlay);
+
+      var closeBtn = box.querySelector(".lmp-ios-hint-close");
+      L.DomEvent.on(closeBtn, "click", this._removeIosHint, this);
+      // 点遮罩空白区域也关闭
+      L.DomEvent.on(overlay, "click", function (e) {
+        if (e.target === overlay) this._removeIosHint();
+      }, this);
+
+      this._iosHintEl = overlay;
+    },
+
+    _removeIosHint: function () {
+      if (this._iosHintEl && this._iosHintEl.parentNode) {
+        this._iosHintEl.parentNode.removeChild(this._iosHintEl);
+      }
+      this._iosHintEl = null;
+    },
+
     // 渲染：文字 + 全屏图标（图标在末尾）
     _renderText: function (text) {
       if (!this._container) return;
       if (this.options.showFullscreen) {
-        const icon = this._isFullscreen() ? " ✕" : " ⛶";
+        var icon = this._isFullscreen() ? " ✕" : " ⛶";
         this._container.textContent = text + icon;
         this._container.title = this._isFullscreen() ? "退出全屏" : "点击全屏";
       } else {
@@ -143,9 +197,9 @@
       }
     },
 
-    // 事件绑定：经纬度实时触发 + 缩放级别仅在结束后触发
+    // 事件绑定
     _bindEvents: function () {
-      const map = this._map;
+      var map = this._map;
       if (this._isMobile) {
         L.DomEvent.on(map, "move", this._updateCenterPosition, this);
         L.DomEvent.on(map, "zoom", this._updateCenterPosition, this);
@@ -161,7 +215,7 @@
     },
 
     _unbindEvents: function () {
-      const map = this._map;
+      var map = this._map;
       if (!map) return;
       if (this._isMobile) {
         L.DomEvent.off(map, "move", this._updateCenterPosition, this);
@@ -183,7 +237,7 @@
 
     _updateCenterPosition: function () {
       if (!this._map) return;
-      const centerLatLng = this._map.getCenter();
+      var centerLatLng = this._map.getCenter();
       if (centerLatLng) {
         this._lastValidLatLng = centerLatLng;
       }
@@ -191,21 +245,21 @@
     },
 
     _updatePosition: function (latlng) {
-      const targetLatLng = latlng || this._lastValidLatLng;
+      var targetLatLng = latlng || this._lastValidLatLng;
       if (!targetLatLng || !this._map) {
         this._updateText("---, ---");
         return;
       }
 
-      const lat = targetLatLng.lat.toFixed(this.options.precision);
-      const lng = targetLatLng.lng.toFixed(this.options.precision);
+      var lat = targetLatLng.lat.toFixed(this.options.precision);
+      var lng = targetLatLng.lng.toFixed(this.options.precision);
 
-      let text = this.options.format
+      var text = this.options.format
         .replace("{lat}", lat)
         .replace("{lng}", lng);
 
       if (this.options.showZoom && this._currentZoom) {
-        const zoomText = this.options.zoomLabel.replace(
+        var zoomText = this.options.zoomLabel.replace(
           "{zoom}",
           this._currentZoom,
         );

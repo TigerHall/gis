@@ -16,3 +16,78 @@
 .leaflet-mouse-position[title]:hover {
   color: #4a8c4a;
 }
+
+/* ========== iOS 全屏引导提示 ========== */
+.lmp-ios-hint-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  animation: lmp-fade-in 0.2s ease;
+}
+
+.lmp-ios-hint-box {
+  background: #f9f9f9;
+  border-radius: 12px 12px 0 0;
+  padding: 20px 20px 16px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  animation: lmp-slide-up 0.25s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.lmp-ios-hint-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.lmp-ios-hint-body {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.lmp-ios-hint-steps {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.lmp-ios-hint-steps li {
+  margin-bottom: 4px;
+}
+
+.lmp-ios-hint-close {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #4a8c4a;
+  background: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lmp-ios-hint-close:active {
+  background: #e8f0e8;
+}
+
+@keyframes lmp-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes lmp-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
