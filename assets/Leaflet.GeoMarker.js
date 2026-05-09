@@ -4,7 +4,7 @@
  * 提供图标创建 + marker 创建，不负责 popup 绑定（由调用方处理）
  *
  * 用法：
- *   var marker = L.GeoMarker.createLabeledMarker(map, latlng, color, labelText, minZoom);
+ *   var marker = L.GeoMarker.createLabeledMarker(map, latlng, color, labelText);
  *   marker.bindPopup(...); // popup 由调用方绑定
  */
 (function (factory) {
@@ -224,25 +224,23 @@
    * @param {L.Map} map - Leaflet 地图实例
    * @param {L.LatLng} latlng - 坐标
    * @param {string} color - 颜色
-   * @param {string} labelText - 标签文字
-   * @param {number} minZoom - 显示标签的最小缩放级别
+   * @param {string} labelText - 标签文字（有值即创建标签，CSS 控制显隐）
    * @returns {L.Marker}
    */
-  function createLabeledMarker(map, latlng, color, labelText, minZoom) {
-    minZoom = minZoom || 7;
-    var showLabel = map.getZoom() >= minZoom;
+  function createLabeledMarker(map, latlng, color, labelText) {
+    var showLabel = !!labelText;
 
     var html =
       '<div class="station-marker-wrapper">' +
       '<span class="station-dot" style="background:' +
       color +
       ';border-color:white;"></span>' +
-      '<span class="station-label ' +
-      (showLabel ? "" : "hidden") +
+      '<span class="station-label' +
+      (showLabel ? '' : ' hidden') +
       '">' +
-      (labelText || "") +
-      "</span>" +
-      "</div>";
+      (labelText || '') +
+      '</span>' +
+      '</div>';
 
     var marker = L.marker(latlng, {
       icon: L.divIcon({
@@ -254,22 +252,6 @@
       }),
       interactive: true,
     });
-
-    // 缩放变化时更新标签显示
-    marker._updateLabelVisibility = function () {
-      var zoom = map.getZoom();
-      var el = marker.getElement();
-      if (el) {
-        var labelSpan = el.querySelector(".station-label");
-        if (labelSpan) {
-          if (zoom >= minZoom) {
-            labelSpan.classList.remove("hidden");
-          } else {
-            labelSpan.classList.add("hidden");
-          }
-        }
-      }
-    };
 
     return marker;
   }
@@ -280,8 +262,7 @@
    * @param {function} svgIconFn - SVG 图标工厂函数，如 createVolcanoIcon、createHotspotIcon，接收 (color) 返回 L.divIcon
    * @param {L.LatLng} latlng - 坐标
    * @param {string} color - 颜色
-   * @param {string} labelText - 标签文字
-   * @param {number} minZoom - 显示标签的最小缩放级别
+   * @param {string} labelText - 标签文字（有值即创建标签，CSS 控制显隐）
    * @returns {L.Marker}
    */
   function createSvgLabeledMarker(
@@ -290,10 +271,8 @@
     latlng,
     color,
     labelText,
-    minZoom,
   ) {
-    minZoom = minZoom || 7;
-    var showLabel = map.getZoom() >= minZoom;
+    var showLabel = !!labelText;
     var svgStr = svgIconFn(color).options.html;
 
     var html =
@@ -301,12 +280,12 @@
       '<span class="station-icon-svg">' +
       svgStr +
       "</span>" +
-      '<span class="station-label ' +
-      (showLabel ? "" : "hidden") +
+      '<span class="station-label' +
+      (showLabel ? '' : ' hidden') +
       '">' +
-      (labelText || "") +
-      "</span>" +
-      "</div>";
+      (labelText || '') +
+      '</span>' +
+      '</div>';
 
     var marker = L.marker(latlng, {
       icon: L.divIcon({
@@ -318,21 +297,6 @@
       }),
       interactive: true,
     });
-
-    marker._updateLabelVisibility = function () {
-      var zoom = map.getZoom();
-      var el = marker.getElement();
-      if (el) {
-        var labelSpan = el.querySelector(".station-label");
-        if (labelSpan) {
-          if (zoom >= minZoom) {
-            labelSpan.classList.remove("hidden");
-          } else {
-            labelSpan.classList.add("hidden");
-          }
-        }
-      }
-    };
 
     return marker;
   }
@@ -360,7 +324,6 @@
    * @param {string} labelText - 标签文字（如果有）
    * @param {boolean} isVolcanoLayer - 是否为火山图层
    * @param {boolean} isHotspotLayer - 是否为热点图层
-   * @param {number} minZoom - 显示标签的最小缩放级别
    * @returns {L.Marker}
    */
   function createPointMarkerByType(
@@ -371,7 +334,6 @@
     labelText,
     isVolcanoLayer,
     isHotspotLayer,
-    minZoom,
   ) {
     var marker;
     if (isVolcanoLayer) {
@@ -382,7 +344,6 @@
           latlng,
           color,
           labelText,
-          minZoom,
         );
       } else {
         marker = createPureIconMarker(latlng, color, createVolcanoIcon);
@@ -395,7 +356,6 @@
           latlng,
           color,
           labelText,
-          minZoom,
         );
       } else {
         marker = createPureIconMarker(latlng, color, createHotspotIcon);
@@ -403,7 +363,7 @@
     } else {
       // 普通点图层
       if (labelText) {
-        marker = createLabeledMarker(map, latlng, color, labelText, minZoom);
+        marker = createLabeledMarker(map, latlng, color, labelText);
       } else {
         marker = createPureIconMarker(latlng, color);
       }

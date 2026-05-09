@@ -171,11 +171,9 @@
     // 标签配置（委托给 GeoUtils，这里保留引用以便快速判断）
     const STATION_LABEL_CONFIG = window.GeoUtils.STATION_LABEL_CONFIG;
     // 缩放相关常量
-    const CLUSTER_MIN_ZOOM = 7;
-    const NO_CLUSTER_FILES = new Set(["hotspots.json", "volcanos.json"]);
     const DEFAULT_LABEL_FIELD = "Name";
-    const DEFAULT_MIN_ZOOM = 7;
-    let clusterEnabled = true;
+      let clusterEnabled = true;
+      let labelEnabled = false;
 
     // ========== 核心样式函数（支持三种颜色模式）==========
     function getFeatureFillColor(feature, checkboxId, fileName, featureIndex) {
@@ -321,7 +319,6 @@
 
       const isVolcanoLayer = fileName === "volcanos.json";
       const isHotspotLayer = fileName === "hotspots.json";
-      const minZoom = DEFAULT_MIN_ZOOM;
 
       // 创建聚类组
       function createClusterGroup() {
@@ -334,7 +331,6 @@
           spiderfyOnMaxZoom: true,
           showCoverageOnHover: false,
           zoomToBoundsOnClick: true,
-          disableClusteringAtZoom: minZoom,
           iconCreateFunction: function (cluster) {
             const count = cluster.getChildCount();
 
@@ -358,12 +354,6 @@
       const geoLayers = [];
       const clusterGroups = [];
       const allMarkers = [];
-
-      const zoomHandler = function () {
-        allMarkers.forEach(function (marker) {
-          if (marker._updateLabelVisibility) marker._updateLabelVisibility();
-        });
-      };
 
       offsets.forEach(function (offset) {
         const shifted = window.GeoUtils.shiftGeoJSON(geojsonData, offset);
@@ -410,10 +400,9 @@
                 feature,
                 latlng,
                 color,
-                labelText,
+                labelEnabled ? labelText : null,
                 isVolcanoLayer,
                 isHotspotLayer,
-                minZoom,
               );
 
               // 绑定弹窗
@@ -479,10 +468,9 @@
                 feature,
                 latlng,
                 color,
-                labelText,
+                labelEnabled ? labelText : null,
                 isVolcanoLayer,
                 isHotspotLayer,
-                minZoom,
               );
 
               marker.bindPopup(
@@ -556,15 +544,12 @@
         }
       });
 
-      map.on("zoomend", zoomHandler);
-
       highlightState[checkboxId] = {
         geoLayers: geoLayers,
         clusterGroups: clusterGroups,
         allMarkers: allMarkers,
         featureId: null,
         fileName: fileName,
-        zoomHandler: zoomHandler,
       };
 
       return L.layerGroup(geoLayers);
@@ -684,7 +669,6 @@
       clearHighlight(checkboxId);
       const oldState = highlightState[checkboxId];
       if (oldState) {
-        if (oldState.zoomHandler) map.off("zoomend", oldState.zoomHandler);
         if (oldState.geoLayers)
           oldState.geoLayers.forEach((gl) => {
             try {
@@ -770,7 +754,6 @@
       clearHighlight(checkboxId);
       const state = highlightState[checkboxId];
       if (state) {
-        if (state.zoomHandler) map.off("zoomend", state.zoomHandler);
         if (state.geoLayers)
           state.geoLayers.forEach((gl) => {
             try {
@@ -1737,6 +1720,25 @@
       });
     }
 
+    // ========== 标签开关 ==========
+    function initLabelToggle() {
+      var toggle = document.getElementById("labelToggle");
+      if (!toggle) return;
+      var saved = localStorage.getItem("labelEnabled");
+      if (saved !== null) {
+        labelEnabled = saved === "true";
+        toggle.checked = labelEnabled;
+      } else {
+        labelEnabled = true;
+        toggle.checked = true;
+      }
+      toggle.addEventListener("change", function () {
+        labelEnabled = this.checked;
+        localStorage.setItem("labelEnabled", String(labelEnabled));
+        rebuildLoadedPointLayers();
+      });
+    }
+
     const _geomTypeCache = {};
 
     function rebuildLoadedPointLayers() {
@@ -1766,6 +1768,7 @@
       generateLayerItems();
       initSearch();
       initClusterToggle();
+      initLabelToggle();
     }
 
     initGeoJsonLayer();
