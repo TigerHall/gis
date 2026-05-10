@@ -181,8 +181,9 @@
   }
 
   function shiftGeoJSON(geojsonData, offset) {
+    // offset=0 时无需拷贝，直接返回原对象（避免 45 万点深拷贝炸内存）
+    if (offset === 0) return geojsonData;
     const data = JSON.parse(JSON.stringify(geojsonData));
-    if (offset === 0) return data;
     if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
       data.features.forEach(function (f) {
         if (f.geometry) f.geometry = shiftGeometry(f.geometry, offset);
@@ -237,15 +238,19 @@
 
   function fixAntimeridian(geojsonData) {
     if (!geojsonData) return geojsonData;
-    const data = JSON.parse(JSON.stringify(geojsonData));
-    if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
-      data.features.forEach(function (f) {
+    // 直接在原对象上修正，不再深拷贝（避免 45 万点炸内存）
+    // 注意：geojsonData 来自 IDB 缓存的副本，修改不影响 IDB 存储
+    if (
+      geojsonData.type === "FeatureCollection" &&
+      Array.isArray(geojsonData.features)
+    ) {
+      geojsonData.features.forEach(function (f) {
         if (f.geometry) fixGeometryCoords(f.geometry);
       });
-    } else if (data.type === "Feature" && data.geometry) {
-      fixGeometryCoords(data.geometry);
+    } else if (geojsonData.type === "Feature" && geojsonData.geometry) {
+      fixGeometryCoords(geojsonData.geometry);
     }
-    return data;
+    return geojsonData;
   }
 
   // ========== 获取可用属性字段 ==========
@@ -286,6 +291,68 @@
     return feature.properties[cfg.field] || null;
   }
 
+  // ========== 直接根据 GeoJSON 计算 bounds（不构建 Layer，避免大数据内存爆炸）==========
+  function computeBounds(geojsonData) {
+    if (!geojsonData || !geojsonData.features) return null;
+    var bounds = null;
+
+    geojsonData.features.forEach(function (f) {
+      if (!f || !f.geometry || !f.geometry.coordinates) return;
+      var coords = f.geometry.coordinates;
+      var geomType = (f.geometry.type || "").toLowerCase();
+
+      function extendByPoint(lng, lat) {
+        if (bounds === null) {
+          bounds = L.latLngBounds([lat, lng], [lat, lng]);
+        } else {
+          bounds.extend([lat, lng]);
+        }
+      }
+
+      function processCoords(c, type) {
+        if (type === "point" || type === "multipoint") {
+          if (typeof c[0] === "number") {
+            extendByPoint(c[0], c[1]);
+          } else {
+            c.forEach(function (p) {
+              extendByPoint(p[0], p[1]);
+            });
+          }
+        } else if (type === "linestring" || type === "multilinestring") {
+          if (typeof c[0][0] === "number") {
+            c.forEach(function (p) {
+              extendByPoint(p[0], p[1]);
+            });
+          } else {
+            c.forEach(function (line) {
+              line.forEach(function (p) {
+                extendByPoint(p[0], p[1]);
+              });
+            });
+          }
+        } else if (type === "polygon" || type === "multipolygon") {
+          var rings = type === "polygon" ? c : c[0];
+          if (rings && rings[0] && typeof rings[0][0] === "number") {
+            // Polygon with single ring
+            rings.forEach(function (p) {
+              extendByPoint(p[0], p[1]);
+            });
+          } else {
+            rings.forEach(function (ring) {
+              ring.forEach(function (p) {
+                extendByPoint(p[0], p[1]);
+              });
+            });
+          }
+        }
+      }
+
+      processCoords(coords, geomType);
+    });
+
+    return bounds;
+  }
+
   // ========== 暴露公共 API ==========
   window.GeoUtils = {
     createFixedSeededRandom,
@@ -303,5 +370,6 @@
     getStationLabel,
     STATION_LABEL_CONFIG,
     POPUP_FIELD_CONFIG,
+    computeBounds,
   };
 })();

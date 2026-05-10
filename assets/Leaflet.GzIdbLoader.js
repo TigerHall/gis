@@ -86,11 +86,12 @@
           const tx = db.transaction(STORE_NAME, "readwrite");
           const store = tx.objectStore(STORE_NAME);
 
+          // 不再计算 size（避免完整序列化 45 万点炸内存）
+          // getCacheSize() 需要时再按需计算
           const record = {
             url: url,
             data: data,
             timestamp: Date.now(),
-            size: JSON.stringify(data).length,
           };
 
           const request = store.put(record);
@@ -142,7 +143,10 @@
             const results = e.target.result;
             let totalSize = 0;
             results.forEach(function (item) {
-              totalSize += item.size || 0;
+              // 只累加有 size 字段的记录（新缓存未存 size，不在此处做 JSON.stringify 避免炸内存）
+              if (typeof item.size === "number") {
+                totalSize += item.size;
+              }
             });
             resolve({
               count: results.length,
@@ -190,9 +194,19 @@
 
   // ========== 主接口 ==========
   function fetchWithCache(url) {
+    const t0 = performance.now();
     // 1. 先尝试从缓存读取
     return getCache(url).then(function (cachedData) {
       if (cachedData) {
+        console.log(
+          "[GzIdbLoader] 缓存命中:",
+          url,
+          "读取耗时:",
+          (performance.now() - t0).toFixed(1) + "ms",
+          "数据大小:",
+          JSON.stringify(cachedData).length,
+          "bytes",
+        );
         return cachedData;
       }
 

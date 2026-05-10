@@ -13,10 +13,6 @@
     <script src="./assets/Leaflet.GeoMarker.js"></script>
     <!-- Leaflet 插件：GZ 加载器 + IDB 缓存 -->
     <script src="./assets/Leaflet.GzIdbLoader.js"></script>
-    <!-- Leaflet点聚类插件 -->
-    <link rel="stylesheet" href="./assets/leaflet.markercluster.css" />
-    <link rel="stylesheet" href="./assets/leaflet.markercluster.default.css" />
-    <script src="./assets/leaflet.markercluster.js"></script>
     <!-- 显示坐标插件 -->
     <link rel="stylesheet" href="./assets/Leaflet.MousePosition.css" />
     <script src="./assets/Leaflet.MousePosition.js"></script>
@@ -25,6 +21,14 @@
     <!-- Leaflet-Geoman 测量插件 -->
     <link rel="stylesheet" href="./assets/leaflet-geoman.css" />
     <script src="./assets/leaflet-geoman.js"></script>
+    <!-- Leaflet点聚类插件（≤10K 点回退方案） -->
+    <link rel="stylesheet" href="./assets/leaflet.markercluster.css" />
+    <link rel="stylesheet" href="./assets/leaflet.markercluster.default.css" />
+    <script src="./assets/leaflet.markercluster.js"></script>
+    <!-- RBush 空间索引（Canvas 聚类依赖） -->
+    <script src="./assets/rbush.js"></script>
+    <!-- Canvas 聚类渲染（>10K 点零 DOM 方案） -->
+    <script src="./assets/Leaflet.MarkersCanvas.js"></script>
     <!-- 自定义css -->
     <link rel="stylesheet" href="./assets/main.css" />
 
@@ -431,24 +435,34 @@
       }
 
       // ========== 外部GeoJSON文件处理（统一走 geojsonloader 的 addUserLayer）==========
-      // 解析文件内容并调用 addUserLayer
-      function loadFileAsUserLayer(file) {
+      // 解析文件内容并调用 addUserLayer（挂到 window，供 geojsonloader.js 内部的 handleFileUpload 复用）
+      window.loadFileAsUserLayer = function loadFileAsUserLayer(file) {
+        window.showLoading("正在读取文件...");
         var reader = new FileReader();
         reader.onload = function (ev) {
-          try {
-            var data = JSON.parse(ev.target.result);
-            if (typeof window.addUserLayer === "function") {
-              window.addUserLayer(data, file.name);
-              // 确保左侧面板打开，让用户看到新图层
-              var layerPanel = document.getElementById("layerPanel");
-              if (layerPanel) layerPanel.classList.add("active");
+          window.showLoading("正在解析数据...");
+          // 用 setTimeout 让浏览器有机会渲染 loading 文字后再执行耗时 parse
+          setTimeout(function () {
+            try {
+              var data = JSON.parse(ev.target.result);
+              if (typeof window.addUserLayer === "function") {
+                window.addUserLayer(data, file.name);
+                var layerPanel = document.getElementById("layerPanel");
+                if (layerPanel) layerPanel.classList.add("active");
+              }
+              window.hideLoading();
+            } catch (err) {
+              window.hideLoading();
+              alert("GeoJSON 解析失败：" + file.name + "\n" + err.message);
             }
-          } catch (err) {
-            alert("GeoJSON 解析失败：" + file.name + "\n" + err.message);
-          }
+          }, 50);
+        };
+        reader.onerror = function () {
+          window.hideLoading();
+          alert("文件读取失败：" + ((file && file.name) || ""));
         };
         reader.readAsText(file);
-      }
+      };
 
       // 暂存：geojsonloader.js 尚未就绪时收到的文件
       var _pendingFiles = [];
@@ -491,6 +505,23 @@
           }
         });
       });
+    </script>
+    <!-- 文件加载缓冲示意 -->
+    <div id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <div id="loadingMessage"></div>
+    </div>
+    <script>
+      window.showLoading = function (msg) {
+        var el = document.getElementById("loadingOverlay");
+        var msgEl = document.getElementById("loadingMessage");
+        if (el) el.classList.add("active");
+        if (msgEl) msgEl.textContent = msg || "加载中...";
+      };
+      window.hideLoading = function () {
+        var el = document.getElementById("loadingOverlay");
+        if (el) el.classList.remove("active");
+      };
     </script>
     <!-- geojson图层加载器 -->
     <script src="./assets/geojsonloader.js"></script>

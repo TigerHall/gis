@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.4.3";
+const CACHE_NAME = "v1.4.4";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -21,6 +21,8 @@ const STATIC_ASSETS = [
   "./assets/Leaflet.GeoMarker.js",
   "./assets/Leaflet.GzIdbLoader.js",
   "./assets/leaflet.markercluster.js",
+  "./assets/rbush.js",
+  "./assets/Leaflet.MarkersCanvas.js",
   "./assets/Leaflet.MousePosition.js",
   "./assets/leaflet-geoman.js",
   "./assets/Leaflet.VectorGrid.bundled.min.js",
