@@ -172,6 +172,9 @@
     // 高亮状态
     const highlightState = {};
     const layerBoundsCache = {};
+    // Canvas 图层要素缓存（用于颜色模式快速切换）
+    const canvasFeaturesCache = {};
+    const canvasFieldValuesCache = {};
     // 标签配置（委托给 GeoUtils，这里保留引用以便快速判断）
     const STATION_LABEL_CONFIG = window.GeoUtils.STATION_LABEL_CONFIG;
     // 缩放相关常量
@@ -421,6 +424,9 @@
 
             canvasLayer.setFeatures(featuresArray);
 
+            // 缓存 featuresArray 供颜色快速切换（避免重新读取数据）
+            canvasFeaturesCache[checkboxId] = featuresArray;
+
             // 点击回调：仅小数据集设置（大数据集点击弹出不实用，且不持有完整 features 引用）
             if (featuresArray.length <= 10000) {
               canvasLayer.options.onFeatureClick = function (f, latlng) {
@@ -644,7 +650,7 @@
         fileName: fileName,
       };
 
-      return L.layerGroup(geoLayers);
+      return L.featureGroup(geoLayers);
     }
 
     // ========== 图层加载 ==========
@@ -782,7 +788,26 @@
       }
 
       if (canvasLayer) {
-        // Canvas 图层：复用已加载的图层，只更新颜色后重绘（避免重复卡顿）
+        // Canvas 图层：尝试直接修改缓存的 featuresArray（避免重新读取数据）
+        var cachedFeatures = canvasFeaturesCache[checkboxId] || null;
+        var newMode = colorMode[checkboxId];
+        var newColor = layerColorMap[checkboxId] || "#8B4513";
+
+        if (cachedFeatures && (newMode === "single" || newMode === "sequential")) {
+          // 单色或顺序色模式：直接修改颜色，无需重新读取数据
+          for (var j = 0; j < cachedFeatures.length; j++) {
+            if (newMode === "single") {
+              cachedFeatures[j].color = newColor;
+            } else if (newMode === "sequential") {
+              cachedFeatures[j].color = window.GeoUtils.getFeatureColorByIndex(cachedFeatures[j]._idx || j);
+            }
+          }
+          canvasLayer.setFeatures(cachedFeatures);
+          updateColorBtnHint(checkboxId);
+          return; // 直接返回，不重新读取数据
+        }
+
+        // 无法优化（如 "field" 模式且未缓存字段值），回退到重新读取数据
         var fileName = null;
         var geojsonPromise;
 
@@ -818,6 +843,8 @@
                 });
               }
               canvasLayer.setFeatures(featuresArray);
+              // 缓存更新后的 featuresArray，供后续颜色快速切换
+              canvasFeaturesCache[checkboxId] = featuresArray;
               updateColorBtnHint(checkboxId);
             })
             .catch(function () {
