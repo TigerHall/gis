@@ -8,7 +8,7 @@
   user-select: none;
 }
 
-/* 启用全屏时，整个控件悬停变色提示可点击 */
+/* 启用全屏/安装时，整个控件悬停变色提示可点击 */
 .leaflet-mouse-position[title] {
   transition: color 0.15s;
 }
@@ -17,7 +17,7 @@
   color: #4a8c4a;
 }
 
-/* ========== iOS 全屏引导提示 ========== */
+/* ========== iOS 安装引导提示（底部滑出） ========== */
 .lmp-ios-hint-overlay {
   position: fixed;
   inset: 0;
@@ -82,6 +82,64 @@
   background: #e8f0e8;
 }
 
+/* ========== PWA 安装提示（居中弹出卡片，非 iOS 降级提示） ========== */
+.lmp-pwa-hint-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  animation: lmp-fade-in 0.2s ease;
+}
+
+.lmp-pwa-hint-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px 20px 20px;
+  max-width: 320px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  animation: lmp-scale-in 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.lmp-pwa-hint-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.lmp-pwa-hint-body {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.lmp-pwa-hint-close {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #4a8c4a;
+  background: #f0f7f0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lmp-pwa-hint-close:active {
+  background: #d4e8d4;
+}
+
+/* ========== 动画 ========== */
 @keyframes lmp-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -90,4 +148,9 @@
 @keyframes lmp-slide-up {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
+}
+
+@keyframes lmp-scale-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
 }

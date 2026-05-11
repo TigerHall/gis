@@ -35,6 +35,13 @@
     <!-- WPA -->
     <link rel="manifest" href="./manifest.json" />
     <script>
+      // 尽早捕获 PWA 安装提示事件（供 Leaflet.MousePosition 插件使用）
+      window._pwaInstallPrompt = null;
+      window.addEventListener("beforeinstallprompt", function (e) {
+        e.preventDefault();
+        window._pwaInstallPrompt = e;
+      });
+
       // 检查浏览器是否支持Service Worker
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
