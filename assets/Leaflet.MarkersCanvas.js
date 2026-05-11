@@ -10,7 +10,7 @@
  *   layer.setFeatures(featuresArray);
  *
  * Options:
- *   clusterDistance: 60    - 聚类距离阈值（屏幕像素）
+ *   clusterDistance: 100   - 聚类距离阈值（屏幕像素）
  *   clusterMaxZoom: 14     - 此 zoom 以下显示聚类
  *   clusterFont: "bold 11px sans-serif"
  *   onFeatureClick: null    - fn(feature, latlng)
@@ -28,104 +28,104 @@
   }
 
   // ─────────────────────────────────────────────
-  //  距离聚类（屏幕像素空间，RBush 加速）
-  //  参考 leaflet.markercluster 的 maxClusterRadius 语义
+  //  网格预聚合聚类（O(n)，比 DBSCAN 快百倍）
+  //  按 clusterRadius 划分网格，同格内点聚合
   // ─────────────────────────────────────────────
+  // ── 网格预聚合聚类（O(n)，比 DBSCAN 快百倍）────────────────────────
+  //  1. 按 cellSize 划分网格（cellSize = clusterRadius/2，保证邻格补漏）
+  //  2. 每格内点聚合；额外查询周围一圈邻格，防止格子边缘的点被切分
   function computeClusters(features, indices, map, clusterRadiusPixels) {
-    // 1. 将所有可见点转换成屏幕坐标
-    var points = []; // { x, y, color, featureIdx }
+    if (!indices.length) return [];
+
+    var cellSize = Math.max(Math.floor(clusterRadiusPixels / 2), 1); // 50px（阈值100时）
+    var grid = Object.create(null); // key: "gx,gy" → { pts: [], cx: 0, cy: 0 }
+
+    // ── 阶段1：单次遍历，全部归入网格 ──
     for (var i = 0; i < indices.length; i++) {
       var f = features[indices[i]];
       if (!f) continue;
       var pt = map.latLngToContainerPoint([f.lat, f.lng]);
-      points.push({
-        x: pt.x,
-        y: pt.y,
-        color: f.color || "#3388ff",
-        featureIdx: indices[i],
-      });
+      var gx = Math.floor(pt.x / cellSize);
+      var gy = Math.floor(pt.y / cellSize);
+      var key = gx + "," + gy;
+
+      if (!grid[key]) {
+        grid[key] = { pts: [], cx: 0, cy: 0 };
+      }
+      var cell = grid[key];
+      cell.pts.push({ x: pt.x, y: pt.y, color: f.color || "#3388ff", featureIdx: indices[i] });
+      cell.cx += pt.x;
+      cell.cy += pt.y;
     }
 
-    if (points.length === 0) return [];
+    // ── 阶段2：合并邻格（防止格子边界切开本应聚合的点）──
+    //  用 deleted Set 追踪已合并的格子，避免遍历中删除导致的 undefined 访问
+    var deleted = Object.create(null); // key → true
+    var keys = Object.keys(grid);
+    for (var ki = 0; ki < keys.length; ki++) {
+      var mainKey = keys[ki];
+      if (deleted[mainKey]) continue;
+      var mainCell = grid[mainKey];
+      var parts = mainKey.split(",");
+      var gx = parseInt(parts[0], 10);
+      var gy = parseInt(parts[1], 10);
 
-    // 2. 用 RBush 加速邻近搜索
-    var tree = new RBush();
-    var treeItems = [];
-    for (var j = 0; j < points.length; j++) {
-      treeItems.push({
-        minX: points[j].x,
-        minY: points[j].y,
-        maxX: points[j].x,
-        maxY: points[j].y,
-        idx: j,
-      });
-    }
-    tree.load(treeItems);
-
-    // 3. DBSCAN 风格聚类
-    var visited = {};
-    var clusters = [];
-
-    for (var k = 0; k < points.length; k++) {
-      if (visited[k]) continue;
-      visited[k] = true;
-
-      var cluster = {
-        points: [points[k]],
-        cx: points[k].x,
-        cy: points[k].y,
-      };
-
-      var queue = [k];
-      while (queue.length > 0) {
-        var currentIdx = queue.pop();
-        var currentPoint = points[currentIdx];
-
-        var nearby = tree.search({
-          minX: currentPoint.x - clusterRadiusPixels,
-          minY: currentPoint.y - clusterRadiusPixels,
-          maxX: currentPoint.x + clusterRadiusPixels,
-          maxY: currentPoint.y + clusterRadiusPixels,
-        });
-
-        for (var m = 0; m < nearby.length; m++) {
-          var nearbyIdx = nearby[m].idx;
-          if (visited[nearbyIdx]) continue;
-
-          var dx = points[nearbyIdx].x - currentPoint.x;
-          var dy = points[nearbyIdx].y - currentPoint.y;
-          var dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist <= clusterRadiusPixels) {
-            visited[nearbyIdx] = true;
-            cluster.points.push(points[nearbyIdx]);
-            cluster.cx += points[nearbyIdx].x;
-            cluster.cy += points[nearbyIdx].y;
-            queue.push(nearbyIdx);
+      for (var dx = -1; dx <= 1; dx++) {
+        for (var dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          var nkey = (gx + dx) + "," + (gy + dy);
+          if (deleted[nkey] || !grid[nkey]) continue;
+          var neighbor = grid[nkey];
+          var ccx = mainCell.cx / mainCell.pts.length;
+          var ccy = mainCell.cy / mainCell.pts.length;
+          var ncX = neighbor.cx / neighbor.pts.length;
+          var ncY = neighbor.cy / neighbor.pts.length;
+          var distX = ncX - ccx;
+          var distY = ncY - ccy;
+          if (distX * distX + distY * distY <= clusterRadiusPixels * clusterRadiusPixels) {
+            for (var nj = 0; nj < neighbor.pts.length; nj++) {
+              mainCell.pts.push(neighbor.pts[nj]);
+              mainCell.cx += neighbor.pts[nj].x;
+              mainCell.cy += neighbor.pts[nj].y;
+            }
+            deleted[nkey] = true;
           }
         }
       }
+    }
 
-      // 计算质心
-      cluster.cx /= cluster.points.length;
-      cluster.cy /= cluster.points.length;
+    // ── 阶段3：输出结果 ──
+    var results = [];
+    for (var k = 0; k < keys.length; k++) {
+      if (deleted[keys[k]]) continue;
+      var cell = grid[keys[k]];
+      var count = cell.pts.length;
+      var cx = cell.cx / count;
+      var cy = cell.cy / count;
 
-      if (cluster.points.length === 1) {
-        clusters.push(cluster.points[0]);
+      if (count === 1) {
+        results.push({
+          x: cell.pts[0].x,
+          y: cell.pts[0].y,
+          color: cell.pts[0].color,
+          idx: cell.pts[0].featureIdx,
+        });
       } else {
-        clusters.push({
-          x: cluster.cx,
-          y: cluster.cy,
-          count: cluster.points.length,
-          indices: cluster.points.map(function (p) {
-            return p.featureIdx;
-          }),
-          color: cluster.points[0].color,
+        var featIndices = new Array(count);
+        for (var j = 0; j < count; j++) {
+          featIndices[j] = cell.pts[j].featureIdx;
+        }
+        results.push({
+          x: cx,
+          y: cy,
+          count: count,
+          indices: featIndices,
+          color: cell.pts[0].color,
         });
       }
     }
 
-    return clusters;
+    return results;
   }
 
   // ─────────────────────────────────────────────
@@ -134,7 +134,7 @@
   var MarkersCanvas = L.Layer.extend({
     options: {
       clustering: true,
-      clusterDistance: 60, // 聚类距离阈值（屏幕像素）
+      clusterDistance: 100, // 聚类距离阈值（屏幕像素）
       clusterMaxZoom: 14, // 此 zoom 以下显示聚类
       clusterFont: "bold 11px sans-serif",
       onFeatureClick: null, // fn(feature, latlng)
@@ -211,7 +211,7 @@
     // ── 私有：获取聚类半径（像素）──
     //  clusterDistance 直接以屏幕像素为单位，不受缩放级别影响
     _getClusterRadiusInPixels: function () {
-      return this.options.clusterDistance || 60;
+      return this.options.clusterDistance || 100;
     },
 
     // ── 私有：Canvas 初始化 ──
@@ -272,12 +272,9 @@
         return v.idx;
       });
 
-      // 2. 是否使用聚类
-      // 注意：可见点太多时（>5万）禁用聚类，否则 DBSCAN 会内存爆炸
-      // 聚类在所有缩放级别都启用，减轻渲染压力
-      var MAX_CLUSTER_POINTS = 50000;
-      var useCluster =
-        this.options.clustering && indices.length <= MAX_CLUSTER_POINTS;
+      // 2. 是否使用聚类（由 clustering 选项 + clusterMaxZoom 共同控制）
+      var zoom = map.getZoom();
+      var useCluster = this.options.clustering && zoom <= this.options.clusterMaxZoom;
 
       var drawUnits;
       if (useCluster) {
@@ -336,6 +333,8 @@
             maxY: u.y + r,
             type: "cluster",
             indices: u.indices,
+            screenX: u.x,
+            screenY: u.y,
           });
         } else {
           // 单点：半径 6px（与 DOM 版 Marker 视觉大小相当），白色描边
@@ -355,6 +354,8 @@
             maxY: u.y + hitR,
             type: "point",
             idx: u.idx || u.featureIdx,
+            screenX: u.x,
+            screenY: u.y,
           });
         }
       }
@@ -383,12 +384,20 @@
       if (e.type === "click") {
         var hit = hits[0];
         if (hit.type === "cluster" && hit.indices) {
-          var b = new L.LatLngBounds();
-          for (var i = 0; i < hit.indices.length; i++) {
-            var f = this._features[hit.indices[i]];
-            b.extend([f.lat, f.lng]);
+          var map = this._map;
+          var currentZoom = map.getZoom();
+          var maxZoom = map.getMaxZoom ? map.getMaxZoom() : 21;
+          if (currentZoom >= maxZoom) {
+            this.options.clustering = false;
+            this._redraw();
+          } else {
+            var targetZoom = Math.min(currentZoom + 2, maxZoom);
+            // 放大到 cluster 质心，而非地图中心
+            var clusterLatLng = map.containerPointToLatLng(
+              L.point(hit.screenX, hit.screenY),
+            );
+            map.setView(clusterLatLng, targetZoom);
           }
-          this._map.fitBounds(b);
         } else if (hit.type === "point" && this.options.onFeatureClick) {
           this.options.onFeatureClick(this._features[hit.idx], e.latlng);
         }

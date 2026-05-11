@@ -400,10 +400,11 @@
           const features = shifted.features || [];
           const totalFeatures = features.length;
 
-          // 大数据集：Canvas 聚类渲染（零 DOM 节点，支持 45 万+ 点）
+          // 大数据集：Canvas 渲染（零 DOM 节点，支持 45 万+ 点）
+          // clustering 由全局 clusterEnabled 开关控制，保持与小数据集聚类行为一致
           // 注意：不在这里 addTo(map)，统一由层组管理，避免重复添加/移除混乱
           if (totalFeatures > 10000) {
-            const canvasLayer = L.markersCanvas({ clustering: true });
+            const canvasLayer = L.markersCanvas({ clustering: clusterEnabled });
 
             // 构建要素数组 [{ lat, lng, color, _idx }]
             // 注意：不持有 _original 完整引用，否则 45 万点直接爆内存
@@ -418,7 +419,8 @@
                 lat: c[1],
                 lng: c[0],
                 color: color,
-                _idx: idx, // 只存索引，点击时再通过 shifted.features[_idx] 取原始数据
+                _idx: idx,
+                properties: f.properties || null, // 弹窗需要 properties
               });
             }
 
@@ -427,23 +429,16 @@
             // 缓存 featuresArray 供颜色快速切换（避免重新读取数据）
             canvasFeaturesCache[checkboxId] = featuresArray;
 
-            // 点击回调：仅小数据集设置（大数据集点击弹出不实用，且不持有完整 features 引用）
-            if (featuresArray.length <= 10000) {
-              canvasLayer.options.onFeatureClick = function (f, latlng) {
-                const original =
-                  f._idx !== undefined ? shifted.features[f._idx] : null;
-                const content = window.GeoUtils.buildPopupContent(
-                  original,
-                  fileName,
-                );
-                if (content) {
-                  L.popup({ maxWidth: 300 })
-                    .setLatLng(latlng)
-                    .setContent(content)
-                    .openOn(map);
-                }
-              };
-            }
+            // 点击回调：所有数据集均设置（f 即 featuresArray 元素，含完整属性）
+            canvasLayer.options.onFeatureClick = function (f, latlng) {
+              const content = window.GeoUtils.buildPopupContent(f, fileName);
+              if (content) {
+                L.popup({ maxWidth: 300 })
+                  .setLatLng(latlng)
+                  .setContent(content)
+                  .openOn(map);
+              }
+            };
 
             geoLayers.push(canvasLayer);
           } else if (!isNoCluster) {
@@ -1977,16 +1972,19 @@
               var cached = layerCache[checkboxId];
               if (cached && typeof cached.getLayers === "function") {
                 var layers = cached.getLayers();
-                var isCanvas = layers.some(function (l) {
-                  return typeof l.setFeatures === "function";
+            var isCanvas = layers.some(function (l) {
+                return typeof l.setFeatures === "function";
+              });
+              if (isCanvas) {
+                // Canvas 图层也需要响应聚类开关：更新 clustering 选项并重绘
+                layers.forEach(function (l) {
+                  if (typeof l.setFeatures === "function") {
+                    l.options.clustering = clusterEnabled;
+                    l.redraw();
+                  }
                 });
-                if (isCanvas) {
-                  console.warn(
-                    "Labels not supported for large layers (>10K points): " +
-                      fileName,
-                  );
-                  return;
-                }
+                return;
+              }
               }
               reloadLayerWithNewMode(
                 checkboxId,
