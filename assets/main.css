@@ -11,10 +11,18 @@ html {
 
 body {
   display: flex; /* 保留flex布局 */
-  padding: min(1.6vw, 1vh, 16px);
-  height: 100vh;
+  /* 横竖屏 safe-area 自适应：取基础间距和系统安全区中的较大值
+     - 竖屏 iOS：top ≈ 50px（灵动岛）、bottom ≈ 34px（Home 条）
+     - 横屏 iOS：left/right ≈ 44px（齐刘海两侧）
+     - Android 刘海/打孔屏：top/bottom 按系统上报值自动适配 */
+  padding-top:    max(min(1.6vw, 1vh, 16px), env(safe-area-inset-top));
+  padding-right:  max(min(1.6vw, 1vh, 16px), env(safe-area-inset-right));
+  padding-bottom: max(min(1.6vw, 1vh, 16px), env(safe-area-inset-bottom));
+  padding-left:   max(min(1.6vw, 1vh, 16px), env(safe-area-inset-left));
+  height: 100vh;   /* 旧浏览器兜底 */
+  height: 100dvh;  /* dvh：动态视口高度，避开移动端地址栏的高度跳变 */
   overflow: hidden;
-  position: relative; /* 新增：为固定定位元素提供参考 */
+  position: relative; /* 为固定定位元素提供参考 */
 }
 
 /* 左侧悬浮图层控制面板（仿天地图样式） */
