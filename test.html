@@ -68,15 +68,17 @@
               });
             })
             .then(function (data) {
-              g.addLayer(
-                L.geoJSON(data, {
-                  style: randomStyle,
-                  onEachFeature: function (f, l) {
-                    var n = f.properties && f.properties.Name;
-                    if (n) l.bindTooltip(n, { sticky: true });
-                  },
-                }),
-              );
+              [0, 360, -360].forEach(function (offset) {
+                g.addLayer(
+                  L.geoJSON(shiftLng(data, offset), {
+                    style: randomStyle,
+                    onEachFeature: function (f, l) {
+                      var n = f.properties && f.properties.Name;
+                      if (n) l.bindTooltip(n, { sticky: true });
+                    },
+                  }),
+                );
+              });
             })
             .catch(function (e) {
               console.error(def.name, e);
@@ -96,6 +98,22 @@
           fillColor: "hsl(" + h + ",60%,50%)",
           fillOpacity: 0.4,
         };
+      }
+
+      // 深拷贝 GeoJSON 并偏移所有经度
+      function shiftLng(geojson, offset) {
+        var copy = JSON.parse(JSON.stringify(geojson));
+        function walk(c) {
+          if (!c) return;
+          if (Array.isArray(c[0])) {
+            for (var i = 0; i < c.length; i++) walk(c[i]);
+          } else c[0] += offset;
+        }
+        if (copy.features)
+          copy.features.forEach(function (f) {
+            walk(f.geometry && f.geometry.coordinates);
+          });
+        return copy;
       }
     </script>
   </body>
