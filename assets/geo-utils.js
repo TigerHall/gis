@@ -310,6 +310,7 @@
       }
 
       function processCoords(c, type) {
+        if (!c || !c.length) return;
         if (type === "point" || type === "multipoint") {
           if (typeof c[0] === "number") {
             extendByPoint(c[0], c[1]);
