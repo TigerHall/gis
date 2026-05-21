@@ -161,7 +161,10 @@
         maxZoom: 21,
         zoomControl: true,
         attributionControl: false,
-        maxBounds: [[-89.8, -Infinity], [89.8, Infinity]],
+        maxBounds: [
+          [-89.8, -Infinity],
+          [89.8, Infinity],
+        ],
         maxBoundsViscosity: 1.0,
       }).setView([32, 107], 3);
 
@@ -177,7 +180,9 @@
       // 从 service-worker.js 读取 CACHE_NAME 保持版本同步
       // 版本号显示在图层面板底部
       fetch("service-worker.js")
-        .then(function (r) { return r.text(); })
+        .then(function (r) {
+          return r.text();
+        })
         .then(function (src) {
           var m = src.match(/CACHE_NAME\s*=\s*["']([^"']+)["']/);
           if (m) {
@@ -407,7 +412,7 @@
 
       // ========== Leaflet-Geoman 测量工具 ==========
       map.pm.addControls({
-        position: "bottomright",
+        position: "topright",
         drawCircleMarker: true,
         drawText: true,
         drawMarker: false,
