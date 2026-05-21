@@ -51,7 +51,20 @@
           navigator.serviceWorker
             .register("service-worker.js")
             .then((registration) => {
-              // Service Worker注册成功
+              // 检测新版本：SW 文件变化时会触发 updatefound
+              registration.addEventListener("updatefound", () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener("statechange", () => {
+                  if (
+                    newWorker.state === "installed" &&
+                    navigator.serviceWorker.controller
+                  ) {
+                    // 新 SW 已安装且旧 SW 仍在控制页面 → 有更新可用
+                    window._swUpdateAvailable = true;
+                    if (window._showUpdateToast) window._showUpdateToast();
+                  }
+                });
+              });
             })
             .catch((error) => {
               console.error("Service Worker注册失败：", error);
@@ -132,6 +145,7 @@
         </label>
       </div>
       <div id="layerItemsContainer"></div>
+      <div id="appVersion" class="app-version"></div>
     </div>
     <!-- 右侧地图容器 -->
     <div id="map"></div>
@@ -159,6 +173,32 @@
           position: "bottomleft",
         })
         .addTo(map);
+
+      // 从 service-worker.js 读取 CACHE_NAME 保持版本同步
+      // 版本号显示在图层面板底部
+      fetch("service-worker.js")
+        .then(function (r) { return r.text(); })
+        .then(function (src) {
+          var m = src.match(/CACHE_NAME\s*=\s*["']([^"']+)["']/);
+          if (m) {
+            document.getElementById("appVersion").textContent = m[1];
+          }
+        })
+        .catch(function () {});
+
+      // 更新提示 toast
+      window._showUpdateToast = function () {
+        if (document.getElementById("updateToast")) return;
+        const toast = document.createElement("div");
+        toast.id = "updateToast";
+        toast.className = "update-toast";
+        toast.innerHTML =
+          '<span>新版本可用，点击刷新</span><button onclick="location.reload()">刷新</button>';
+        document.body.appendChild(toast);
+      };
+      if (window._swUpdateAvailable && window._showUpdateToast) {
+        window._showUpdateToast();
+      }
 
       // 3. 鼠标坐标控件
       L.control
