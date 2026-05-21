@@ -55,7 +55,10 @@
 
     layers.forEach(function(item) {
       fetch('./assets/geojson/' + item.file)
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+          if (!r.ok) throw new Error(r.status);
+          return r.json();
+        })
         .then(function(data) {
           var layer = L.geoJSON(data, {
             style: randomStyle,
@@ -66,12 +69,14 @@
             }
           });
           overlayLayers[item.name] = layer;
+        })
+        .catch(function(err) { console.error(item.file, err); })
+        .finally(function() {
           loadedCount++;
           if (loadedCount === layers.length) {
             L.control.layers(baseLayers, overlayLayers).addTo(map);
           }
-        })
-        .catch(function(err) { console.error(item.file, err); });
+        });
     });
   </script>
 </body>
