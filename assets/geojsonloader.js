@@ -680,12 +680,12 @@
 
       fetchGeoJSON(filePath)
         .then(function (data) {
-          const fixedData = window.GeoUtils.fixAntimeridian(data);
+          const data_ = data; // 直接使用原始数据，三副本逻辑处理跨180显示
           console.log(
-            `[DEBUG] ${fileName}: 加载成功, features: ${fixedData.features?.length || 0}`,
+            `[DEBUG] ${fileName}: 加载成功, features: ${data_.features?.length || 0}`,
           );
 
-          const geomType = window.GeoUtils.detectMainGeomType(fixedData);
+          const geomType = window.GeoUtils.detectMainGeomType(data_);
           _geomTypeCache[fileName] = geomType;
 
           if (colorMode[checkboxId] === undefined) {
@@ -701,7 +701,7 @@
           }
 
           const worldCopyGroup = buildGeoJsonLayerGroup(
-            fixedData,
+            data_,
             checkboxId,
             fileName,
           );
@@ -710,13 +710,13 @@
 
           // 直接计算 bounds，不构建完整 L.geoJSON 层（避免大数据内存爆炸）
           const boundsObj = window.GeoUtils.computeBounds
-            ? window.GeoUtils.computeBounds(fixedData)
+            ? window.GeoUtils.computeBounds(data_)
             : null;
           if (boundsObj && boundsObj.isValid && boundsObj.isValid()) {
             layerBoundsCache[checkboxId] = boundsObj;
           } else {
             // 降级：用轻量方式算 bounds
-            const fakeLayer = L.geoJSON(fixedData, {
+            const fakeLayer = L.geoJSON(data_, {
               style: function () {
                 return { opacity: 0, fillOpacity: 0 };
               },
@@ -737,14 +737,14 @@
             const cb = document.getElementById(checkboxId);
             const layerLabel = cb ? cb.dataset.layerName || fileName : fileName;
             // 大数据集（>1万点）不持有完整 features，只存文件名供搜索时实时读取
-            const isLarge = (fixedData.features?.length || 0) > 10000;
+            const isLarge = (data_.features?.length || 0) > 10000;
             searchRegistry.push({
               layerLabel: layerLabel,
               checkboxId: checkboxId,
               fileName: fileName,
               // 小数据集保留完整引用方便搜索；大数据集只存长度信息
-              features: isLarge ? null : fixedData.features || [],
-              featureCount: fixedData.features?.length || 0,
+              features: isLarge ? null : data_.features || [],
+              featureCount: data_.features?.length || 0,
               isLarge: isLarge,
             });
           }
@@ -876,11 +876,9 @@
         const checkbox = document.getElementById(checkboxId);
         if (checkbox && checkbox.checked) {
           if (savedData) {
-            const fixedData = window.GeoUtils.fixAntimeridian(
-              savedData.geoJsonData,
-            );
+            const data_ = savedData.geoJsonData; // 直接使用原始数据，三副本逻辑处理跨180显示
             const worldCopyGroup = buildGeoJsonLayerGroup(
-              fixedData,
+              data_,
               checkboxId,
               savedData.fileName,
             );
@@ -1225,8 +1223,7 @@
 
       dataPromise
         .then(function (data) {
-          const fixed = window.GeoUtils.fixAntimeridian(data);
-          const fields = window.GeoUtils.getAvailableFields(fixed);
+          const fields = window.GeoUtils.getAvailableFields(data);
 
           colorModalData = {
             checkboxId: checkboxId,
@@ -1240,7 +1237,7 @@
             checkboxId,
             fileName,
             fields,
-            fixed,
+            data,
           );
           colorModalOverlay.style.cssText =
             "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:99999;display:flex;align-items:center;justify-content:center;";
@@ -1510,26 +1507,26 @@
       var fixedColor = window.GeoUtils.getFixedColor(globalLayerIndex++);
       layerColorMap[uid] = fixedColor;
 
-      var fixedData = window.GeoUtils.fixAntimeridian(geojsonData);
-      var mainGeomType = window.GeoUtils.detectMainGeomType(fixedData);
+      var data_ = geojsonData; // 直接使用原始数据，三副本逻辑处理跨180显示
+      var mainGeomType = window.GeoUtils.detectMainGeomType(data_);
       colorMode[uid] =
         mainGeomType === "polygon" || mainGeomType === "multipolygon"
           ? "sequential"
           : "single";
 
       if (
-        fixedData.type === "FeatureCollection" &&
-        Array.isArray(fixedData.features)
+        data_.type === "FeatureCollection" &&
+        Array.isArray(data_.features)
       ) {
-        fixedData.features.forEach(function (f, idx) {
+        data_.features.forEach(function (f, idx) {
           f._featureIndex = idx;
         });
       }
 
-      var worldCopyGroup = buildGeoJsonLayerGroup(fixedData, uid, fileName);
+      var worldCopyGroup = buildGeoJsonLayerGroup(data_, uid, fileName);
       worldCopyGroup.addTo(map);
       layerCache[uid] = worldCopyGroup;
-      userLayerGeoJson[uid] = { geoJsonData: fixedData, fileName: fileName };
+      userLayerGeoJson[uid] = { geoJsonData: data_, fileName: fileName };
 
       // 直接从坐标数组计算 bounds，避免为45万点创建 L.geoJSON（会生成大量 DOM Marker 对象）
       try {
@@ -1537,7 +1534,7 @@
           maxLat = -Infinity,
           minLng = Infinity,
           maxLng = -Infinity;
-        var feats = fixedData.features || [];
+        var feats = data_.features || [];
         for (var bi = 0; bi < feats.length; bi++) {
           var fg = feats[bi] && feats[bi].geometry;
           if (!fg) continue;
@@ -1657,7 +1654,7 @@
           layerLabel: fileName,
           checkboxId: uid,
           fileName: fileName,
-          features: fixedData.features || [],
+          features: data_.features || [],
         });
       }
     }
