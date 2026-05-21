@@ -87,7 +87,7 @@
 
         // 监听 beforeinstallprompt（如果尚未触发，等待后续触发）
         this._installPromptHandler = function (e) {
-          e.preventDefault();
+          // 不拦截，让浏览器也可以自动弹窗
           this._deferredInstallPrompt = e;
           window._pwaInstallPrompt = e; // 全局共享
           this._isPWAInstalled = false;

@@ -41,7 +41,7 @@
       // 尽早捕获 PWA 安装提示事件（供 Leaflet.MousePosition 插件使用）
       window._pwaInstallPrompt = null;
       window.addEventListener("beforeinstallprompt", function (e) {
-        e.preventDefault();
+        // 不拦截，让浏览器也可以自动弹窗；同时记录事件供自定义按钮使用
         window._pwaInstallPrompt = e;
       });
 
