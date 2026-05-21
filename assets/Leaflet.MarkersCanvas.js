@@ -157,6 +157,11 @@
       map.on("mousemove", this._fire, this);
       map.on("mouseout", this._onMouseOut, this);
       if (map._zoomAnimated) map.on("zoomanim", this._animateZoom, this);
+      // setFeatures 可能在 addTo 之前调用，此时 _map 为 null 导致 _redraw 跳过
+      // 这里补一次渲染，确保数据加载后立即显示
+      if (this._features && this._features.length) {
+        this._redraw(true);
+      }
     },
 
     onRemove: function (map) {
