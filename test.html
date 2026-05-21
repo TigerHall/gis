@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>GeoJSON 原始渲染测试</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100dvh;
+      font-family: sans-serif;
+      padding:
+        max(0px, env(safe-area-inset-top))
+        max(0px, env(safe-area-inset-right))
+        max(0px, env(safe-area-inset-bottom))
+        max(0px, env(safe-area-inset-left));
+    }
+    #map { height: 100dvh; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    var map = L.map('map').setView([20, 0], 2);
+
+    var imagery = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 18, attribution: '&copy; Esri', noWrap: false }
+    ).addTo(map);
+
+    var layers = [
+      { name: "全球16大板块 plate16", file: "plate16.json" },
+      { name: "大陆板块 plate_cont", file: "plate_cont.json" },
+      { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
+      { name: "1全球洋壳 GlobalOceanicCrust", file: "1GlobalOceanicCrust.json" },
+      { name: "3次大洋域 SubOceanDomain", file: "3SubOceanDomain.json" },
+      { name: "4洋中脊作用域 RidgeDomain", file: "4RidgeDomain.json" },
+      { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.json" }
+    ];
+
+    function randomStyle(feature) {
+      var hue = Math.floor(Math.random() * 360);
+      return {
+        color: '#fff', weight: 1, opacity: 0.8,
+        fillColor: 'hsl(' + hue + ', 60%, 50%)', fillOpacity: 0.4
+      };
+    }
+
+    var baseLayers = { 'ArcGIS 影像': imagery };
+    var overlayLayers = {};
+    var loadedCount = 0;
+
+    layers.forEach(function(item) {
+      fetch('./assets/geojson/' + item.file)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var layer = L.geoJSON(data, {
+            style: randomStyle,
+            onEachFeature: function(feature, lyr) {
+              var name = feature.properties && feature.properties.Name
+                ? feature.properties.Name : '';
+              if (name) lyr.bindTooltip(name, { sticky: true });
+            }
+          });
+          overlayLayers[item.name] = layer;
+          loadedCount++;
+          if (loadedCount === layers.length) {
+            L.control.layers(baseLayers, overlayLayers).addTo(map);
+          }
+        })
+        .catch(function(err) { console.error(item.file, err); });
+    });
+  </script>
+</body>
+</html>
