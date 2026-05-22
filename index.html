@@ -239,13 +239,18 @@
           menu = document.createElement("div");
           menu.className = "refresh-menu";
           menu.innerHTML =
+            '<button data-mode="refresh">刷新页面</button>' +
             '<button data-mode="sw">清理网页缓存</button>' +
             '<button data-mode="all">彻底清理</button>';
           menu.addEventListener("click", function (e) {
             var btn = e.target.closest("[data-mode]");
             if (!btn) return;
             menu.remove();
-            doRefresh(btn.dataset.mode === "all");
+            if (btn.dataset.mode === "refresh") {
+              location.reload();
+            } else {
+              doRefresh(btn.dataset.mode === "all");
+            }
           });
           el.appendChild(menu);
         }
