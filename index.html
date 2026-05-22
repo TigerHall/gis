@@ -191,6 +191,51 @@
         })
         .catch(function () {});
 
+      // 版本号双击 → 强制清空缓存并刷新
+      (function () {
+        var el = document.getElementById("appVersion");
+        if (!el) return;
+        var tapCount = 0;
+        var tapTimer = null;
+        function onTap() {
+          tapCount++;
+          if (tapCount === 1) {
+            tapTimer = setTimeout(function () { tapCount = 0; }, 500);
+          } else if (tapCount >= 2) {
+            clearTimeout(tapTimer);
+            tapCount = 0;
+            if (!confirm("确认强制刷新？将清空本地缓存并重新加载最新版本。")) return;
+            // 清空所有 SW 缓存后刷新
+            if (window.caches) {
+              caches.keys().then(function (names) {
+                return Promise.all(names.map(function (n) { return caches.delete(n); }));
+              }).then(function () {
+                location.reload(true);
+              });
+            } else {
+              location.reload(true);
+            }
+          }
+        }
+        el.addEventListener("dblclick", function (e) {
+          e.preventDefault();
+          // dblclick 会触发两次 click，这里直接走逻辑
+          if (!confirm("确认强制刷新？将清空本地缓存并重新加载最新版本。")) return;
+          if (window.caches) {
+            caches.keys().then(function (names) {
+              return Promise.all(names.map(function (n) { return caches.delete(n); }));
+            }).then(function () { location.reload(true); });
+          } else {
+            location.reload(true);
+          }
+        });
+        // 手机触屏：500ms 内两次 tap
+        el.addEventListener("touchend", function (e) {
+          e.preventDefault();
+          onTap();
+        });
+      })();
+
       // 更新提示 toast
       window._showUpdateToast = function () {
         if (document.getElementById("updateToast")) return;
