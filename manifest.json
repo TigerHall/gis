@@ -77,6 +77,15 @@
         "application/json": [
           ".geojson",
           ".json"
+        ],
+        "application/vnd.google-earth.kml+xml": [
+          ".kml"
+        ],
+        "application/vnd.google-earth.kmz": [
+          ".kmz"
+        ],
+        "application/zip": [
+          ".zip"
         ]
       }
     }

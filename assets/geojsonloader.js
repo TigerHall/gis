@@ -1485,7 +1485,7 @@
       };
       var fileInput = document.createElement("input");
       fileInput.type = "file";
-      fileInput.accept = ".geojson,.json,.shp,.zip,.kml,.kmz";
+      fileInput.accept = ".geojson,.json,.shp,.zip,.kml,application/vnd.google-earth.kml+xml,.kmz,application/vnd.google-earth.kmz";
       fileInput.multiple = true;
       fileInput.style.display = "none";
       uploadBtn.addEventListener("click", function () {
