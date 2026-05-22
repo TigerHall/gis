@@ -479,3 +479,28 @@ body {
     transform: translateX(-50%) translateY(0);
   }
 }
+
+/* 版本号清理菜单 */
+.refresh-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;
+}
+.refresh-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+  text-align: center;
+  background: #e8e8ed;
+  color: #333;
+  transition: background 0.12s;
+}
+.refresh-menu button:hover {
+  background: #d8d8de;
+}

@@ -191,49 +191,49 @@
         })
         .catch(function () {});
 
-      // 版本号双击 → 强制清空缓存并刷新
+      // 版本号双击 → 显示清理选项
       (function () {
         var el = document.getElementById("appVersion");
         if (!el) return;
-        var tapCount = 0;
-        var tapTimer = null;
-        function onTap() {
-          tapCount++;
-          if (tapCount === 1) {
-            tapTimer = setTimeout(function () { tapCount = 0; }, 500);
-          } else if (tapCount >= 2) {
-            clearTimeout(tapTimer);
-            tapCount = 0;
-            if (!confirm("确认强制刷新？将清空本地缓存并重新加载最新版本。")) return;
-            // 清空所有 SW 缓存后刷新
-            if (window.caches) {
-              caches.keys().then(function (names) {
-                return Promise.all(names.map(function (n) { return caches.delete(n); }));
-              }).then(function () {
-                location.reload(true);
-              });
-            } else {
-              location.reload(true);
-            }
-          }
+
+        function clearSWCache() {
+          if (!window.caches) return Promise.resolve();
+          return caches.keys().then(function (names) {
+            return Promise.all(names.map(function (n) { return caches.delete(n); }));
+          });
         }
-        el.addEventListener("dblclick", function (e) {
-          e.preventDefault();
-          // dblclick 会触发两次 click，这里直接走逻辑
-          if (!confirm("确认强制刷新？将清空本地缓存并重新加载最新版本。")) return;
-          if (window.caches) {
-            caches.keys().then(function (names) {
-              return Promise.all(names.map(function (n) { return caches.delete(n); }));
-            }).then(function () { location.reload(true); });
-          } else {
-            location.reload(true);
+        function clearIDB() {
+          if (window.L && window.L.GzIdbLoader && window.L.GzIdbLoader.clearCache) {
+            return window.L.GzIdbLoader.clearCache();
           }
-        });
-        // 手机触屏：500ms 内两次 tap
-        el.addEventListener("touchend", function (e) {
-          e.preventDefault();
-          onTap();
-        });
+          return new Promise(function (resolve) {
+            var req = indexedDB.deleteDatabase("GzGeoJSONCache");
+            req.onsuccess = req.onerror = resolve;
+          });
+        }
+        function doRefresh(all) {
+          var tasks = [clearSWCache()];
+          if (all) tasks.push(clearIDB());
+          Promise.all(tasks).then(function () { location.reload(true); });
+        }
+        function toggleMenu() {
+          var menu = el.querySelector(".refresh-menu");
+          if (menu) { menu.remove(); return; }
+          menu = document.createElement("div");
+          menu.className = "refresh-menu";
+          menu.innerHTML =
+            '<button data-mode="sw">清理网页缓存</button>' +
+            '<button data-mode="all">彻底清理</button>';
+          menu.addEventListener("click", function (e) {
+            var btn = e.target.closest("[data-mode]");
+            if (!btn) return;
+            menu.remove();
+            doRefresh(btn.dataset.mode === "all");
+          });
+          el.appendChild(menu);
+        }
+
+        el.addEventListener("click", function (e) { e.stopPropagation(); toggleMenu(); });
       })();
 
       // 更新提示 toast
