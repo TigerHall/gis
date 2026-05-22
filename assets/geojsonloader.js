@@ -12,7 +12,7 @@
     {
       groupName: "全球板块构造",
       layers: [
-        { name: "全球16大板块 plate16", file: "plate16.json" },
+        { name: "全球16大板块 plate16", file: "plate16.geojson" },
         { name: "大陆板块 plate_cont", file: "plate_cont.json" },
         { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
         { name: "洋中脊 Mid-Ocean Ridge", file: "ridgenew.json" },
@@ -788,13 +788,18 @@
         var newMode = colorMode[checkboxId];
         var newColor = layerColorMap[checkboxId] || "#8B4513";
 
-        if (cachedFeatures && (newMode === "single" || newMode === "sequential")) {
+        if (
+          cachedFeatures &&
+          (newMode === "single" || newMode === "sequential")
+        ) {
           // 单色或顺序色模式：直接修改颜色，无需重新读取数据
           for (var j = 0; j < cachedFeatures.length; j++) {
             if (newMode === "single") {
               cachedFeatures[j].color = newColor;
             } else if (newMode === "sequential") {
-              cachedFeatures[j].color = window.GeoUtils.getFeatureColorByIndex(cachedFeatures[j]._idx || j);
+              cachedFeatures[j].color = window.GeoUtils.getFeatureColorByIndex(
+                cachedFeatures[j]._idx || j,
+              );
             }
           }
           canvasLayer.setFeatures(cachedFeatures);
@@ -1514,10 +1519,7 @@
           ? "sequential"
           : "single";
 
-      if (
-        data_.type === "FeatureCollection" &&
-        Array.isArray(data_.features)
-      ) {
+      if (data_.type === "FeatureCollection" && Array.isArray(data_.features)) {
         data_.features.forEach(function (f, idx) {
           f._featureIndex = idx;
         });
@@ -1969,19 +1971,19 @@
               var cached = layerCache[checkboxId];
               if (cached && typeof cached.getLayers === "function") {
                 var layers = cached.getLayers();
-            var isCanvas = layers.some(function (l) {
-                return typeof l.setFeatures === "function";
-              });
-              if (isCanvas) {
-                // Canvas 图层也需要响应聚类开关：更新 clustering 选项并重绘
-                layers.forEach(function (l) {
-                  if (typeof l.setFeatures === "function") {
-                    l.options.clustering = clusterEnabled;
-                    l.redraw();
-                  }
+                var isCanvas = layers.some(function (l) {
+                  return typeof l.setFeatures === "function";
                 });
-                return;
-              }
+                if (isCanvas) {
+                  // Canvas 图层也需要响应聚类开关：更新 clustering 选项并重绘
+                  layers.forEach(function (l) {
+                    if (typeof l.setFeatures === "function") {
+                      l.options.clustering = clusterEnabled;
+                      l.redraw();
+                    }
+                  });
+                  return;
+                }
               }
               reloadLayerWithNewMode(
                 checkboxId,
