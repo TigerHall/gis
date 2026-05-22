@@ -199,11 +199,19 @@
         function clearSWCache() {
           if (!window.caches) return Promise.resolve();
           return caches.keys().then(function (names) {
-            return Promise.all(names.map(function (n) { return caches.delete(n); }));
+            return Promise.all(
+              names.map(function (n) {
+                return caches.delete(n);
+              }),
+            );
           });
         }
         function clearIDB() {
-          if (window.L && window.L.GzIdbLoader && window.L.GzIdbLoader.clearCache) {
+          if (
+            window.L &&
+            window.L.GzIdbLoader &&
+            window.L.GzIdbLoader.clearCache
+          ) {
             return window.L.GzIdbLoader.clearCache();
           }
           return new Promise(function (resolve) {
@@ -214,11 +222,16 @@
         function doRefresh(all) {
           var tasks = [clearSWCache()];
           if (all) tasks.push(clearIDB());
-          Promise.all(tasks).then(function () { location.reload(true); });
+          Promise.all(tasks).then(function () {
+            location.reload(true);
+          });
         }
         function toggleMenu() {
           var menu = el.querySelector(".refresh-menu");
-          if (menu) { menu.remove(); return; }
+          if (menu) {
+            menu.remove();
+            return;
+          }
           menu = document.createElement("div");
           menu.className = "refresh-menu";
           menu.innerHTML =
@@ -233,7 +246,10 @@
           el.appendChild(menu);
         }
 
-        el.addEventListener("click", function (e) { e.stopPropagation(); toggleMenu(); });
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          toggleMenu();
+        });
       })();
 
       // 更新提示 toast
