@@ -32,6 +32,10 @@
     <script src="./assets/rbush.js"></script>
     <!-- Canvas 聚类渲染（>10K 点零 DOM 方案） -->
     <script src="./assets/Leaflet.MarkersCanvas.js"></script>
+    <!-- 格式转换库：shp/kml/kmz → GeoJSON（CDN，后续可本地化） -->
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+    <script src="https://unpkg.com/@mapbox/togeojson@0.16.2/togeojson.js"></script>
+    <script src="https://unpkg.com/jszip@3/dist/jszip.min.js"></script>
     <!-- 自定义css -->
     <link rel="stylesheet" href="./assets/main.css" />
 
@@ -555,35 +559,173 @@
         return area;
       }
 
-      // ========== 外部GeoJSON文件处理（统一走 geojsonloader 的 addUserLayer）==========
-      // 解析文件内容并调用 addUserLayer（挂到 window，供 geojsonloader.js 内部的 handleFileUpload 复用）
+      // ========== 外部文件处理（支持 GeoJSON / SHP / KML / KMZ → 统一走 addUserLayer）==========
       window.loadFileAsUserLayer = function loadFileAsUserLayer(file) {
-        window.showLoading("正在读取文件...");
-        var reader = new FileReader();
-        reader.onload = function (ev) {
-          window.showLoading("正在解析数据...");
-          // 用 setTimeout 让浏览器有机会渲染 loading 文字后再执行耗时 parse
-          setTimeout(function () {
-            try {
-              var data = JSON.parse(ev.target.result);
-              if (typeof window.addUserLayer === "function") {
-                window.addUserLayer(data, file.name);
-                var layerPanel = document.getElementById("layerPanel");
-                if (layerPanel) layerPanel.classList.add("active");
+        var ext = (file.name.split(".").pop() || "").toLowerCase();
+        var geojsonExts = ["geojson", "json"];
+        var shpExts = ["shp", "zip"];
+        var kmlExts = ["kml"];
+        var kmzExts = ["kmz"];
+
+        if (geojsonExts.indexOf(ext) !== -1) {
+          // --- GeoJSON / JSON ---
+          window.showLoading("正在读取文件...");
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            window.showLoading("正在解析数据...");
+            setTimeout(function () {
+              try {
+                var data = JSON.parse(ev.target.result);
+                deliverToMap(data, file.name);
+              } catch (err) {
+                window.hideLoading();
+                alert("GeoJSON 解析失败：" + file.name + "\n" + err.message);
               }
-              window.hideLoading();
-            } catch (err) {
-              window.hideLoading();
-              alert("GeoJSON 解析失败：" + file.name + "\n" + err.message);
-            }
-          }, 50);
-        };
-        reader.onerror = function () {
-          window.hideLoading();
-          alert("文件读取失败：" + ((file && file.name) || ""));
-        };
-        reader.readAsText(file);
+            }, 50);
+          };
+          reader.onerror = function () {
+            window.hideLoading();
+            alert("文件读取失败：" + (file.name || ""));
+          };
+          reader.readAsText(file);
+
+        } else if (shpExts.indexOf(ext) !== -1) {
+          // --- Shapefile (.shp 或打包为 .zip) ---
+          if (typeof shp !== "function") {
+            alert("shpjs 库尚未加载，请检查网络连接后刷新页面。");
+            return;
+          }
+          window.showLoading("正在读取 Shapefile...");
+          var reader2 = new FileReader();
+          reader2.onload = function (ev) {
+            window.showLoading("正在解析 Shapefile...");
+            setTimeout(function () {
+              shp(ev.target.result).then(function (result) {
+                // shp() 可能返回 FeatureCollection 或 FeatureCollection[]
+                var fc = Array.isArray(result) ? mergeFeatureCollections(result) : result;
+                deliverToMap(fc, file.name);
+              }).catch(function (err) {
+                window.hideLoading();
+                alert("Shapefile 解析失败：" + file.name + "\n" + err.message);
+              });
+            }, 50);
+          };
+          reader2.onerror = function () {
+            window.hideLoading();
+            alert("文件读取失败：" + (file.name || ""));
+          };
+          reader2.readAsArrayBuffer(file);
+
+        } else if (kmlExts.indexOf(ext) !== -1) {
+          // --- KML ---
+          if (typeof toGeoJSON === "undefined") {
+            alert("toGeoJSON 库尚未加载，请检查网络连接后刷新页面。");
+            return;
+          }
+          window.showLoading("正在读取 KML...");
+          var reader3 = new FileReader();
+          reader3.onload = function (ev) {
+            window.showLoading("正在解析 KML...");
+            setTimeout(function () {
+              try {
+                var parser = new DOMParser();
+                var xmlDoc = parser.parseFromString(ev.target.result, "text/xml");
+                var fc = toGeoJSON.kml(xmlDoc);
+                deliverToMap(fc, file.name);
+              } catch (err) {
+                window.hideLoading();
+                alert("KML 解析失败：" + file.name + "\n" + err.message);
+              }
+            }, 50);
+          };
+          reader3.onerror = function () {
+            window.hideLoading();
+            alert("文件读取失败：" + (file.name || ""));
+          };
+          reader3.readAsText(file);
+
+        } else if (kmzExts.indexOf(ext) !== -1) {
+          // --- KMZ（zip 内含 doc.kml）---
+          if (typeof JSZip === "undefined") {
+            alert("JSZip 库尚未加载，请检查网络连接后刷新页面。");
+            return;
+          }
+          if (typeof toGeoJSON === "undefined") {
+            alert("toGeoJSON 库尚未加载，请检查网络连接后刷新页面。");
+            return;
+          }
+          window.showLoading("正在读取 KMZ...");
+          var reader4 = new FileReader();
+          reader4.onload = function (ev) {
+            window.showLoading("正在解析 KMZ...");
+            setTimeout(function () {
+              JSZip.loadAsync(ev.target.result).then(function (zip) {
+                // 查找 kml 文件（优先 doc.kml）
+                var kmlFile = null;
+                var kmlNames = ["doc.kml", "Doc.kml", "DOC.KML"];
+                for (var i = 0; i < kmlNames.length; i++) {
+                  if (zip.file(kmlNames[i])) {
+                    kmlFile = zip.file(kmlNames[i]);
+                    break;
+                  }
+                }
+                if (!kmlFile) {
+                  // 回退：找第一个 .kml 文件
+                  zip.forEach(function (relativePath, zipEntry) {
+                    if (!kmlFile && /\.kml$/i.test(relativePath)) {
+                      kmlFile = zipEntry;
+                    }
+                  });
+                }
+                if (!kmlFile) {
+                  window.hideLoading();
+                  alert("KMZ 中未找到 KML 文件");
+                  return;
+                }
+                return kmlFile.async("text");
+              }).then(function (kmlText) {
+                if (!kmlText) return;
+                var parser = new DOMParser();
+                var xmlDoc = parser.parseFromString(kmlText, "text/xml");
+                var fc = toGeoJSON.kml(xmlDoc);
+                deliverToMap(fc, file.name);
+              }).catch(function (err) {
+                window.hideLoading();
+                alert("KMZ 解析失败：" + file.name + "\n" + err.message);
+              });
+            }, 50);
+          };
+          reader4.onerror = function () {
+            window.hideLoading();
+            alert("文件读取失败：" + (file.name || ""));
+          };
+          reader4.readAsArrayBuffer(file);
+
+        } else {
+          alert("不支持的文件格式：" + ext + "\n支持格式：GeoJSON、JSON、SHP（zip打包）、KML、KMZ");
+        }
       };
+
+      // 合并多个 FeatureCollection 为一个
+      function mergeFeatureCollections(arr) {
+        var merged = { type: "FeatureCollection", features: [] };
+        arr.forEach(function (fc) {
+          if (fc && fc.features) {
+            merged.features = merged.features.concat(fc.features);
+          }
+        });
+        return merged;
+      }
+
+      // 统一交付给地图图层
+      function deliverToMap(data, fileName) {
+        if (typeof window.addUserLayer === "function") {
+          window.addUserLayer(data, fileName);
+          var layerPanel = document.getElementById("layerPanel");
+          if (layerPanel) layerPanel.classList.add("active");
+        }
+        window.hideLoading();
+      }
 
       // 暂存：geojsonloader.js 尚未就绪时收到的文件
       var _pendingFiles = [];
@@ -618,7 +760,7 @@
         e.preventDefault();
         e.stopPropagation();
         Array.from(e.dataTransfer.files).forEach(function (file) {
-          if (/\.(geojson|json)$/i.test(file.name)) {
+          if (/\.(geojson|json|shp|zip|kml|kmz)$/i.test(file.name)) {
             loadFileAsUserLayer(file);
             // 确保左侧面板打开
             var layerPanel = document.getElementById("layerPanel");

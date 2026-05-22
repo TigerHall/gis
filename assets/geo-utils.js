@@ -68,8 +68,18 @@
       for (let i = 0; i < geojsonData.features.length; i++) {
         const geom = geojsonData.features[i].geometry;
         if (geom && geom.type) {
-          const t = geom.type.toLowerCase();
-          typeCount[t] = (typeCount[t] || 0) + 1;
+          let t = geom.type.toLowerCase();
+          // GeometryCollection：递归统计子几何类型（KML MultiGeometry）
+          if (t === "geometrycollection" && Array.isArray(geom.geometries)) {
+            geom.geometries.forEach(function (g) {
+              if (g && g.type) {
+                const sub = g.type.toLowerCase();
+                typeCount[sub] = (typeCount[sub] || 0) + 1;
+              }
+            });
+          } else {
+            typeCount[t] = (typeCount[t] || 0) + 1;
+          }
         }
       }
       if (typeCount["polygon"] || typeCount["multipolygon"]) return "polygon";
@@ -173,6 +183,14 @@
             return shiftRingCoords(r, offset);
           });
         });
+        break;
+      case "GeometryCollection":
+        // KML 的 <MultiGeometry> 会被 toGeoJSON 转为此类型
+        if (Array.isArray(g.geometries)) {
+          g.geometries = g.geometries.map(function (geom) {
+            return shiftGeometry(geom, offset);
+          });
+        }
         break;
       default:
         break;

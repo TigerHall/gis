@@ -1483,7 +1483,7 @@
       };
       var fileInput = document.createElement("input");
       fileInput.type = "file";
-      fileInput.accept = ".geojson,.json";
+      fileInput.accept = ".geojson,.json,.shp,.zip,.kml,.kmz";
       fileInput.multiple = true;
       fileInput.style.display = "none";
       uploadBtn.addEventListener("click", function () {
