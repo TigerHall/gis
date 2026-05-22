@@ -1472,7 +1472,9 @@
       uploadDiv.style.cssText =
         "padding:10px;border-top:1px dashed #ccc;margin-top:8px;";
       var uploadBtn = document.createElement("button");
-      uploadBtn.textContent = "📂 上传 GeoJSON";
+      uploadBtn.textContent = "上传矢量";
+      uploadBtn.title =
+        "支持格式：GeoJSON、JSON、SHP（zip打包）、KML、KMZ、ZIP（可混装）";
       uploadBtn.style.cssText =
         "width:100%;padding:8px 12px;background:#f0f7f0;border:1px solid #99cc99;border-radius:4px;cursor:pointer;font-size:12px;color:#3a7a3a;transition:background 0.15s;";
       uploadBtn.onmouseover = function () {

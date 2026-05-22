@@ -559,15 +559,11 @@
         return area;
       }
 
-      // ========== 外部文件处理（支持 GeoJSON / SHP / KML / KMZ → 统一走 addUserLayer）==========
+      // ========== 外部文件处理（支持 GeoJSON / SHP / KML / KMZ / ZIP → 统一走 addUserLayer）==========
       window.loadFileAsUserLayer = function loadFileAsUserLayer(file) {
         var ext = (file.name.split(".").pop() || "").toLowerCase();
-        var geojsonExts = ["geojson", "json"];
-        var shpExts = ["shp", "zip"];
-        var kmlExts = ["kml"];
-        var kmzExts = ["kmz"];
 
-        if (geojsonExts.indexOf(ext) !== -1) {
+        if (/^(geojson|json)$/i.test(ext)) {
           // --- GeoJSON / JSON ---
           window.showLoading("正在读取文件...");
           var reader = new FileReader();
@@ -588,48 +584,58 @@
             alert("文件读取失败：" + (file.name || ""));
           };
           reader.readAsText(file);
-
-        } else if (shpExts.indexOf(ext) !== -1) {
-          // --- Shapefile (.shp 或打包为 .zip) ---
+        } else if (/^shp$/i.test(ext) && !/\.zip$/i.test(file.name)) {
+          // --- 单独 .shp 文件（无配套文件，大概率不完整，但尝试解析）---
           if (typeof shp !== "function") {
             alert("shpjs 库尚未加载，请检查网络连接后刷新页面。");
             return;
           }
           window.showLoading("正在读取 Shapefile...");
-          var reader2 = new FileReader();
-          reader2.onload = function (ev) {
+          var readerShp = new FileReader();
+          readerShp.onload = function (ev) {
             window.showLoading("正在解析 Shapefile...");
             setTimeout(function () {
-              shp(ev.target.result).then(function (result) {
-                // shp() 可能返回 FeatureCollection 或 FeatureCollection[]
-                var fc = Array.isArray(result) ? mergeFeatureCollections(result) : result;
-                deliverToMap(fc, file.name);
-              }).catch(function (err) {
-                window.hideLoading();
-                alert("Shapefile 解析失败：" + file.name + "\n" + err.message);
-              });
+              shp(ev.target.result)
+                .then(function (result) {
+                  if (Array.isArray(result)) {
+                    // 多个图层，各自独立添加，用原始文件名 + 序号
+                    result.forEach(function (fc, i) {
+                      deliverToMap(fc, file.name + (i > 0 ? "_" + i : ""));
+                    });
+                  } else {
+                    deliverToMap(result, file.name);
+                  }
+                })
+                .catch(function (err) {
+                  window.hideLoading();
+                  alert(
+                    "Shapefile 解析失败：" + file.name + "\n" + err.message,
+                  );
+                });
             }, 50);
           };
-          reader2.onerror = function () {
+          readerShp.onerror = function () {
             window.hideLoading();
             alert("文件读取失败：" + (file.name || ""));
           };
-          reader2.readAsArrayBuffer(file);
-
-        } else if (kmlExts.indexOf(ext) !== -1) {
+          readerShp.readAsArrayBuffer(file);
+        } else if (/^kml$/i.test(ext)) {
           // --- KML ---
           if (typeof toGeoJSON === "undefined") {
             alert("toGeoJSON 库尚未加载，请检查网络连接后刷新页面。");
             return;
           }
           window.showLoading("正在读取 KML...");
-          var reader3 = new FileReader();
-          reader3.onload = function (ev) {
+          var readerKml = new FileReader();
+          readerKml.onload = function (ev) {
             window.showLoading("正在解析 KML...");
             setTimeout(function () {
               try {
                 var parser = new DOMParser();
-                var xmlDoc = parser.parseFromString(ev.target.result, "text/xml");
+                var xmlDoc = parser.parseFromString(
+                  ev.target.result,
+                  "text/xml",
+                );
                 var fc = toGeoJSON.kml(xmlDoc);
                 deliverToMap(fc, file.name);
               } catch (err) {
@@ -638,84 +644,154 @@
               }
             }, 50);
           };
-          reader3.onerror = function () {
+          readerKml.onerror = function () {
             window.hideLoading();
             alert("文件读取失败：" + (file.name || ""));
           };
-          reader3.readAsText(file);
-
-        } else if (kmzExts.indexOf(ext) !== -1) {
-          // --- KMZ（zip 内含 doc.kml）---
+          readerKml.readAsText(file);
+        } else if (/^(zip|kmz)$/i.test(ext)) {
+          // --- ZIP / KMZ：通用 ZIP 容器解析 ---
           if (typeof JSZip === "undefined") {
             alert("JSZip 库尚未加载，请检查网络连接后刷新页面。");
             return;
           }
-          if (typeof toGeoJSON === "undefined") {
-            alert("toGeoJSON 库尚未加载，请检查网络连接后刷新页面。");
-            return;
-          }
-          window.showLoading("正在读取 KMZ...");
-          var reader4 = new FileReader();
-          reader4.onload = function (ev) {
-            window.showLoading("正在解析 KMZ...");
+          window.showLoading(
+            "正在读取 " + (ext === "kmz" ? "KMZ" : "ZIP") + "...",
+          );
+          var readerZip = new FileReader();
+          readerZip.onload = function (ev) {
+            window.showLoading("正在解压...");
             setTimeout(function () {
-              JSZip.loadAsync(ev.target.result).then(function (zip) {
-                // 查找 kml 文件（优先 doc.kml）
-                var kmlFile = null;
-                var kmlNames = ["doc.kml", "Doc.kml", "DOC.KML"];
-                for (var i = 0; i < kmlNames.length; i++) {
-                  if (zip.file(kmlNames[i])) {
-                    kmlFile = zip.file(kmlNames[i]);
-                    break;
-                  }
-                }
-                if (!kmlFile) {
-                  // 回退：找第一个 .kml 文件
+              JSZip.loadAsync(ev.target.result)
+                .then(function (zip) {
+                  // 扫描 ZIP 内容，分类处理
+                  var hasShp = false;
+                  var geojsonFiles = [];
+                  var kmlFiles = [];
+
                   zip.forEach(function (relativePath, zipEntry) {
-                    if (!kmlFile && /\.kml$/i.test(relativePath)) {
-                      kmlFile = zipEntry;
-                    }
+                    // 跳过目录和隐藏文件（__MACOSX 等）
+                    if (zipEntry.dir) return;
+                    var name = relativePath.split("/").pop(); // 取文件名部分
+                    if (!name || name.startsWith(".")) return;
+
+                    var e = name.split(".").pop().toLowerCase();
+                    if (e === "shp") hasShp = true;
+                    else if (/^(geojson|json)$/i.test(e))
+                      geojsonFiles.push({ path: relativePath, name: name });
+                    else if (/^kml$/i.test(e))
+                      kmlFiles.push({ path: relativePath, name: name });
                   });
-                }
-                if (!kmlFile) {
+
+                  var tasks = [];
+
+                  // 1) 有 .shp → 用 shpjs 统一解析整个 ZIP（shpjs 内部会匹配 .shp/.dbf/.prj 组合）
+                  if (hasShp && typeof shp === "function") {
+                    tasks.push(
+                      shp(ev.target.result)
+                        .then(function (result) {
+                          if (Array.isArray(result)) {
+                            // 多个图层，各自独立添加
+                            result.forEach(function (fc, i) {
+                              deliverToMap(
+                                fc,
+                                file.name + (i > 0 ? "_" + i : ""),
+                              );
+                            });
+                          } else {
+                            deliverToMap(result, file.name);
+                          }
+                        })
+                        .catch(function (err) {
+                          console.warn(
+                            "shpjs 解析失败（非致命，继续处理其他文件）:",
+                            err,
+                          );
+                        }),
+                    );
+                  }
+
+                  // 2) GeoJSON 文件
+                  geojsonFiles.forEach(function (item, idx) {
+                    // 单个文件用外层 ZIP 名，多个文件加序号区分
+                    var displayName =
+                      geojsonFiles.length === 1
+                        ? file.name.replace(/\.(zip|kmz)$/i, ".geojson")
+                        : item.name;
+                    tasks.push(
+                      zip
+                        .file(item.path)
+                        .async("text")
+                        .then(function (text) {
+                          var data = JSON.parse(text);
+                          deliverToMap(data, displayName);
+                        })
+                        .catch(function (err) {
+                          console.warn("GeoJSON 解析失败:", item.name, err);
+                        }),
+                    );
+                  });
+
+                  // 3) KML 文件
+                  if (typeof toGeoJSON !== "undefined") {
+                    kmlFiles.forEach(function (item, idx) {
+                      // 单个文件用外层 ZIP/KMZ 名，多个文件加序号区分
+                      var displayName =
+                        kmlFiles.length === 1
+                          ? file.name.replace(/\.(zip|kmz)$/i, ".kml")
+                          : item.name;
+                      tasks.push(
+                        zip
+                          .file(item.path)
+                          .async("text")
+                          .then(function (text) {
+                            var parser = new DOMParser();
+                            var xmlDoc = parser.parseFromString(
+                              text,
+                              "text/xml",
+                            );
+                            var fc = toGeoJSON.kml(xmlDoc);
+                            deliverToMap(fc, displayName);
+                          })
+                          .catch(function (err) {
+                            console.warn("KML 解析失败:", item.name, err);
+                          }),
+                      );
+                    });
+                  }
+
+                  if (tasks.length === 0) {
+                    window.hideLoading();
+                    alert(
+                      "ZIP 中未找到可识别的文件\n支持：.shp、.geojson、.json、.kml",
+                    );
+                    return;
+                  }
+
+                  // 全部完成后关闭 loading
+                  Promise.allSettled(tasks).then(function () {
+                    window.hideLoading();
+                  });
+                })
+                .catch(function (err) {
                   window.hideLoading();
-                  alert("KMZ 中未找到 KML 文件");
-                  return;
-                }
-                return kmlFile.async("text");
-              }).then(function (kmlText) {
-                if (!kmlText) return;
-                var parser = new DOMParser();
-                var xmlDoc = parser.parseFromString(kmlText, "text/xml");
-                var fc = toGeoJSON.kml(xmlDoc);
-                deliverToMap(fc, file.name);
-              }).catch(function (err) {
-                window.hideLoading();
-                alert("KMZ 解析失败：" + file.name + "\n" + err.message);
-              });
+                  alert("ZIP 解压失败：" + file.name + "\n" + err.message);
+                });
             }, 50);
           };
-          reader4.onerror = function () {
+          readerZip.onerror = function () {
             window.hideLoading();
             alert("文件读取失败：" + (file.name || ""));
           };
-          reader4.readAsArrayBuffer(file);
-
+          readerZip.readAsArrayBuffer(file);
         } else {
-          alert("不支持的文件格式：" + ext + "\n支持格式：GeoJSON、JSON、SHP（zip打包）、KML、KMZ");
+          alert(
+            "不支持的文件格式：." +
+              ext +
+              "\n支持格式：GeoJSON、JSON、SHP、KML、KMZ、ZIP",
+          );
         }
       };
-
-      // 合并多个 FeatureCollection 为一个
-      function mergeFeatureCollections(arr) {
-        var merged = { type: "FeatureCollection", features: [] };
-        arr.forEach(function (fc) {
-          if (fc && fc.features) {
-            merged.features = merged.features.concat(fc.features);
-          }
-        });
-        return merged;
-      }
 
       // 统一交付给地图图层
       function deliverToMap(data, fileName) {
