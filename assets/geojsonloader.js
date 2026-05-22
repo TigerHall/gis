@@ -444,7 +444,7 @@
           } else if (!isNoCluster) {
             // 小数据集 + 聚类开启：DOM 聚类
             const clusterGroup = createClusterGroup();
-            clusterGroup.addTo(map);
+            // 注意：不在这里 addTo(map)，统一由层组管理，避免重复添加/移除混乱
 
             const markers = [];
             L.geoJSON(shifted, {
@@ -538,7 +538,7 @@
                 return marker;
               },
             });
-            geoLayer.addTo(map);
+            // 注意：不在这里 addTo(map)，统一由层组管理，避免重复添加/移除混乱
             geoLayers.push(geoLayer);
           }
         } else {
@@ -632,7 +632,7 @@
             },
           });
 
-          geoLayer.addTo(map);
+          // 注意：不在这里 addTo(map)，统一由层组管理，避免重复添加/移除混乱
           geoLayers.push(geoLayer);
         }
       });
@@ -1472,9 +1472,9 @@
       uploadDiv.style.cssText =
         "padding:10px;border-top:1px dashed #ccc;margin-top:8px;";
       var uploadBtn = document.createElement("button");
-      uploadBtn.textContent = "上传矢量";
+      uploadBtn.textContent = "上传矢量（单文件）";
       uploadBtn.title =
-        "支持格式：GeoJSON、JSON、SHP（zip打包）、KML、KMZ、ZIP（可混装）";
+        "支持格式：GeoJSON、JSON、KML、KMZ、ZIP（内可含 SHP/KML/GeoJSON）";
       uploadBtn.style.cssText =
         "width:100%;padding:8px 12px;background:#f0f7f0;border:1px solid #99cc99;border-radius:4px;cursor:pointer;font-size:12px;color:#3a7a3a;transition:background 0.15s;";
       uploadBtn.onmouseover = function () {
@@ -1494,6 +1494,31 @@
       fileInput.addEventListener("change", handleFileUpload);
       uploadDiv.appendChild(uploadBtn);
       uploadDiv.appendChild(fileInput);
+
+      // 选择文件夹按钮
+      var folderBtn = document.createElement("button");
+      folderBtn.textContent = "选择文件夹";
+      folderBtn.title =
+        "递归搜索文件夹内的 shp、kml、kmz、json、geojson 文件并添加为图层";
+      folderBtn.style.cssText =
+        "width:100%;padding:8px 12px;background:#f0f0f7;border:1px solid #9999cc;border-radius:4px;cursor:pointer;font-size:12px;color:#3a3a7a;transition:background 0.15s;margin-top:6px;";
+      folderBtn.onmouseover = function () {
+        folderBtn.style.background = "#e2e2f0";
+      };
+      folderBtn.onmouseout = function () {
+        folderBtn.style.background = "#f0f0f7";
+      };
+      var folderInput = document.createElement("input");
+      folderInput.type = "file";
+      folderInput.webkitdirectory = true;
+      folderInput.multiple = true;
+      folderInput.style.display = "none";
+      folderBtn.addEventListener("click", function () {
+        folderInput.click();
+      });
+      folderInput.addEventListener("change", handleFolderUpload);
+      uploadDiv.appendChild(folderBtn);
+      uploadDiv.appendChild(folderInput);
       container.appendChild(uploadDiv);
     }
 
@@ -1506,10 +1531,200 @@
       });
     }
 
+    // ========== 文件夹上传 ==========
+    function handleFolderUpload(e) {
+      var allFiles = Array.from(e.target.files);
+      e.target.value = "";
+      if (!allFiles.length) return;
+
+      // 建立文件名 → File 查找表（key = 文件名小写，含路径）
+      var fileMap = {};
+      allFiles.forEach(function (file) {
+        fileMap[file.name.toLowerCase()] = file;
+      });
+
+      // --- 收集非 shp 文件 ---
+      var nonShpExts = ["kml", "kmz", "json", "geojson"];
+      var nonShpFiles = [];
+      allFiles.forEach(function (file) {
+        var ext = file.name.split(".").pop().toLowerCase();
+        if (nonShpExts.indexOf(ext) !== -1) {
+          nonShpFiles.push(file);
+        }
+      });
+
+      // --- 收集 shp 文件并匹配配套 ---
+      var shpFileNames = []; // baseName（不含扩展名）
+      allFiles.forEach(function (file) {
+        var name = file.name.toLowerCase();
+        if (name.endsWith(".shp")) {
+          // webkitdirectory 下同目录文件 name 可能含路径前缀，统一用文件名部分
+          var baseName = file.name.replace(/\.shp$/i, "");
+          if (shpFileNames.indexOf(baseName) === -1) {
+            shpFileNames.push(baseName);
+          }
+        }
+      });
+
+      if (!nonShpFiles.length && !shpFileNames.length) {
+        alert(
+          "文件夹中未找到支持的矢量文件\n支持：shp、kml、kmz、json、geojson",
+        );
+        return;
+      }
+
+      window.showLoading("正在扫描文件夹...");
+      var warnings = [];
+      var shpTasks = [];
+
+      // 解析非 shp 文件（走 loadFileAsUserLayer，传 autoShow=false 不自动显示）
+      nonShpFiles.forEach(function (file) {
+        window.loadFileAsUserLayer(file, false);
+      });
+
+      // 如果没有 shp 文件，直接关闭外层 loading
+      if (!shpFileNames.length) {
+        window.hideLoading();
+        return;
+      }
+
+      // 解析 shp：为每个 .shp 找配套文件，用 JSZip 打包后喂给 shpjs
+      if (typeof JSZip !== "undefined") {
+        shpFileNames.forEach(function (baseName) {
+          var companionExts = [".dbf", ".shx", ".prj"];
+          var companions = [];
+          var missing = [];
+
+          // 查找配套文件（在 fileMap 中按 baseName+ext 匹配）
+          companionExts.forEach(function (ce) {
+            // webkitdirectory 返回的 file.name 可能是 "dir/basename.dbf" 形式
+            var found = null;
+            var key = baseName + ce;
+            var keyLower = key.toLowerCase();
+
+            for (var fname in fileMap) {
+              if (fname === keyLower || fname.endsWith("/" + keyLower)) {
+                found = fileMap[fname];
+                break;
+              }
+            }
+
+            if (found) {
+              companions.push({ name: baseName + ce, file: found });
+            } else {
+              missing.push(ce);
+            }
+          });
+
+          // 记录缺失文件（.dbf 是必须的，.shx/.prj 可选）
+          if (missing.length > 0) {
+            warnings.push(
+              baseName + ".shp 缺少配套文件：" + missing.join("、"),
+            );
+          }
+
+          // 至少有 .shp 本身（尝试解析，shpjs 可能会报错但不会崩溃）
+          var shpFile = null;
+          var shpKey = baseName + ".shp";
+          var shpKeyLower = shpKey.toLowerCase();
+          for (var fname in fileMap) {
+            if (fname === shpKeyLower || fname.endsWith("/" + shpKeyLower)) {
+              shpFile = fileMap[fname];
+              break;
+            }
+          }
+
+          if (!shpFile) return; // 理论上不会发生
+
+          // 读取所有文件为 ArrayBuffer，打包成 zip
+          var allParts = companions.concat([
+            { name: baseName + ".shp", file: shpFile },
+          ]);
+          var readPromises = allParts.map(function (part) {
+            return new Promise(function (resolve) {
+              var reader = new FileReader();
+              reader.onload = function (ev) {
+                resolve({ name: part.name, buffer: ev.target.result });
+              };
+              reader.onerror = function () {
+                resolve(null); // 读取失败跳过
+              };
+              reader.readAsArrayBuffer(part.file);
+            });
+          });
+
+          shpTasks.push(
+            Promise.all(readPromises).then(function (results) {
+              var zip = new JSZip();
+              results.forEach(function (r) {
+                if (r && r.buffer) {
+                  zip.file(r.name, r.buffer);
+                }
+              });
+              return zip.generateAsync({ type: "arraybuffer" });
+            }),
+          );
+        });
+
+        // 批量执行 shp 解析
+        Promise.allSettled(shpTasks).then(function (results) {
+          var shpLoadPromises = [];
+          results.forEach(function (result, idx) {
+            if (result.status === "fulfilled" && typeof shp === "function") {
+              var zipBuf = result.value;
+              shpLoadPromises.push(
+                shp(zipBuf)
+                  .then(function (geojson) {
+                    var name = shpFileNames[idx] + ".shp";
+                    // shp 可能返回数组（多图层）
+                    if (Array.isArray(geojson)) {
+                      geojson.forEach(function (layer, li) {
+                        var layerName =
+                          geojson.length === 1
+                            ? name
+                            : name.replace(/\.shp$/i, "") + "_" + li + ".shp";
+                        window.addUserLayer(layer, layerName, false);
+                      });
+                    } else {
+                      window.addUserLayer(geojson, name, false);
+                    }
+                  })
+                  .catch(function (err) {
+                    warnings.push(
+                      shpFileNames[idx] +
+                        ".shp 解析失败：" +
+                        (err.message || err),
+                    );
+                  }),
+              );
+            }
+          });
+
+          Promise.allSettled(shpLoadPromises).then(function () {
+            window.hideLoading();
+            var layerPanel = document.getElementById("layerPanel");
+            if (layerPanel) layerPanel.classList.add("active");
+            // 弹出缺失/失败的提示
+            if (warnings.length > 0) {
+              alert("SHP 加载提示：\n\n" + warnings.join("\n\n"));
+            }
+          });
+        });
+      } else {
+        // JSZip 不可用，无法打包 shp 配套文件
+        window.hideLoading();
+        if (shpFileNames.length > 0) {
+          alert(
+            "JSZip 库尚未加载，无法解析 SHP 文件\n请检查网络连接后刷新页面。",
+          );
+        }
+      }
+    }
+
     let userLayerIndex = 0;
     const userLayerGeoJson = {};
 
-    function addUserLayer(geojsonData, fileName) {
+    function addUserLayer(geojsonData, fileName, autoShow) {
       var uid = "user_layer_" + userLayerIndex++;
       var fixedColor = window.GeoUtils.getFixedColor(globalLayerIndex++);
       layerColorMap[uid] = fixedColor;
@@ -1528,7 +1743,11 @@
       }
 
       var worldCopyGroup = buildGeoJsonLayerGroup(data_, uid, fileName);
-      worldCopyGroup.addTo(map);
+
+      // autoShow 为 false 时：图层缓存但不添加到地图，checkbox 不勾选
+      if (autoShow !== false) {
+        worldCopyGroup.addTo(map);
+      }
       layerCache[uid] = worldCopyGroup;
       userLayerGeoJson[uid] = { geoJsonData: data_, fileName: fileName };
 
@@ -1590,10 +1809,10 @@
       var checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.id = uid;
-      checkbox.checked = true;
+      checkbox.checked = autoShow !== false;
       checkbox.dataset.userLayer = "true";
       checkbox.style.setProperty("--layer-color", fixedColor);
-      checkbox.style.background = fixedColor;
+      checkbox.style.background = autoShow !== false ? fixedColor : "#fff";
       checkbox.addEventListener("change", function () {
         this.style.background = this.checked ? fixedColor : "#fff";
         if (this.checked) {

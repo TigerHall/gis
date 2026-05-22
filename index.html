@@ -560,7 +560,10 @@
       }
 
       // ========== 外部文件处理（支持 GeoJSON / SHP / KML / KMZ / ZIP → 统一走 addUserLayer）==========
-      window.loadFileAsUserLayer = function loadFileAsUserLayer(file) {
+      window.loadFileAsUserLayer = function loadFileAsUserLayer(
+        file,
+        autoShow,
+      ) {
         var ext = (file.name.split(".").pop() || "").toLowerCase();
 
         // ========== 单文件：直接用原始文件名 ==========
@@ -586,7 +589,7 @@
                 } else {
                   data = JSON.parse(ev.target.result);
                 }
-                deliverToMap(data, file.name);
+                deliverToMap(data, file.name, autoShow);
               } catch (err) {
                 window.hideLoading();
                 alert(
@@ -806,9 +809,9 @@
       };
 
       // 统一交付给地图图层
-      function deliverToMap(data, fileName) {
+      function deliverToMap(data, fileName, autoShow) {
         if (typeof window.addUserLayer === "function") {
-          window.addUserLayer(data, fileName);
+          window.addUserLayer(data, fileName, autoShow);
           var layerPanel = document.getElementById("layerPanel");
           if (layerPanel) layerPanel.classList.add("active");
         }
@@ -839,7 +842,7 @@
         });
       }
 
-      // 拖放支持：拖入地图页面
+      // 拖放支持：拖入地图页面（支持单文件和文件夹）
       document.addEventListener("dragover", function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -847,14 +850,241 @@
       document.addEventListener("drop", function (e) {
         e.preventDefault();
         e.stopPropagation();
-        Array.from(e.dataTransfer.files).forEach(function (file) {
-          if (/\.(geojson|json|shp|zip|kml|kmz)$/i.test(file.name)) {
-            loadFileAsUserLayer(file);
-            // 确保左侧面板打开
-            var layerPanel = document.getElementById("layerPanel");
-            if (layerPanel) layerPanel.classList.add("active");
+
+        var items = e.dataTransfer.items;
+        if (!items || !items.length) return;
+
+        // 检测是否有目录条目
+        var hasDirectory = false;
+        for (var i = 0; i < items.length; i++) {
+          var entry = items[i].webkitGetAsEntry && items[i].webkitGetAsEntry();
+          if (entry && entry.isDirectory) {
+            hasDirectory = true;
+            break;
           }
-        });
+        }
+
+        if (hasDirectory) {
+          // 文件夹拖入：递归扫描所有文件，统一走文件夹上传逻辑
+          var allFiles = [];
+          var pendingEntries = [];
+
+          for (var di = 0; di < items.length; di++) {
+            var dirEntry =
+              items[di].webkitGetAsEntry && items[di].webkitGetAsEntry();
+            if (dirEntry) pendingEntries.push(dirEntry);
+          }
+
+          function readEntriesRecursive() {
+            if (!pendingEntries.length) {
+              onAllFilesCollected(allFiles);
+              return;
+            }
+            var current = pendingEntries.shift();
+            if (current.isFile) {
+              current.file(
+                function (file) {
+                  allFiles.push(file);
+                  readEntriesRecursive();
+                },
+                function () {
+                  readEntriesRecursive(); // 读取失败跳过
+                },
+              );
+            } else if (current.isDirectory) {
+              var reader = current.createReader();
+              reader.readEntries(
+                function (entries) {
+                  for (var ei = 0; ei < entries.length; ei++) {
+                    pendingEntries.push(entries[ei]);
+                  }
+                  readEntriesRecursive();
+                },
+                function () {
+                  readEntriesRecursive(); // 读取失败跳过
+                },
+              );
+            } else {
+              readEntriesRecursive();
+            }
+          }
+
+          function onAllFilesCollected(files) {
+            if (!files.length) return;
+            // 复用 handleFolderUpload 的逻辑
+            window.showLoading("正在扫描文件夹...");
+
+            var fileMap = {};
+            files.forEach(function (file) {
+              fileMap[file.name.toLowerCase()] = file;
+            });
+
+            var nonShpExts = ["kml", "kmz", "json", "geojson"];
+            var nonShpFiles = [];
+            files.forEach(function (file) {
+              var ext = file.name.split(".").pop().toLowerCase();
+              if (nonShpExts.indexOf(ext) !== -1) nonShpFiles.push(file);
+            });
+
+            var shpFileNames = [];
+            files.forEach(function (file) {
+              if (file.name.toLowerCase().endsWith(".shp")) {
+                var baseName = file.name.replace(/\.shp$/i, "");
+                if (shpFileNames.indexOf(baseName) === -1) {
+                  shpFileNames.push(baseName);
+                }
+              }
+            });
+
+            if (!nonShpFiles.length && !shpFileNames.length) {
+              window.hideLoading();
+              alert(
+                "文件夹中未找到支持的矢量文件\n支持：shp、kml、kmz、json、geojson",
+              );
+              return;
+            }
+
+            var warnings = [];
+            var shpTasks = [];
+
+            nonShpFiles.forEach(function (file) {
+              loadFileAsUserLayer(file, false);
+            });
+
+            if (!shpFileNames.length) {
+              window.hideLoading();
+              // 确保左侧面板打开
+              var layerPanel = document.getElementById("layerPanel");
+              if (layerPanel) layerPanel.classList.add("active");
+              return;
+            }
+
+            if (typeof JSZip !== "undefined") {
+              shpFileNames.forEach(function (baseName) {
+                var companionExts = [".dbf", ".shx", ".prj"];
+                var companions = [];
+                var missing = [];
+                companionExts.forEach(function (ce) {
+                  var found = null;
+                  var keyLower = (baseName + ce).toLowerCase();
+                  for (var fname in fileMap) {
+                    if (fname === keyLower || fname.endsWith("/" + keyLower)) {
+                      found = fileMap[fname];
+                      break;
+                    }
+                  }
+                  if (found) {
+                    companions.push({ name: baseName + ce, file: found });
+                  } else {
+                    missing.push(ce);
+                  }
+                });
+                if (missing.length > 0) {
+                  warnings.push(
+                    baseName + ".shp 缺少配套文件：" + missing.join("、"),
+                  );
+                }
+
+                var shpFile = null;
+                var shpKeyLower = (baseName + ".shp").toLowerCase();
+                for (var fn in fileMap) {
+                  if (fn === shpKeyLower || fn.endsWith("/" + shpKeyLower)) {
+                    shpFile = fileMap[fn];
+                    break;
+                  }
+                }
+                if (!shpFile) return;
+
+                var allParts = companions.concat([
+                  { name: baseName + ".shp", file: shpFile },
+                ]);
+                var readPromises = allParts.map(function (part) {
+                  return new Promise(function (resolve) {
+                    var reader = new FileReader();
+                    reader.onload = function (ev) {
+                      resolve({ name: part.name, buffer: ev.target.result });
+                    };
+                    reader.onerror = function () {
+                      resolve(null);
+                    };
+                    reader.readAsArrayBuffer(part.file);
+                  });
+                });
+                shpTasks.push(
+                  Promise.all(readPromises).then(function (results) {
+                    var zip = new JSZip();
+                    results.forEach(function (r) {
+                      if (r && r.buffer) zip.file(r.name, r.buffer);
+                    });
+                    return zip.generateAsync({ type: "arraybuffer" });
+                  }),
+                );
+              });
+
+              Promise.allSettled(shpTasks).then(function (results) {
+                var shpLoadPromises = [];
+                results.forEach(function (result, idx) {
+                  if (
+                    result.status === "fulfilled" &&
+                    typeof shp === "function"
+                  ) {
+                    shpLoadPromises.push(
+                      shp(result.value)
+                        .then(function (geojson) {
+                          var name = shpFileNames[idx] + ".shp";
+                          if (Array.isArray(geojson)) {
+                            geojson.forEach(function (layer, li) {
+                              var layerName =
+                                geojson.length === 1
+                                  ? name
+                                  : name.replace(/\.shp$/i, "") +
+                                    "_" +
+                                    li +
+                                    ".shp";
+                              window.addUserLayer(layer, layerName, false);
+                            });
+                          } else {
+                            window.addUserLayer(geojson, name, false);
+                          }
+                        })
+                        .catch(function (err) {
+                          warnings.push(
+                            shpFileNames[idx] +
+                              ".shp 解析失败：" +
+                              (err.message || err),
+                          );
+                        }),
+                    );
+                  }
+                });
+                Promise.allSettled(shpLoadPromises).then(function () {
+                  window.hideLoading();
+                  var layerPanel = document.getElementById("layerPanel");
+                  if (layerPanel) layerPanel.classList.add("active");
+                  if (warnings.length > 0) {
+                    alert("SHP 加载提示：\n\n" + warnings.join("\n\n"));
+                  }
+                });
+              });
+            } else {
+              window.hideLoading();
+              alert(
+                "JSZip 库尚未加载，无法解析 SHP 文件\n请检查网络连接后刷新页面。",
+              );
+            }
+          }
+
+          readEntriesRecursive();
+        } else {
+          // 单文件拖入：走原有逻辑
+          Array.from(e.dataTransfer.files).forEach(function (file) {
+            if (/\.(geojson|json|zip|kml|kmz)$/i.test(file.name)) {
+              loadFileAsUserLayer(file);
+              var layerPanel = document.getElementById("layerPanel");
+              if (layerPanel) layerPanel.classList.add("active");
+            }
+          });
+        }
       });
     </script>
     <!-- 文件加载缓冲示意 -->
