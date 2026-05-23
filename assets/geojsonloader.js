@@ -2049,7 +2049,9 @@
         searchRegistry.forEach(function (entry) {
           var cb = document.getElementById(entry.checkboxId);
           if (!cb || !cb.checked) return;
-          entry.features.forEach(function (f) {
+          var feats = entry.features;
+          if (!feats || !feats.length) return;
+          feats.forEach(function (f) {
             if (featureToSearchStr(f).includes(q)) {
               results.push({
                 label: entry.layerLabel,
@@ -2290,7 +2292,14 @@
         if (q.length < 1) return;
         searchTimer = setTimeout(function () {
           var results = runSearch(q);
-          renderResults(results, q);
+          if (results.length === 0 && searchRegistry.some(function (e) {
+            return e.isLarge && document.getElementById(e.checkboxId)?.checked;
+          })) {
+            resultsBox.innerHTML = '<div class="search-empty">大数据集暂不支持全文搜索</div>';
+            resultsBox.classList.add("open");
+          } else {
+            renderResults(results, q);
+          }
         }, 150);
       });
 
