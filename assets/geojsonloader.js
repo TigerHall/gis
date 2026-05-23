@@ -15,6 +15,7 @@
       groupName: "全球板块构造",
       layers: [
         { name: "全球16大板块 plate16", file: "plate16.geojson" },
+        { name: "板块 (Hasterok2022)", file: "plates_Hasterok2022.geojson" },
         { name: "大陆板块 plate_cont", file: "plate_cont.json" },
         { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
         { name: "洋中脊 Mid-Ocean Ridge", file: "ridgenew.json" },
@@ -49,6 +50,15 @@
         { name: "热点 hotspots", file: "hotspots.json" },
         { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
         { name: "洋壳年龄30Ma", file: "seafloor_age_30.geojson" },
+
+        {
+          name: "盆地 (Evenick2021)",
+          file: "global_basins_Evenick2021.geojson",
+        },
+        {
+          name: "盆地 (CGG)",
+          file: "Sedimentary_CGG.geojson",
+        },
       ],
     },
     {
@@ -69,11 +79,23 @@
         { name: "ODP", file: "ODP.geojson" },
         { name: "IODP03-13", file: "IODP03-13.geojson" },
         { name: "IODP13-26", file: "IODP13-26.geojson" },
+        {
+          name: "古生物学 PBDB",
+          file: "PBDB.geojson",
+        },
+        {
+          name: "气候岩性指标 PBDB",
+          file: "Boucot.geojson",
+        },
       ],
     },
     {
-      groupName: null,
+      groupName: "测试数据",
       layers: [{ name: "PIC 45万点", file: "pic.geojson" }],
+    },
+    {
+      groupName: null,
+      layers: [{ name: "Dupal异常洋 DupalOcean", file: "DupalOcean.json" }],
     },
   ];
 
