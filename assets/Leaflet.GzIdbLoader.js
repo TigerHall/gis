@@ -2,12 +2,15 @@
  * Leaflet.GzIdbLoader.js
  * Leaflet 插件：GZ 文件加载器 + IndexedDB 缓存
  * 功能：加载 .gz 压缩的 GeoJSON 文件，自动解压并缓存解析后的 JSON 数据
- * 用途：加速重复加载，避免重复解压
+ *       同时缓存搜索倒排索引（tokens 部分），加速页面刷新后搜索恢复
+ * 用途：加速重复加载，避免重复解压和索引重建
  *
  * 使用方式：
  *   L.GzIdbLoader.fetch(url) → Promise<GeoJSON>
  *   L.GzIdbLoader.clearCache() → 清除缓存
  *   L.GzIdbLoader.getCacheSize() → 获取缓存大小
+ *   L.GzIdbLoader.getSearchIndex(checkboxId) → Promise<Object|null>
+ *   L.GzIdbLoader.setSearchIndex(checkboxId, tokens) → Promise
  */
 (function (root, factory) {
   // 支持 AMD / CommonJS / 全局变量
@@ -23,8 +26,9 @@
 
   // ========== 配置 ==========
   const DB_NAME = "GzGeoJSONCache";
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   const STORE_NAME = "geojson";
+  const INDEX_STORE = "searchIndex";
 
   // ========== IndexedDB 封装 ==========
   function openDB() {
@@ -36,6 +40,10 @@
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const store = db.createObjectStore(STORE_NAME, { keyPath: "url" });
           store.createIndex("timestamp", "timestamp", { unique: false });
+        }
+        // V2: 新增搜索索引 store
+        if (!db.objectStoreNames.contains(INDEX_STORE)) {
+          db.createObjectStore(INDEX_STORE, { keyPath: "checkboxId" });
         }
       };
 
@@ -113,6 +121,64 @@
         })
         .catch(function (err) {
           console.warn("[GzIdbLoader] 缓存写入失败:", err);
+          resolve();
+        });
+    });
+  }
+
+  // ========== 搜索索引缓存（tokens + featureCount 用于版本检测）==========
+  function getSearchIndex(cacheKey) {
+    return new Promise(function (resolve) {
+      openDB()
+        .then(function (db) {
+          const tx = db.transaction(INDEX_STORE, "readonly");
+          const store = tx.objectStore(INDEX_STORE);
+          const request = store.get(cacheKey);
+
+          request.onsuccess = function (e) {
+            const result = e.target.result;
+            if (result) {
+              console.log("[GzIdbLoader] 搜索索引缓存命中:", cacheKey);
+              resolve(result);
+            } else {
+              resolve(null);
+            }
+          };
+
+          request.onerror = function () {
+            resolve(null);
+          };
+        })
+        .catch(function () {
+          resolve(null);
+        });
+    });
+  }
+
+  function setSearchIndex(cacheKey, indexObj) {
+    return new Promise(function (resolve) {
+      openDB()
+        .then(function (db) {
+          const tx = db.transaction(INDEX_STORE, "readwrite");
+          const store = tx.objectStore(INDEX_STORE);
+          const record = {
+            checkboxId: cacheKey,
+            tokens: indexObj.tokens,
+            featureCount: indexObj.featureCount,
+            timestamp: Date.now(),
+          };
+          const request = store.put(record);
+
+          request.onsuccess = function () {
+            console.log("[GzIdbLoader] 搜索索引已缓存:", cacheKey);
+            resolve();
+          };
+
+          request.onerror = function () {
+            resolve();
+          };
+        })
+        .catch(function () {
           resolve();
         });
     });
@@ -253,6 +319,21 @@
      * @returns {Promise<Object|null>}
      */
     getCache: getCache,
+
+    /**
+     * 读取缓存的搜索索引 tokens
+     * @param {string} checkboxId - 图层 checkbox ID
+     * @returns {Promise<Object|null>} tokens 倒排索引
+     */
+    getSearchIndex: getSearchIndex,
+
+    /**
+     * 写入搜索索引 tokens 到缓存
+     * @param {string} checkboxId - 图层 checkbox ID
+     * @param {Object} tokens - tokens 倒排索引
+     * @returns {Promise}
+     */
+    setSearchIndex: setSearchIndex,
   };
 
   return L.GzIdbLoader;
