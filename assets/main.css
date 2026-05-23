@@ -606,9 +606,11 @@ body {
   color: #333;
   max-width: 360px;
   max-height: 280px;
-  overflow: auto;
-  white-space: pre-line;
-  pointer-events: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  pointer-events: auto;
 }
 #searchTooltip.visible {
   display: block;

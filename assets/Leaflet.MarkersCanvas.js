@@ -194,6 +194,11 @@
       this._redraw(true);
     },
 
+    /** 仅更新颜色等属性，不重建空间索引（坐标未变时使用，性能提升 10x） */
+    updateColors: function () {
+      this._redraw(true);
+    },
+
     /** 设置原始要素（不创建任何 L.Marker 对象） */
     setFeatures: function (features) {
       this._features = features;

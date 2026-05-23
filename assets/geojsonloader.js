@@ -254,6 +254,32 @@
     // Canvas 图层要素缓存（用于颜色模式快速切换）
     const canvasFeaturesCache = {};
     const canvasFieldValuesCache = {};
+    const searchIndexMap = {}; // 倒排索引：{ checkboxId: { tokens: { tok: [idx, ...] }, features: [...] } }
+    let searchIndexingCount = 0; // 正在构建索引的图层数
+
+    // 搜索辅助函数（提取 feature 所有属性为可搜索字符串）
+    function featureToSearchStr(f) {
+      if (!f || !f.properties) return "";
+      return JSON.stringify(f.properties).toLowerCase();
+    }
+
+    // 倒排索引构建：为大数据集提供 O(1) 搜索能力
+    function buildSearchIndex(checkboxId, features) {
+      if (!features || !features.length) return;
+      var tokens = {};
+      for (var i = 0; i < features.length; i++) {
+        var str = featureToSearchStr(features[i]);
+        if (!str) continue;
+        var parts = str.split(/[^a-z0-9\u4e00-\u9fff]+/);
+        for (var t = 0; t < parts.length; t++) {
+          var tok = parts[t];
+          if (!tok) continue;
+          if (!tokens[tok]) tokens[tok] = [];
+          tokens[tok].push(i);
+        }
+      }
+      searchIndexMap[checkboxId] = { tokens: tokens, features: features };
+    }
     // 标签配置（委托给 GeoUtils，这里保留引用以便快速判断）
     const STATION_LABEL_CONFIG = window.GeoUtils.STATION_LABEL_CONFIG;
     // 缩放相关常量
@@ -815,17 +841,21 @@
           if (!searchRegistry.find((e) => e.checkboxId === checkboxId)) {
             const cb = document.getElementById(checkboxId);
             const layerLabel = cb ? cb.dataset.layerName || fileName : fileName;
-            // 大数据集（>1万点）不持有完整 features，只存文件名供搜索时实时读取
-            const isLarge = (data_.features?.length || 0) > 10000;
             searchRegistry.push({
               layerLabel: layerLabel,
               checkboxId: checkboxId,
               fileName: fileName,
-              // 小数据集保留完整引用方便搜索；大数据集只存长度信息
-              features: isLarge ? null : data_.features || [],
-              featureCount: data_.features?.length || 0,
-              isLarge: isLarge,
             });
+            // 异步构建倒排索引（不阻塞 UI）
+            if (data_.features) {
+              searchIndexingCount++;
+              updateSearchInputState();
+              setTimeout(function () {
+                buildSearchIndex(checkboxId, data_.features);
+                searchIndexingCount--;
+                updateSearchInputState();
+              }, 0);
+            }
           }
         })
         .catch(function (error) {
@@ -862,28 +892,46 @@
       }
 
       if (canvasLayer) {
-        // Canvas 图层：尝试直接修改缓存的 featuresArray（避免重新读取数据）
+        // Canvas 图层：利用缓存中的 featuresArray 增量更新颜色
         var cachedFeatures = canvasFeaturesCache[checkboxId] || null;
-        var newMode = colorMode[checkboxId];
-        var newColor = layerColorMap[checkboxId] || "#8B4513";
 
-        if (
-          cachedFeatures &&
-          (newMode === "single" || newMode === "sequential")
-        ) {
-          // 单色或顺序色模式：直接修改颜色，无需重新读取数据
-          for (var j = 0; j < cachedFeatures.length; j++) {
-            if (newMode === "single") {
-              cachedFeatures[j].color = newColor;
-            } else if (newMode === "sequential") {
-              cachedFeatures[j].color = window.GeoUtils.getFeatureColorByIndex(
-                cachedFeatures[j]._idx || j,
+        if (cachedFeatures) {
+          // 所有颜色模式均可增量更新：利用缓存中的 properties 重新计算颜色
+          var cb = document.getElementById(checkboxId);
+          var cFileName = cb ? (cb.value || "").split("/").pop() : "";
+          var total = cachedFeatures.length;
+          // 大数据集分片执行，避免冻结 UI（每帧处理 2 万点）
+          if (total > 20000) {
+            var chunkSize = 20000;
+            var offset = 0;
+            function processChunk() {
+              var end = Math.min(offset + chunkSize, total);
+              for (var j = offset; j < end; j++) {
+                cachedFeatures[j].color = getFeatureFillColor(
+                  { properties: cachedFeatures[j].properties },
+                  checkboxId, cFileName, cachedFeatures[j]._idx || j
+                );
+              }
+              offset = end;
+              if (offset < total) {
+                requestAnimationFrame(processChunk);
+              } else {
+                canvasLayer.updateColors();
+                updateColorBtnHint(checkboxId);
+              }
+            }
+            requestAnimationFrame(processChunk);
+          } else {
+            for (var j = 0; j < total; j++) {
+              cachedFeatures[j].color = getFeatureFillColor(
+                { properties: cachedFeatures[j].properties },
+                checkboxId, cFileName, cachedFeatures[j]._idx || j
               );
             }
+            canvasLayer.updateColors();
+            updateColorBtnHint(checkboxId);
           }
-          canvasLayer.setFeatures(cachedFeatures);
-          updateColorBtnHint(checkboxId);
-          return; // 直接返回，不重新读取数据
+          return;
         }
 
         // 无法优化（如 "field" 模式且未缓存字段值），回退到重新读取数据
@@ -919,6 +967,7 @@
                   lng: c[0],
                   color: color,
                   _idx: idx,
+                  properties: f.properties || null,
                 });
               }
               canvasLayer.setFeatures(featuresArray);
@@ -1237,7 +1286,6 @@
       checkboxId,
       fileName,
       availableFields,
-      geojsonData,
     ) {
       const mode = colorMode[checkboxId] || "sequential";
       const currentField = fieldKey[checkboxId] || "";
@@ -1294,98 +1342,100 @@
         colorModalOverlay = null;
       }
 
-      // 获取 GeoJSON 数据：有 filePath 则从 URL 加载，否则从 highlightState 读取（用户上传的图层）
-      var dataPromise;
-      if (filePath) {
-        dataPromise = fetchGeoJSON(filePath);
+      // 获取 GeoJSON 数据：优先从搜索索引缓存取（避免大数据集重新 fetch 300MB）
+      // 搜索索引的 features 是原始 data_.features 引用，包含完整 properties
+      var si = searchIndexMap[checkboxId];
+      if (si && si.features) {
+        // 构造轻量伪 GeoJSON 供 getAvailableFields 取字段名
+        var cachedData = { type: "FeatureCollection", features: si.features.slice(0, 50) };
+        var fields = window.GeoUtils.getAvailableFields(cachedData);
+        showColorModalContent(checkboxId, fileName, filePath, fields);
+      } else if (filePath) {
+        fetchGeoJSON(filePath).then(function (data) {
+          var fields = window.GeoUtils.getAvailableFields(data);
+          showColorModalContent(checkboxId, fileName, filePath, fields);
+        });
       } else if (userLayerGeoJson[checkboxId]) {
-        dataPromise = Promise.resolve(userLayerGeoJson[checkboxId].geoJsonData);
+        var fields = window.GeoUtils.getAvailableFields(userLayerGeoJson[checkboxId].geoJsonData);
+        showColorModalContent(checkboxId, fileName, filePath, fields);
       } else {
         alert("无法加载图层数据，请尝试重新添加图层。");
-        return;
+      }
+    }
+
+    function showColorModalContent(checkboxId, fileName, filePath, fields) {
+      colorModalData = {
+        checkboxId: checkboxId,
+        fileName: fileName,
+        filePath: filePath,
+      };
+
+      colorModalOverlay = document.createElement("div");
+      colorModalOverlay.id = "colorModalOverlay";
+      colorModalOverlay.innerHTML = getColorModalHTML(
+        checkboxId,
+        fileName,
+        fields,
+      );
+      colorModalOverlay.style.cssText =
+        "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:99999;display:flex;align-items:center;justify-content:center;";
+      document.body.appendChild(colorModalOverlay);
+
+      document
+        .querySelectorAll('input[name="colorModeRadio"]')
+        .forEach(function (r) {
+          r.addEventListener("change", function () {
+            document.getElementById("singleColorPanel").style.display =
+              this.value === "single" ? "block" : "none";
+            document.getElementById("fieldColorPanel").style.display =
+              this.value === "field" ? "block" : "none";
+          });
+        });
+
+      var colorPicker = document.getElementById("modalColorPicker");
+      if (colorPicker) {
+        colorPicker.addEventListener("input", function () {
+          var hexSpan = document.getElementById("modalColorHex");
+          if (hexSpan) hexSpan.textContent = this.value;
+        });
+        colorPicker.addEventListener("change", function () {
+          var selMode = document.querySelector(
+            'input[name="colorModeRadio"]:checked',
+          );
+          var newMode = selMode ? selMode.value : "sequential";
+          if (newMode === "single") {
+            layerColorMap[colorModalData.checkboxId] = this.value;
+            refreshLayerColors(colorModalData.checkboxId);
+          }
+        });
       }
 
-      dataPromise
-        .then(function (data) {
-          const fields = window.GeoUtils.getAvailableFields(data);
+      document.getElementById("colorModalClose").onclick = closeColorModal;
+      document.getElementById("colorModalCancel").onclick = closeColorModal;
+      colorModalOverlay.addEventListener("click", function (e) {
+        if (e.target === colorModalOverlay) closeColorModal();
+      });
 
-          colorModalData = {
-            checkboxId: checkboxId,
-            fileName: fileName,
-            filePath: filePath,
-          };
-
-          colorModalOverlay = document.createElement("div");
-          colorModalOverlay.id = "colorModalOverlay";
-          colorModalOverlay.innerHTML = getColorModalHTML(
-            checkboxId,
-            fileName,
-            fields,
-            data,
-          );
-          colorModalOverlay.style.cssText =
-            "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:99999;display:flex;align-items:center;justify-content:center;";
-          document.body.appendChild(colorModalOverlay);
-
-          document
-            .querySelectorAll('input[name="colorModeRadio"]')
-            .forEach(function (r) {
-              r.addEventListener("change", function () {
-                document.getElementById("singleColorPanel").style.display =
-                  this.value === "single" ? "block" : "none";
-                document.getElementById("fieldColorPanel").style.display =
-                  this.value === "field" ? "block" : "none";
-              });
-            });
-
-          var colorPicker = document.getElementById("modalColorPicker");
-          if (colorPicker) {
-            colorPicker.addEventListener("input", function () {
-              var hexSpan = document.getElementById("modalColorHex");
-              if (hexSpan) hexSpan.textContent = this.value;
-            });
-            colorPicker.addEventListener("change", function () {
-              var selMode = document.querySelector(
-                'input[name="colorModeRadio"]:checked',
-              );
-              var newMode = selMode ? selMode.value : "sequential";
-              if (newMode === "single") {
-                layerColorMap[colorModalData.checkboxId] = this.value;
-                refreshLayerColors(colorModalData.checkboxId);
-              }
-            });
-          }
-
-          document.getElementById("colorModalClose").onclick = closeColorModal;
-          document.getElementById("colorModalCancel").onclick = closeColorModal;
-          colorModalOverlay.addEventListener("click", function (e) {
-            if (e.target === colorModalOverlay) closeColorModal();
-          });
-
-          document.getElementById("colorModalConfirm").onclick = function () {
-            if (!colorModalData) return;
-            const selMode = document.querySelector(
-              'input[name="colorModeRadio"]:checked',
-            );
-            const newMode = selMode ? selMode.value : "sequential";
-            const newColor = document.getElementById("modalColorPicker")
-              ? document.getElementById("modalColorPicker").value
-              : layerColorMap[colorModalData.checkboxId];
-            const newField = document.getElementById("modalFieldSelect")
-              ? document.getElementById("modalFieldSelect").value
-              : "";
-            reloadLayerWithNewMode(
-              colorModalData.checkboxId,
-              newMode,
-              newColor,
-              newField,
-            );
-            closeColorModal();
-          };
-        })
-        .catch(function (e) {
-          console.error("无法加载字段列表：", e);
-        });
+      document.getElementById("colorModalConfirm").onclick = function () {
+        if (!colorModalData) return;
+        const selMode = document.querySelector(
+          'input[name="colorModeRadio"]:checked',
+        );
+        const newMode = selMode ? selMode.value : "sequential";
+        const newColor = document.getElementById("modalColorPicker")
+          ? document.getElementById("modalColorPicker").value
+          : layerColorMap[colorModalData.checkboxId];
+        const newField = document.getElementById("modalFieldSelect")
+          ? document.getElementById("modalFieldSelect").value
+          : "";
+        reloadLayerWithNewMode(
+          colorModalData.checkboxId,
+          newMode,
+          newColor,
+          newField,
+        );
+        closeColorModal();
+      };
     }
 
     function closeColorModal() {
@@ -1986,15 +2036,23 @@
     }
 
     // ========== 搜索功能 ==========
+    // 更新搜索输入框状态（索引构建中时禁用并提示）
+    function updateSearchInputState() {
+      var inp = document.getElementById("searchInput");
+      if (!inp) return;
+      if (searchIndexingCount > 0) {
+        inp.disabled = true;
+        inp.placeholder = "建立搜索索引中...";
+      } else {
+        inp.disabled = false;
+        inp.placeholder = "搜索...";
+      }
+    }
+
     function initSearch() {
       var input = document.getElementById("searchInput");
       var resultsBox = document.getElementById("searchResults");
       if (!input || !resultsBox) return;
-
-      function featureToSearchStr(f) {
-        if (!f || !f.properties) return "";
-        return JSON.stringify(f.properties).toLowerCase();
-      }
 
       function buildSummary(props) {
         if (!props) return "";
@@ -2046,24 +2104,46 @@
       function runSearch(query) {
         var q = query.toLowerCase().trim();
         var results = [];
+        var totalCount = 0;
         searchRegistry.forEach(function (entry) {
           var cb = document.getElementById(entry.checkboxId);
           if (!cb || !cb.checked) return;
-          var feats = entry.features;
-          if (!feats || !feats.length) return;
-          feats.forEach(function (f) {
-            if (featureToSearchStr(f).includes(q)) {
-              results.push({
-                label: entry.layerLabel,
-                summary: buildSummary(f.properties),
-                tooltipHtml: buildTooltipHtml(f.properties),
-                feature: f,
-                checkboxId: entry.checkboxId,
-              });
+
+          // 统一走倒排索引（所有数据集加载时均已构建）
+          var si = searchIndexMap[entry.checkboxId];
+          if (!si) return; // 索引尚未构建完成
+          var tokens = q.split(/\s+/);
+          var candidateSets = [];
+          for (var ti = 0; ti < tokens.length; ti++) {
+            candidateSets.push(si.tokens[tokens[ti]] || []);
+          }
+          if (candidateSets.length === 0) return;
+          // 多词取交集
+          var intersect = candidateSets[0];
+          for (var ci = 1; ci < candidateSets.length; ci++) {
+            var set = candidateSets[ci];
+            var next = [];
+            for (var si2 = 0; si2 < intersect.length; si2++) {
+              if (set.indexOf(intersect[si2]) !== -1) next.push(intersect[si2]);
             }
-          });
+            intersect = next;
+            if (intersect.length === 0) return;
+          }
+          totalCount += intersect.length;
+          // 限制结果数量
+          var limit = Math.min(intersect.length, 30);
+          for (var k = 0; k < limit; k++) {
+            var f = si.features[intersect[k]];
+            results.push({
+              label: entry.layerLabel,
+              summary: buildSummary(f.properties),
+              tooltipHtml: buildTooltipHtml(f.properties),
+              feature: f,
+              checkboxId: entry.checkboxId,
+            });
+          }
         });
-        return results;
+        return { items: results, total: totalCount };
       }
 
       function extractCoords(geom) {
@@ -2119,7 +2199,7 @@
         } catch (e) {}
       }
 
-      function renderResults(results, query) {
+      function renderResults(results, query, totalCount) {
         resultsBox.innerHTML = "";
         if (results.length === 0) {
           resultsBox.innerHTML = '<div class="search-empty">无匹配结果</div>';
@@ -2214,7 +2294,7 @@
             var feat = r.feature;
             var cbId = r.checkboxId;
             var state = highlightState[cbId];
-            if (state) {
+            if (state && state.geoLayers) {
               state.geoLayers.forEach(function (gl) {
                 gl.eachLayer(function (layer) {
                   if (
@@ -2243,17 +2323,51 @@
                   }
                 });
               });
+            } else {
+              // Canvas 大数据集：直接从 geometry 坐标定位
+              if (feat.geometry && feat.geometry.coordinates) {
+                var coords = feat.geometry.coordinates;
+                var gtype = feat.geometry.type;
+                if (gtype === "Point") {
+                  // 点：平移过去，不改变缩放级别
+                  map.panTo(L.latLng(coords[1], coords[0]), {
+                    duration: 0.6,
+                  });
+                } else {
+                  // 线/面：提取边界框，flyToBounds 缩放至
+                  var corners = [];
+                  (function collect(arr) {
+                    if (!Array.isArray(arr)) return;
+                    if (typeof arr[0] === "number") {
+                      corners.push([arr[1], arr[0]]);
+                    } else {
+                      for (var i = 0; i < arr.length; i++) collect(arr[i]);
+                    }
+                  })(coords);
+                  if (corners.length >= 2) {
+                    var bounds = L.latLngBounds(corners);
+                    if (bounds.isValid()) {
+                      map.flyToBounds(bounds, {
+                        padding: [40, 40],
+                        duration: 0.8,
+                      });
+                    }
+                  } else if (corners.length === 1) {
+                    map.panTo(corners[0], { duration: 0.6 });
+                  }
+                }
+              }
             }
             resultsBox.classList.remove("open");
             input.blur();
           });
           resultsBox.appendChild(item);
         });
-        if (results.length > MAX) {
+        if (totalCount > MAX) {
           var more = document.createElement("div");
           more.className = "search-empty";
           more.textContent =
-            "还有 " + (results.length - MAX) + " 条，请精确关键词";
+            "共 " + totalCount + " 条，已显示前 " + MAX + " 条，请精确关键词";
           resultsBox.appendChild(more);
         }
         resultsBox.classList.add("open");
@@ -2291,15 +2405,8 @@
         }
         if (q.length < 1) return;
         searchTimer = setTimeout(function () {
-          var results = runSearch(q);
-          if (results.length === 0 && searchRegistry.some(function (e) {
-            return e.isLarge && document.getElementById(e.checkboxId)?.checked;
-          })) {
-            resultsBox.innerHTML = '<div class="search-empty">大数据集暂不支持全文搜索</div>';
-            resultsBox.classList.add("open");
-          } else {
-            renderResults(results, q);
-          }
+          var res = runSearch(q);
+          renderResults(res.items, q, res.total);
         }, 150);
       });
 
