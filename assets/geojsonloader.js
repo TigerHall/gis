@@ -2133,10 +2133,29 @@
           // 统一走倒排索引（所有数据集加载时均已构建）
           var si = searchIndexMap[entry.checkboxId];
           if (!si) return; // 索引尚未构建完成
-          var tokens = q.split(/\s+/);
+          var tokens = q.split(/[^a-z0-9\u4e00-\u9fff]+/);
           var candidateSets = [];
           for (var ti = 0; ti < tokens.length; ti++) {
-            candidateSets.push(si.tokens[tokens[ti]] || []);
+            var tok = tokens[ti];
+            if (!tok) continue;
+            var idxList = si.tokens[tok];
+            if (idxList && idxList.length > 0) {
+              // 精确 token 匹配
+              candidateSets.push(idxList);
+            } else {
+              // 模糊搜索：遍历索引 keys 做子串匹配
+              var merged = {};
+              var keys = Object.keys(si.tokens);
+              for (var ki = 0; ki < keys.length; ki++) {
+                if (keys[ki].indexOf(tok) !== -1) {
+                  var arr = si.tokens[keys[ki]];
+                  for (var ai = 0; ai < arr.length; ai++) {
+                    merged[arr[ai]] = true;
+                  }
+                }
+              }
+              candidateSets.push(Object.keys(merged).map(Number));
+            }
           }
           if (candidateSets.length === 0) return;
           // 多词取交集
@@ -2315,7 +2334,14 @@
             var feat = r.feature;
             var cbId = r.checkboxId;
             var state = highlightState[cbId];
-            if (state && state.geoLayers) {
+            // 判断是否为 Canvas 图层（有 setFeatures 则为 Canvas）
+            var isCanvasLayer =
+              state &&
+              state.geoLayers &&
+              state.geoLayers.some(function (gl) {
+                return typeof gl.setFeatures === "function";
+              });
+            if (state && state.geoLayers && !isCanvasLayer) {
               state.geoLayers.forEach(function (gl) {
                 gl.eachLayer(function (layer) {
                   if (
