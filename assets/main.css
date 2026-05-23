@@ -45,7 +45,7 @@ body {
   box-sizing: border-box;
   /* 细滚动条，与面板风格统一 */
   scrollbar-width: thin;
-  scrollbar-color: rgba(106,170,106,0.3) transparent;
+  scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
 }
 .layer-panel::-webkit-scrollbar {
   width: 6px;
@@ -54,11 +54,11 @@ body {
   background: transparent;
 }
 .layer-panel::-webkit-scrollbar-thumb {
-  background: rgba(106,170,106,0.25);
+  background: rgba(106, 170, 106, 0.25);
   border-radius: 3px;
 }
 .layer-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(106,170,106,0.45);
+  background: rgba(106, 170, 106, 0.45);
 }
 
 /* 【修复】提升active类优先级，明确覆盖默认transform */
@@ -236,7 +236,9 @@ body {
   user-select: none;
   padding: 2px 4px;
   border-radius: 50%;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 .search-clear:hover {
   color: #e5534b;
@@ -582,8 +584,10 @@ body {
   text-align: center;
   cursor: pointer;
   z-index: 10;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition:
+    background 0.15s,
+    transform 0.1s;
   padding: 0;
 }
 .popup-zoom-btn:hover {
@@ -599,7 +603,7 @@ body {
   background: #fff;
   border: 1px solid #99cc99;
   border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   padding: 8px 12px;
   font-size: 12px;
   line-height: 1.6;

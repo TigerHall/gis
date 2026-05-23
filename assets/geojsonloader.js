@@ -176,9 +176,10 @@
 
       // 读取存储宽度
       var savedWidth = parseInt(localStorage.getItem(STORAGE_KEY), 10);
-      var panelWidth = (savedWidth >= MIN_WIDTH && savedWidth <= MAX_WIDTH)
-        ? savedWidth
-        : DEFAULT_WIDTH;
+      var panelWidth =
+        savedWidth >= MIN_WIDTH && savedWidth <= MAX_WIDTH
+          ? savedWidth
+          : DEFAULT_WIDTH;
 
       function applyWidth(w) {
         panelWidth = w;
@@ -236,7 +237,9 @@
         localStorage.setItem(STORAGE_KEY, String(panelWidth));
         // 标记：接下来 300ms 内的 click 不触发 panel 收起
         window.__yugis_justResized = true;
-        setTimeout(function () { window.__yugis_justResized = false; }, 300);
+        setTimeout(function () {
+          window.__yugis_justResized = false;
+        }, 300);
       }
     })();
 
@@ -909,7 +912,9 @@
               for (var j = offset; j < end; j++) {
                 cachedFeatures[j].color = getFeatureFillColor(
                   { properties: cachedFeatures[j].properties },
-                  checkboxId, cFileName, cachedFeatures[j]._idx || j
+                  checkboxId,
+                  cFileName,
+                  cachedFeatures[j]._idx || j,
                 );
               }
               offset = end;
@@ -925,7 +930,9 @@
             for (var j = 0; j < total; j++) {
               cachedFeatures[j].color = getFeatureFillColor(
                 { properties: cachedFeatures[j].properties },
-                checkboxId, cFileName, cachedFeatures[j]._idx || j
+                checkboxId,
+                cFileName,
+                cachedFeatures[j]._idx || j,
               );
             }
             canvasLayer.updateColors();
@@ -1282,11 +1289,7 @@
     let colorModalOverlay = null;
     let colorModalData = null;
 
-    function getColorModalHTML(
-      checkboxId,
-      fileName,
-      availableFields,
-    ) {
+    function getColorModalHTML(checkboxId, fileName, availableFields) {
       const mode = colorMode[checkboxId] || "sequential";
       const currentField = fieldKey[checkboxId] || "";
       const currentColor = layerColorMap[checkboxId] || "#8B4513";
@@ -1347,7 +1350,10 @@
       var si = searchIndexMap[checkboxId];
       if (si && si.features) {
         // 构造轻量伪 GeoJSON 供 getAvailableFields 取字段名
-        var cachedData = { type: "FeatureCollection", features: si.features.slice(0, 50) };
+        var cachedData = {
+          type: "FeatureCollection",
+          features: si.features.slice(0, 50),
+        };
         var fields = window.GeoUtils.getAvailableFields(cachedData);
         showColorModalContent(checkboxId, fileName, filePath, fields);
       } else if (filePath) {
@@ -1356,7 +1362,9 @@
           showColorModalContent(checkboxId, fileName, filePath, fields);
         });
       } else if (userLayerGeoJson[checkboxId]) {
-        var fields = window.GeoUtils.getAvailableFields(userLayerGeoJson[checkboxId].geoJsonData);
+        var fields = window.GeoUtils.getAvailableFields(
+          userLayerGeoJson[checkboxId].geoJsonData,
+        );
         showColorModalContent(checkboxId, fileName, filePath, fields);
       } else {
         alert("无法加载图层数据，请尝试重新添加图层。");
@@ -1614,7 +1622,8 @@
       };
       var fileInput = document.createElement("input");
       fileInput.type = "file";
-      fileInput.accept = ".geojson,.json,.shp,.zip,.kml,application/vnd.google-earth.kml+xml,.kmz,application/vnd.google-earth.kmz";
+      fileInput.accept =
+        ".geojson,.json,.shp,.zip,.kml,application/vnd.google-earth.kml+xml,.kmz,application/vnd.google-earth.kmz";
       fileInput.multiple = true;
       fileInput.style.display = "none";
       uploadBtn.addEventListener("click", function () {
@@ -2094,9 +2103,21 @@
           if (INTERNAL_SKIP.has(k.toLowerCase())) continue;
           var v = props[k];
           if (v === null || v === undefined || v === "") continue;
-          var safeK = k.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-          var safeV = String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-          rows.push('<span class="tt-key">' + safeK + '</span>: <span class="tt-val">' + safeV + '</span>');
+          var safeK = k
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          var safeV = String(v)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          rows.push(
+            '<span class="tt-key">' +
+              safeK +
+              '</span>: <span class="tt-val">' +
+              safeV +
+              "</span>",
+          );
         }
         return rows.join("\n");
       }

@@ -53,7 +53,12 @@
         grid[key] = { pts: [], cx: 0, cy: 0 };
       }
       var cell = grid[key];
-      cell.pts.push({ x: pt.x, y: pt.y, color: f.color || "#3388ff", featureIdx: indices[i] });
+      cell.pts.push({
+        x: pt.x,
+        y: pt.y,
+        color: f.color || "#3388ff",
+        featureIdx: indices[i],
+      });
       cell.cx += pt.x;
       cell.cy += pt.y;
     }
@@ -73,7 +78,7 @@
       for (var dx = -1; dx <= 1; dx++) {
         for (var dy = -1; dy <= 1; dy++) {
           if (dx === 0 && dy === 0) continue;
-          var nkey = (gx + dx) + "," + (gy + dy);
+          var nkey = gx + dx + "," + (gy + dy);
           if (deleted[nkey] || !grid[nkey]) continue;
           var neighbor = grid[nkey];
           var ccx = mainCell.cx / mainCell.pts.length;
@@ -82,7 +87,10 @@
           var ncY = neighbor.cy / neighbor.pts.length;
           var distX = ncX - ccx;
           var distY = ncY - ccy;
-          if (distX * distX + distY * distY <= clusterRadiusPixels * clusterRadiusPixels) {
+          if (
+            distX * distX + distY * distY <=
+            clusterRadiusPixels * clusterRadiusPixels
+          ) {
             for (var nj = 0; nj < neighbor.pts.length; nj++) {
               mainCell.pts.push(neighbor.pts[nj]);
               mainCell.cx += neighbor.pts[nj].x;
@@ -284,7 +292,8 @@
 
       // 2. 是否使用聚类（由 clustering 选项 + clusterMaxZoom 共同控制）
       var zoom = map.getZoom();
-      var useCluster = this.options.clustering && zoom <= this.options.clusterMaxZoom;
+      var useCluster =
+        this.options.clustering && zoom <= this.options.clusterMaxZoom;
 
       var drawUnits;
       if (useCluster) {
