@@ -227,6 +227,7 @@
           });
         }
         function doRefresh(all) {
+          localStorage.clear(); // 清理用户设置（底图选择等）
           var tasks = [clearSWCache()];
           if (all) tasks.push(clearIDB());
           Promise.all(tasks).then(function () {
@@ -479,9 +480,35 @@
         )
         .addTo(map);
 
-      // 设置默认底图
-      arcgisBaseLayers["ArcGIS-海洋底图"].addTo(map);
+      // ========== 底图持久化：记住用户上次选择 ==========
+      var BASEMAP_STORAGE_KEY = "yugis_basemap";
+
+      // 所有可切换底图的名称 → layer 映射
+      var allBaseLayers = Object.assign(
+        {
+          天地图纯影像: tdtImgLayer2,
+          天地图影像底图: imgLayers,
+          天地图矢量底图: vecLayers,
+          天地图地形底图: terLayers,
+          OSM底图_边界有误慎用: osmLayers,
+        },
+        arcgisBaseLayers,
+      );
+
+      // 尝试恢复上次选择的底图，没有则用默认
+      var savedBasemap = localStorage.getItem(BASEMAP_STORAGE_KEY);
+      var initialBaseLayer =
+        savedBasemap && allBaseLayers[savedBasemap]
+          ? allBaseLayers[savedBasemap]
+          : arcgisBaseLayers["ArcGIS-海洋底图"];
+
+      initialBaseLayer.addTo(map);
       tdtIboLayer.addTo(map);
+
+      // 切换底图时保存选择
+      map.on("baselayerchange", function (e) {
+        localStorage.setItem(BASEMAP_STORAGE_KEY, e.name);
+      });
 
       // ========== Leaflet-Geoman 测量工具 ==========
       map.pm.addControls({
