@@ -1,6 +1,6 @@
 {
-  "name": "YuGroup WebGIS",
-  "short_name": "YuGIS",
+  "name": "OceanGeoView",
+  "short_name": "OGV",
   "description": "海洋地质一张图 WebGIS 应用",
   "start_url": "./",
   "display": "standalone",
