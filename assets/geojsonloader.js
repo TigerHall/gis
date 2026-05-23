@@ -130,7 +130,8 @@
         if (
           layerPanel.classList.contains("active") &&
           !layerPanel.contains(e.target) &&
-          !layerTrigger.contains(e.target)
+          !layerTrigger.contains(e.target) &&
+          !window.__yugis_justResized
         ) {
           layerPanel.classList.remove("active");
         }
@@ -160,6 +161,84 @@
         layerPanel.insertBefore(titleRow, layerPanel.firstChild);
       }
     }
+
+    // ========== 侧边栏宽度可调节 ==========
+    (function initPanelResize() {
+      var panel = document.getElementById("layerPanel");
+      var handle = document.getElementById("panelResizeHandle");
+      var trigger = document.getElementById("layerTrigger");
+      if (!panel || !handle) return;
+
+      var STORAGE_KEY = "yugis_panel_width";
+      var MIN_WIDTH = 180;
+      var MAX_WIDTH = 500;
+      var DEFAULT_WIDTH = 240;
+
+      // 读取存储宽度
+      var savedWidth = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+      var panelWidth = (savedWidth >= MIN_WIDTH && savedWidth <= MAX_WIDTH)
+        ? savedWidth
+        : DEFAULT_WIDTH;
+
+      function applyWidth(w) {
+        panelWidth = w;
+        panel.style.width = w + "px";
+        panel.style.transform = "translateX(-" + w + "px)";
+      }
+
+      // 初始应用
+      applyWidth(panelWidth);
+
+      // 拖拽开始
+      var isResizing = false;
+      handle.addEventListener("mousedown", startResize);
+      handle.addEventListener("touchstart", startResize, { passive: false });
+
+      function startResize(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        isResizing = true;
+        handle.classList.add("active");
+        document.body.style.cursor = "ew-resize";
+        document.body.style.userSelect = "none";
+        document.addEventListener("mousemove", onResize);
+        document.addEventListener("mouseup", stopResize);
+        document.addEventListener("touchmove", onResize, { passive: false });
+        document.addEventListener("touchend", stopResize);
+      }
+
+      function getClientX(e) {
+        return e.touches ? e.touches[0].clientX : e.clientX;
+      }
+
+      function onResize(e) {
+        if (!isResizing) return;
+        e.preventDefault();
+        var rect = panel.getBoundingClientRect();
+        var newWidth = getClientX(e) - rect.left;
+        newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
+        applyWidth(newWidth);
+      }
+
+      // 标记是否刚结束拖拽，防止 mouseup 冒泡触发 panel 收起
+      window.__yugis_justResized = false;
+
+      function stopResize() {
+        if (!isResizing) return;
+        isResizing = false;
+        handle.classList.remove("active");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.removeEventListener("mousemove", onResize);
+        document.removeEventListener("mouseup", stopResize);
+        document.removeEventListener("touchmove", onResize);
+        document.removeEventListener("touchend", stopResize);
+        localStorage.setItem(STORAGE_KEY, String(panelWidth));
+        // 标记：接下来 300ms 内的 click 不触发 panel 收起
+        window.__yugis_justResized = true;
+        setTimeout(function () { window.__yugis_justResized = false; }, 300);
+      }
+    })();
 
     // ========== 搜索注册表 ==========
     const searchRegistry = [];
@@ -1919,17 +1998,49 @@
 
       function buildSummary(props) {
         if (!props) return "";
-        var parts = [];
         var keys = Object.keys(props);
         var INTERNAL_SKIP = new Set(["_featureindex"]);
+        // 不区分大小写查找 name 字段
+        var nameKey = null;
+        for (var ni = 0; ni < keys.length; ni++) {
+          if (keys[ni].toLowerCase() === "name") {
+            nameKey = keys[ni];
+            break;
+          }
+        }
+        var parts = [];
+        // name 优先作为第一个
+        if (nameKey && props[nameKey] != null && props[nameKey] !== "") {
+          parts.push(String(props[nameKey]));
+        }
+        // 再补充其他字段，最多取到 4 个字段总计
         for (var i = 0; i < keys.length && parts.length < 4; i++) {
           var k = keys[i];
+          if (k === nameKey) continue;
           if (INTERNAL_SKIP.has(k.toLowerCase())) continue;
           var v = props[k];
           if (v === null || v === undefined || v === "") continue;
           parts.push(String(v));
         }
         return parts.join("  |  ");
+      }
+
+      // 构建所有字段信息的 tooltip HTML（用于自定义 hover 卡片）
+      function buildTooltipHtml(props) {
+        if (!props) return "";
+        var keys = Object.keys(props);
+        var INTERNAL_SKIP = new Set(["_featureindex"]);
+        var rows = [];
+        for (var i = 0; i < keys.length; i++) {
+          var k = keys[i];
+          if (INTERNAL_SKIP.has(k.toLowerCase())) continue;
+          var v = props[k];
+          if (v === null || v === undefined || v === "") continue;
+          var safeK = k.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          var safeV = String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          rows.push('<span class="tt-key">' + safeK + '</span>: <span class="tt-val">' + safeV + '</span>');
+        }
+        return rows.join("\n");
       }
 
       function runSearch(query) {
@@ -1943,6 +2054,7 @@
               results.push({
                 label: entry.layerLabel,
                 summary: buildSummary(f.properties),
+                tooltipHtml: buildTooltipHtml(f.properties),
                 feature: f,
                 checkboxId: entry.checkboxId,
               });
@@ -2014,9 +2126,57 @@
         }
         var MAX = 30;
         var shown = results.slice(0, MAX);
+        // 确保全局只有一个 tooltip 元素
+        var tip = document.getElementById("searchTooltip");
+        if (!tip) {
+          tip = document.createElement("div");
+          tip.id = "searchTooltip";
+          document.body.appendChild(tip);
+        }
+        // tip 自己的 mouseenter/leave：防止鼠标移到 tip 上时 item 的 mouseleave 隐藏它
+        tip.addEventListener("mouseenter", function () {
+          clearTimeout(tip._hideTimer);
+        });
+        tip.addEventListener("mouseleave", function () {
+          clearTimeout(tip._hideTimer);
+          tip._hideTimer = setTimeout(function () {
+            tip.classList.remove("visible");
+          }, 120);
+        });
+
         shown.forEach(function (r) {
           var item = document.createElement("div");
           item.className = "search-result-item";
+
+          // 自定义 hover 提示卡片
+          item.addEventListener("mouseenter", function (e) {
+            if (!r.tooltipHtml) return;
+            clearTimeout(tip._hideTimer);
+            tip.innerHTML = r.tooltipHtml;
+            tip.classList.add("visible");
+            // 此时 tip 已有内容，可测量尺寸
+            var rect = item.getBoundingClientRect();
+            var tipW = tip.offsetWidth || 280;
+            var tipH = tip.offsetHeight || 200;
+            var left = rect.right + 8;
+            var top = rect.top;
+            if (left + tipW > window.innerWidth - 8) {
+              left = rect.left - tipW - 8;
+            }
+            if (top + tipH > window.innerHeight - 8) {
+              top = window.innerHeight - tipH - 8;
+            }
+            if (top < 8) top = 8;
+            tip.style.left = left + "px";
+            tip.style.top = top + "px";
+          });
+          item.addEventListener("mouseleave", function () {
+            clearTimeout(tip._hideTimer);
+            tip._hideTimer = setTimeout(function () {
+              tip.classList.remove("visible");
+            }, 120);
+          });
+
           var tag = document.createElement("span");
           tag.className = "search-result-tag";
           tag.textContent = r.label;
@@ -2105,7 +2265,21 @@
       }
 
       var searchTimer = null;
+      var clearBtn = document.getElementById("searchClear");
+      if (clearBtn) {
+        clearBtn.addEventListener("click", function () {
+          input.value = "";
+          resultsBox.innerHTML = "";
+          resultsBox.classList.remove("open");
+          clearBtn.classList.remove("visible");
+          input.blur();
+        });
+      }
+
       input.addEventListener("input", function () {
+        if (clearBtn) {
+          clearBtn.classList.toggle("visible", this.value.trim().length > 0);
+        }
         clearTimeout(searchTimer);
         var q = this.value.trim();
         if (!q) {
