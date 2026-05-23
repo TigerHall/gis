@@ -237,7 +237,11 @@
           });
         }
         function toggleMenu() {
-          var menu = el.querySelector(".refresh-menu");
+          // 菜单是 #appVersion 的前一个兄弟节点
+          var menu = el.previousElementSibling;
+          if (!menu || !menu.classList.contains("refresh-menu")) {
+            menu = null;
+          }
           if (menu) {
             menu.remove();
             return;
@@ -258,7 +262,8 @@
               doRefresh(btn.dataset.mode === "all");
             }
           });
-          el.appendChild(menu);
+          // 插入到 #appVersion 前面（版号上方）
+          el.parentNode.insertBefore(menu, el);
         }
 
         el.addEventListener("click", function (e) {
