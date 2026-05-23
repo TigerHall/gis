@@ -290,10 +290,26 @@
       return JSON.stringify(f.properties).toLowerCase();
     }
 
+    // 从 features 构建倒排 tokens（公共分词逻辑）
+    function tokenizeFeatures(features) {
+      var tokens = Object.create(null);
+      for (var i = 0; i < features.length; i++) {
+        var str = featureToSearchStr(features[i]);
+        if (!str) continue;
+        var parts = str.split(/[^a-z0-9\u4e00-\u9fff]+/);
+        for (var t = 0; t < parts.length; t++) {
+          var tok = parts[t];
+          if (!tok) continue;
+          if (!tokens[tok]) tokens[tok] = [];
+          tokens[tok].push(i);
+        }
+      }
+      return tokens;
+    }
+
     // 倒排索引构建：为大数据集提供 O(1) 搜索能力
-    // 支持从 IDB 缓存恢复 tokens，避免刷新页面后重复构建
     // cacheKey: 用于 IDB 缓存的 key（内置图层用 fileName，用户上传图层传 null 不缓存）
-    // callback: function(FromCache) 回调，FromCache 为 true 表示命中缓存
+    // callback: function(fromCache) 回调
     function buildSearchIndex(checkboxId, features, cacheKey, callback) {
       if (!features || !features.length) {
         if (callback) callback(false);
@@ -301,18 +317,7 @@
       }
       // cacheKey 为 null/undefined 时不走 IDB 缓存（用户上传图层）
       if (!cacheKey) {
-        var tokens = {};
-        for (var i = 0; i < features.length; i++) {
-          var str = featureToSearchStr(features[i]);
-          if (!str) continue;
-          var parts = str.split(/[^a-z0-9\u4e00-\u9fff]+/);
-          for (var t = 0; t < parts.length; t++) {
-            var tok = parts[t];
-            if (!tok) continue;
-            if (!tokens[tok]) tokens[tok] = [];
-            tokens[tok].push(i);
-          }
-        }
+        var tokens = tokenizeFeatures(features);
         searchIndexMap[checkboxId] = { tokens: tokens, features: features };
         console.log(
           "[GeoJSONLoader] 搜索索引构建（不上缓存）:",
@@ -325,55 +330,34 @@
       }
       // 先尝试从 IDB 恢复缓存的 tokens
       L.GzIdbLoader.getSearchIndex(cacheKey).then(function (cached) {
-        var tokens = cached ? cached.tokens : null;
-        var fromCache = !!tokens;
-        if (!tokens) {
-          // 缓存未命中或版本不匹配，重建 tokens
-          tokens = {};
-          for (var i = 0; i < features.length; i++) {
-            var str = featureToSearchStr(features[i]);
-            if (!str) continue;
-            var parts = str.split(/[^a-z0-9\u4e00-\u9fff]+/);
-            for (var t = 0; t < parts.length; t++) {
-              var tok = parts[t];
-              if (!tok) continue;
-              if (!tokens[tok]) tokens[tok] = [];
-              tokens[tok].push(i);
-            }
-          }
-          // 异步写入缓存（不阻塞主流程），附带 features.length 用于版本检测
-          L.GzIdbLoader.setSearchIndex(cacheKey, {
-            tokens: tokens,
-            featureCount: features.length,
-          });
-        } else {
-          // 版本检测：feature 数量变了说明文件已更新，丢弃缓存重建
+        var tokens = null;
+        var fromCache = false;
+        // 缓存命中时校验格式：tokens 必须是对象，且 featureCount 匹配
+        if (
+          cached &&
+          cached.tokens &&
+          typeof cached.tokens === "object" &&
+          !Array.isArray(cached.tokens)
+        ) {
           if (
             cached.featureCount !== undefined &&
             cached.featureCount !== features.length
           ) {
             console.log(
-              "[GeoJSONLoader] 搜索索引版本不匹配（feature 数量变化），重建:",
+              "[GeoJSONLoader] 搜索索引版本不匹配（feature数量变化），重建:",
               checkboxId,
             );
-            tokens = {};
-            for (var i = 0; i < features.length; i++) {
-              var str = featureToSearchStr(features[i]);
-              if (!str) continue;
-              var parts = str.split(/[^a-z0-9\u4e00-\u9fff]+/);
-              for (var t = 0; t < parts.length; t++) {
-                var tok = parts[t];
-                if (!tok) continue;
-                if (!tokens[tok]) tokens[tok] = [];
-                tokens[tok].push(i);
-              }
-            }
-            fromCache = false;
-            L.GzIdbLoader.setSearchIndex(cacheKey, {
-              tokens: tokens,
-              featureCount: features.length,
-            });
+          } else {
+            tokens = cached.tokens;
+            fromCache = true;
           }
+        }
+        if (!tokens) {
+          tokens = tokenizeFeatures(features);
+          L.GzIdbLoader.setSearchIndex(cacheKey, {
+            tokens: tokens,
+            featureCount: features.length,
+          });
         }
         searchIndexMap[checkboxId] = { tokens: tokens, features: features };
         console.log(

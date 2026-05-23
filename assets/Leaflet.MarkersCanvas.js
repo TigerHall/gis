@@ -331,10 +331,10 @@
         var u = drawUnits[i];
 
         if (u.count) {
-          // 聚类圆：半径随数量动态变化，最大 36px
+          // 聚类圆：半径随数量动态变化，最大 36px，填充色跟随点位
           var r = Math.min(10 + Math.log2(u.count) * 5, 36);
           ctx.beginPath();
-          ctx.fillStyle = "#3388ff";
+          ctx.fillStyle = u.color || "#3388ff";
           ctx.arc(u.x, u.y, r, 0, Math.PI * 2);
           ctx.fill();
           ctx.strokeStyle = "#fff";
@@ -356,16 +356,16 @@
             screenY: u.y,
           });
         } else {
-          // 单点：半径 6px（与 DOM 版 Marker 视觉大小相当），白色描边
+          // 单点：半径 8px（匹配 IODP DOM 渲染点），白色描边
           ctx.beginPath();
           ctx.fillStyle = u.color;
-          ctx.arc(u.x, u.y, 6, 0, Math.PI * 2);
+          ctx.arc(u.x, u.y, 8, 0, Math.PI * 2);
           ctx.fill();
           ctx.strokeStyle = "#fff";
           ctx.lineWidth = 1;
           ctx.stroke();
 
-          var hitR = 8;
+          var hitR = 10;
           hitItems.push({
             minX: u.x - hitR,
             minY: u.y - hitR,

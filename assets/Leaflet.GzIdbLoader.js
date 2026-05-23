@@ -105,12 +105,7 @@
           const request = store.put(record);
 
           request.onsuccess = function () {
-            console.log(
-              "[GzIdbLoader] 已缓存:",
-              url,
-              "大小:",
-              formatBytes(record.size),
-            );
+            console.log("[GzIdbLoader] 已缓存:", url);
             resolve();
           };
 
