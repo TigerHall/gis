@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.6.8";
+const CACHE_NAME = "v1.6.9";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -29,6 +29,7 @@ const STATIC_ASSETS = [
   "./assets/shp.min.js",
   "./assets/togeojson.min.js",
   "./assets/jszip.min.js",
+  "./assets/pointdrop.js",
   "./assets/geojsonloader.js",
   // 图标
   "./assets/images/icon.svg",

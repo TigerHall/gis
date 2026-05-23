@@ -513,3 +513,54 @@
   display: block;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
+
+/* ========== 投点功能样式 ========== */
+#pointDropBtn:hover {
+  background: #fff1c1 !important;
+}
+
+#pointDropTable input[type="text"]:focus {
+  outline: 1px solid #cc9933;
+  background: #fffef5;
+}
+
+#pdTableWrap table {
+  table-layout: fixed;
+}
+
+#pdTableWrap th {
+  position: sticky;
+  top: 0;
+  background: #f9f0d4;
+  z-index: 1;
+}
+
+#pdTableWrap td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+#pdPasteArea:focus {
+  outline: 1px solid #cc9933;
+  border-color: #cc9933;
+}
+
+/* 投点字段名可编辑样式 */
+#pdTableWrap th [contenteditable] {
+  cursor: text;
+  padding: 0 2px;
+  min-width: 28px;
+  transition: background 0.15s;
+}
+
+#pdTableWrap th [contenteditable]:hover {
+  background: rgba(204, 153, 51, 0.15);
+}
+
+#pdTableWrap th [contenteditable]:focus {
+  background: #fff;
+  outline: 1px solid #cc9933;
+  border-radius: 2px;
+}

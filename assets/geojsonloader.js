@@ -1779,6 +1779,11 @@
       folderInput.addEventListener("change", handleFolderUpload);
       uploadDiv.appendChild(folderBtn);
       uploadDiv.appendChild(folderInput);
+      // 投点按钮锚点（pointdrop.js 在这里插入按钮）
+      var pdAnchor = document.createElement("div");
+      pdAnchor.id = "pointDropAnchor";
+      container.appendChild(pdAnchor);
+
       container.appendChild(uploadDiv);
     }
 
