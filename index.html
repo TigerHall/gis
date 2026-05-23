@@ -1141,5 +1141,52 @@
     </script>
     <!-- geojson图层加载器 -->
     <script src="./assets/geojsonloader.js"></script>
+    <script>
+      // 悬浮窗：popup 打开时插入右下角缩放按钮
+      map.on("popupopen", function (e) {
+        var popup = e.popup;
+        var el = popup.getElement();
+        if (!el) return;
+        if (el.querySelector(".popup-zoom-btn")) return;
+
+        // 从 popup 关联的图层/要素中提取 bounds 或坐标
+        var layer = popup._source || popup._sourceLayer;
+        var bounds = null;
+        var latLng = null;
+
+        if (layer && typeof layer.getBounds === "function") {
+          try {
+            var b = layer.getBounds();
+            if (b && b.isValid()) bounds = b;
+          } catch (ex) {}
+        }
+        if (!bounds && layer && layer.getLatLng) {
+          latLng = layer.getLatLng();
+        }
+        if (!bounds && !latLng) {
+          // 尝试从 popup 自身获取
+          var pLatLng = popup.getLatLng ? popup.getLatLng() : null;
+          if (pLatLng) latLng = pLatLng;
+        }
+        if (!bounds && !latLng) return;
+
+        var btn = document.createElement("button");
+        btn.className = "popup-zoom-btn";
+        btn.title = "缩放至要素";
+        btn.innerHTML = "⚲";
+
+        btn.onclick = function (ev) {
+          L.DomEvent.stop(ev);
+          if (bounds) {
+            map.fitBounds(bounds, { maxZoom: 16, padding: [40, 40] });
+          } else if (latLng) {
+            map.setView([latLng.lat, latLng.lng], Math.max(map.getZoom(), 8));
+          }
+          map.closePopup();
+        };
+
+        el.appendChild(btn);
+      });
+    </script>
   </body>
 </html>

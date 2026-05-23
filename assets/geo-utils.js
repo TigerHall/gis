@@ -121,14 +121,22 @@
         typeof props[k] !== "object",
     );
     if (displayKeys.length === 0) return null;
-    // 标题行
+    // 标题行：优先用配置的 titleField，否则自动检测 Name 字段（不区分大小写）
     let titleHtml = "";
-    if (config.titleField && props[config.titleField]) {
-      titleHtml = `<div style="font-weight:bold;font-size:13px;margin-bottom:4px;color:#2a6a2a;border-bottom:1px solid #eee;padding-bottom:3px;">${props[config.titleField]}</div>`;
+    let titleKey = config.titleField || null;
+    if (!titleKey) {
+      // 不区分大小写查找 name 字段
+      const nameKey = keys.find(k => k.toLowerCase() === "name");
+      if (nameKey && props[nameKey] != null && props[nameKey] !== "") {
+        titleKey = nameKey;
+      }
     }
-    // 字段行
+    if (titleKey && props[titleKey] != null && props[titleKey] !== "") {
+      titleHtml = `<div style="font-weight:bold;font-size:13px;margin-bottom:4px;color:#2a6a2a;border-bottom:1px solid #eee;padding-bottom:3px;">${props[titleKey]}</div>`;
+    }
+    // 字段行（排除已作为标题的字段）
     const rows = displayKeys
-      .filter((k) => !config.titleField || k !== config.titleField)
+      .filter((k) => !titleKey || k !== titleKey)
       .map((k) => {
         let val = props[k];
         if (typeof val === "number")
@@ -136,10 +144,9 @@
         return `<tr><td>${k}</td><td>${val}</td></tr>`;
       })
       .join("");
+
     return `<div class="feature-popup">${titleHtml}<table><tbody>${rows}</tbody></table></div>`;
   }
-
-  // ========== 高亮样式 ==========
   function buildHighlightStyle(origStyle) {
     return Object.assign({}, origStyle, {
       color: "#ffff00",
