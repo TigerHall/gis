@@ -203,31 +203,16 @@
           url,
           "读取耗时:",
           (performance.now() - t0).toFixed(1) + "ms",
-          "数据大小:",
-          JSON.stringify(cachedData).length,
-          "bytes",
         );
         return cachedData;
       }
 
-      // 2. 缓存未命中，加载文件
+      // 2. 缓存未命中，仅加载 gz
       const gzUrl = url.endsWith(".gz") ? url : url + ".gz";
-
-      return fetchGz(gzUrl)
-        .then(function (data) {
-          // 3. 成功加载 gz，写入缓存
-          setCache(url, data);
-          return data;
-        })
-        .catch(function () {
-          // 4. gz 加载失败，尝试加载原始 JSON
-          console.log("[GzIdbLoader] gz 不可用，回退至原始文件:", url);
-          return fetchJson(url).then(function (data) {
-            // 5. 原始 JSON 也写入缓存
-            setCache(url, data);
-            return data;
-          });
-        });
+      return fetchGz(gzUrl).then(function (data) {
+        setCache(url, data);
+        return data;
+      });
     });
   }
 

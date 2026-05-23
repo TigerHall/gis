@@ -6,6 +6,8 @@
 (function () {
   // ========== 路径配置（放在最前面）==========
   const geoJsonBasePath = "./assets/geojson/";
+  const geoJsonCosPath =
+    "https://dupal-1258052757.cos.ap-shanghai.myqcloud.com/assets/geojson/";
 
   // ========== GeoJSON 分组配置（路径之后，方便引用 basePath）==========
   const geoJsonGroups = [
@@ -70,8 +72,8 @@
       ],
     },
     {
-      groupName: null, // 无分组名 = 直接显示图层，不渲染分组头
-      layers: [{ name: "PIC 45万点", file: "pic.geojson.gz" }],
+      groupName: null,
+      layers: [{ name: "PIC 45万点", file: "pic.geojson" }],
     },
   ];
 
@@ -335,7 +337,7 @@
       }
 
       if (isPoint) {
-        const isVolcano = fileName === "volcanos.json";
+        const isVolcano = fileName === "volcanos.geojson";
         return {
           color: featureColor,
           fillColor: featureColor,
@@ -757,12 +759,16 @@
     }
 
     // ========== 图层加载 ==========
-    // 使用 Leaflet.GzIdbLoader 加载（自动处理 gz 解压和 IDB 缓存）
-    function fetchGeoJSON(filePath) {
+    // 使用 Leaflet.GzIdbLoader 加载（仅 gz，自动解压 + IDB 缓存）
+    function fetchGzGeoJSON(filePath) {
       return L.GzIdbLoader.fetch(filePath);
     }
 
     function loadGeoJSONLayer(filePath, checkboxId, fitBoundsAfterLoad) {
+      // COS 远程路径自动计算本地回退路径
+      var localFallback = filePath.startsWith("http")
+        ? geoJsonBasePath + filePath.split("/").pop()
+        : null;
       if (layerCache[checkboxId]) {
         layerCache[checkboxId].addTo(map);
         const state = highlightState[checkboxId];
@@ -786,91 +792,107 @@
       const fileName = filePath.split("/").pop();
       updateLayerItemStatus(checkboxId, "loading");
 
-      fetchGeoJSON(filePath)
-        .then(function (data) {
-          const data_ = data; // 直接使用原始数据，三副本逻辑处理跨180显示
-          console.log(
-            `[DEBUG] ${fileName}: 加载成功, features: ${data_.features?.length || 0}`,
-          );
+      function onDataLoaded(data) {
+        const data_ = data;
+        console.log(
+          `[DEBUG] ${fileName}: 加载成功, features: ${data_.features?.length || 0}`,
+        );
 
-          const geomType = window.GeoUtils.detectMainGeomType(data_);
-          _geomTypeCache[fileName] = geomType;
+        const geomType = window.GeoUtils.detectMainGeomType(data_);
+        _geomTypeCache[fileName] = geomType;
 
-          if (colorMode[checkboxId] === undefined) {
-            const isPolygon =
-              geomType === "polygon" || geomType === "multipolygon";
-            if (fileName === "hotspots.json" || fileName === "volcanos.json") {
-              colorMode[checkboxId] = "single";
-            } else if (isPolygon) {
-              colorMode[checkboxId] = "sequential";
-            } else {
-              colorMode[checkboxId] = "single";
-            }
-          }
-
-          const worldCopyGroup = buildGeoJsonLayerGroup(
-            data_,
-            checkboxId,
-            fileName,
-          );
-          layerCache[checkboxId] = worldCopyGroup;
-          worldCopyGroup.addTo(map); // 统一在这里添加到地图
-
-          // 直接计算 bounds，不构建完整 L.geoJSON 层（避免大数据内存爆炸）
-          const boundsObj = window.GeoUtils.computeBounds
-            ? window.GeoUtils.computeBounds(data_)
-            : null;
-          if (boundsObj && boundsObj.isValid && boundsObj.isValid()) {
-            layerBoundsCache[checkboxId] = boundsObj;
+        if (colorMode[checkboxId] === undefined) {
+          const isPolygon =
+            geomType === "polygon" || geomType === "multipolygon";
+          if (fileName === "hotspots.json" || fileName === "volcanos.json") {
+            colorMode[checkboxId] = "single";
+          } else if (isPolygon) {
+            colorMode[checkboxId] = "sequential";
           } else {
-            // 降级：用轻量方式算 bounds
-            const fakeLayer = L.geoJSON(data_, {
-              style: function () {
-                return { opacity: 0, fillOpacity: 0 };
-              },
-            });
-            layerBoundsCache[checkboxId] = fakeLayer;
+            colorMode[checkboxId] = "single";
           }
+        }
 
-          if (fitBoundsAfterLoad) {
-            try {
-              const b = baseGeoJson.getBounds();
-              if (b.isValid())
-                optimizedFitBounds(b, { padding: [6, 6], animate: true });
-            } catch (e) {}
-          }
-          updateLayerItemStatus(checkboxId, "loaded");
+        const worldCopyGroup = buildGeoJsonLayerGroup(
+          data_,
+          checkboxId,
+          fileName,
+        );
+        layerCache[checkboxId] = worldCopyGroup;
+        worldCopyGroup.addTo(map);
 
-          if (!searchRegistry.find((e) => e.checkboxId === checkboxId)) {
-            const cb = document.getElementById(checkboxId);
-            const layerLabel = cb ? cb.dataset.layerName || fileName : fileName;
-            searchRegistry.push({
-              layerLabel: layerLabel,
-              checkboxId: checkboxId,
-              fileName: fileName,
-            });
-            // 异步构建倒排索引（不阻塞 UI）
-            if (data_.features) {
-              searchIndexingCount++;
+        const boundsObj = window.GeoUtils.computeBounds
+          ? window.GeoUtils.computeBounds(data_)
+          : null;
+        if (boundsObj && boundsObj.isValid && boundsObj.isValid()) {
+          layerBoundsCache[checkboxId] = boundsObj;
+        } else {
+          const fakeLayer = L.geoJSON(data_, {
+            style: function () {
+              return { opacity: 0, fillOpacity: 0 };
+            },
+          });
+          layerBoundsCache[checkboxId] = fakeLayer;
+        }
+
+        if (fitBoundsAfterLoad) {
+          try {
+            const b = baseGeoJson.getBounds();
+            if (b.isValid())
+              optimizedFitBounds(b, { padding: [6, 6], animate: true });
+          } catch (e) {}
+        }
+        updateLayerItemStatus(checkboxId, "loaded");
+
+        if (!searchRegistry.find((e) => e.checkboxId === checkboxId)) {
+          const cb = document.getElementById(checkboxId);
+          const layerLabel = cb ? cb.dataset.layerName || fileName : fileName;
+          searchRegistry.push({
+            layerLabel: layerLabel,
+            checkboxId: checkboxId,
+            fileName: fileName,
+          });
+          if (data_.features) {
+            searchIndexingCount++;
+            updateSearchInputState();
+            setTimeout(function () {
+              buildSearchIndex(checkboxId, data_.features);
+              searchIndexingCount--;
               updateSearchInputState();
-              setTimeout(function () {
-                buildSearchIndex(checkboxId, data_.features);
-                searchIndexingCount--;
-                updateSearchInputState();
-              }, 0);
-            }
+            }, 0);
           }
-        })
+        }
+      }
+
+      fetchGzGeoJSON(filePath)
+        .then(onDataLoaded)
         .catch(function (error) {
-          console.error("GeoJSON加载失败：", error);
-          updateLayerItemStatus(checkboxId, "error");
-          const checkbox = document.getElementById(checkboxId);
-          if (checkbox) {
-            checkbox.checked = false;
-            checkbox.style.background = "#fff";
+          if (localFallback) {
+            console.warn("[GeoJSONLoader] COS加载失败，回退本地:", filePath);
+            fetchGzGeoJSON(localFallback)
+              .then(onDataLoaded)
+              .catch(function (err) {
+                console.error("GeoJSON加载失败：", err);
+                updateLayerItemStatus(checkboxId, "error");
+                var cb2 = document.getElementById(checkboxId);
+                if (cb2) {
+                  cb2.checked = false;
+                  cb2.style.background = "#fff";
+                }
+                syncSelectAllStatus();
+                isMapZooming = false;
+              });
+          } else {
+            console.error("GeoJSON加载失败：", error);
+            updateLayerItemStatus(checkboxId, "error");
+            const checkbox = document.getElementById(checkboxId);
+            if (checkbox) {
+              checkbox.checked = false;
+              checkbox.style.background = "#fff";
+            }
+            syncSelectAllStatus();
+            isMapZooming = false;
           }
-          syncSelectAllStatus();
-          isMapZooming = false;
         });
     }
 
@@ -1357,10 +1379,24 @@
         var fields = window.GeoUtils.getAvailableFields(cachedData);
         showColorModalContent(checkboxId, fileName, filePath, fields);
       } else if (filePath) {
-        fetchGeoJSON(filePath).then(function (data) {
-          var fields = window.GeoUtils.getAvailableFields(data);
-          showColorModalContent(checkboxId, fileName, filePath, fields);
-        });
+        function doFetch(p) {
+          fetchGzGeoJSON(p).then(function (data) {
+            var fields = window.GeoUtils.getAvailableFields(data);
+            showColorModalContent(checkboxId, fileName, filePath, fields);
+          });
+        }
+        if (filePath.startsWith("http")) {
+          fetchGzGeoJSON(filePath)
+            .then(function (data) {
+              var fields = window.GeoUtils.getAvailableFields(data);
+              showColorModalContent(checkboxId, fileName, filePath, fields);
+            })
+            .catch(function () {
+              doFetch(geoJsonBasePath + fileName);
+            });
+        } else {
+          doFetch(filePath);
+        }
       } else if (userLayerGeoJson[checkboxId]) {
         var fields = window.GeoUtils.getAvailableFields(
           userLayerGeoJson[checkboxId].geoJsonData,
@@ -1533,7 +1569,7 @@
         group.layers.forEach(function (layerConfig) {
           var idx = globalLayerIndex++;
           var checkboxId = "layer_" + idx;
-          var fullPath = geoJsonBasePath + layerConfig.file;
+          var fullPath = geoJsonCosPath + layerConfig.file;
           var fileName = layerConfig.file;
           var fixedColor =
             fileName === "hotspots.json" || fileName === "volcanos.json"
