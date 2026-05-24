@@ -78,7 +78,7 @@
     pasteArea.placeholder =
       "纬度\t经度\t名称\n32.1\t118.5\t南京\n39.9\t116.4\t北京\n\n也可直接粘贴 Excel 或 CSV 内容";
     pasteArea.style.cssText =
-      "width:100%;height:48px;box-sizing:border-box;font-size:11px;margin-bottom:4px;border:1px solid #ccc;border-radius:3px;padding:4px;background:#fff;color:#222;";
+      "width:100%;min-height:76px;box-sizing:border-box;font-size:11px;margin-bottom:4px;border:1px solid #ccc;border-radius:3px;padding:4px;background:#fff;color:#222;resize: vertical;";
     pasteArea.oninput = onPasteInput;
     pointDropTable.appendChild(pasteArea);
 
