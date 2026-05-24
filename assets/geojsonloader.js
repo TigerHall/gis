@@ -1368,11 +1368,61 @@
         {
           idle: "未加载",
           loading: "加载中...",
-          loaded: "已加载",
+          loaded: "已加载（点击下载）",
           error: "加载失败",
         }[status] || status;
       const gd = li.closest(".layer-group");
       if (gd) syncGroupLoadingStatus(gd);
+    }
+
+    // ========== 下载图层 GeoJSON ==========
+    function downloadLayerGeoJson(checkboxId, filePath, layerName) {
+      // 用户上传图层：直接从内存取原始数据
+      if (userLayerGeoJson[checkboxId]) {
+        var gd = userLayerGeoJson[checkboxId].geoJsonData;
+        var fn = userLayerGeoJson[checkboxId].fileName || layerName || "layer";
+        triggerDownload(gd, fn.replace(/\.\w+$/, "") + ".geojson");
+        return;
+      }
+      // 预置图层：优先从搜索索引缓存取（避免大数据集重新 fetch）
+      var si = searchIndexMap[checkboxId];
+      if (si && si.features && si.features.length > 0) {
+        var cleaned = si.features.map(function (f) {
+          var c = { type: "Feature", properties: f.properties || {} };
+          if (f.geometry) c.geometry = f.geometry;
+          return c;
+        });
+        triggerDownload(
+          { type: "FeatureCollection", features: cleaned },
+          (layerName || checkboxId) + ".geojson",
+        );
+        return;
+      }
+      // 预置图层：回退到重新 fetch
+      if (filePath) {
+        L.GzIdbLoader.fetch(filePath)
+          .then(function (data) {
+            triggerDownload(data, (layerName || "layer") + ".geojson");
+          })
+          .catch(function () {
+            alert("下载失败：无法获取图层数据");
+          });
+      } else {
+        alert("下载失败：找不到图层数据源");
+      }
+    }
+
+    function triggerDownload(geoJsonObj, fileName) {
+      var str = JSON.stringify(geoJsonObj, null, 2);
+      var blob = new Blob([str], { type: "application/geo+json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     // ========== 颜色按钮提示 ==========
@@ -1688,6 +1738,13 @@
           var statusSpan = document.createElement("span");
           statusSpan.className = "layer-status";
           statusSpan.dataset.status = "idle";
+          (function (cbId, fPath, fName) {
+            statusSpan.addEventListener("click", function (e) {
+              e.stopPropagation();
+              if (statusSpan.dataset.status !== "loaded") return;
+              downloadLayerGeoJson(cbId, fPath, fName);
+            });
+          })(checkboxId, fullPath, layerConfig.name);
 
           var colorBtn = document.createElement("button");
           colorBtn.className = "layer-color-btn";
@@ -2095,7 +2152,14 @@
       var statusSpan = document.createElement("span");
       statusSpan.className = "layer-status";
       statusSpan.dataset.status = "loaded";
-      statusSpan.title = "已加载";
+      statusSpan.title = "已加载（点击下载）";
+      (function (cbId, fName) {
+        statusSpan.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (statusSpan.dataset.status !== "loaded") return;
+          downloadLayerGeoJson(cbId, null, fName);
+        });
+      })(uid, fileName);
 
       var colorBtn = document.createElement("button");
       colorBtn.className = "layer-color-btn";
@@ -2699,7 +2763,9 @@
             var oldState = highlightState[checkboxId];
             if (oldState && oldState.geoLayers) {
               oldState.geoLayers.forEach(function (gl) {
-                try { map.removeLayer(gl); } catch (e) {}
+                try {
+                  map.removeLayer(gl);
+                } catch (e) {}
               });
             }
             if (cached) map.removeLayer(cached);
