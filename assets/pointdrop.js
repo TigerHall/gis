@@ -138,32 +138,59 @@
     var wrap = document.getElementById("pdTableWrap");
     if (!wrap) return;
 
+    // 计算各列宽度：列名字符数+1ch，最小4ch，最大60px
+    var fixedCols = [
+      { name: "#", w: "28px" },
+      { name: "纬度 *", w: "60px" },
+      { name: "经度 *", w: "60px" },
+      { name: "Name", w: "60px" },
+    ];
+    var colWidths = fixedCols.map(function (c) {
+      return c.w;
+    });
+    for (var ci = 0; ci < pointDropCols.length; ci++) {
+      var len = pointDropCols[ci].length + 1;
+      if (len < 4) len = 4;
+      colWidths.push("min(60px," + len + "ch)");
+    }
+
     var html =
-      '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+      '<table style="width:max-content;min-width:100%;font-size:11px;border-collapse:collapse;table-layout:fixed;">';
 
     // 表头
     html += "<thead><tr style='background:#f9f0d4;color:#333;'>";
     html +=
-      '<th style="width:28px;text-align:center;padding:3px;border:1px solid #ddd;color:#333;">#</th>';
+      '<th style="width:' +
+      colWidths[0] +
+      ';text-align:center;padding:3px;border:1px solid #ddd;color:#333;">#</th>';
     html +=
-      '<th style="padding:3px 6px;border:1px solid #ddd;min-width:70px;color:#333;">纬度 *</th>';
+      '<th style="width:' +
+      colWidths[1] +
+      ';padding:3px 6px;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">纬度 *</th>';
     html +=
-      '<th style="padding:3px 6px;border:1px solid #ddd;min-width:70px;color:#333;">经度 *</th>';
+      '<th style="width:' +
+      colWidths[2] +
+      ';padding:3px 6px;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">经度 *</th>';
     html +=
-      '<th style="padding:3px 6px;border:1px solid #ddd;min-width:70px;color:#333;">Name</th>';
+      '<th style="width:' +
+      colWidths[3] +
+      ';padding:3px 6px;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">Name</th>';
     // 表头——额外字段名用 contenteditable 实现可编辑
-    for (var ci = 0; ci < pointDropCols.length; ci++) {
+    for (var ci2 = 0; ci2 < pointDropCols.length; ci2++) {
+      var cw = colWidths[4 + ci2];
       html +=
-        '<th style="padding:3px 6px;border:1px solid #ddd;min-width:70px;color:#333;white-space:nowrap;">' +
+        '<th style="width:' +
+        cw +
+        ';padding:3px 6px;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">' +
         '<span contenteditable="true" style="outline:none;display:inline-block;min-width:24px;border-bottom:1px dashed #cc9933;" ' +
         'onblur="window.__pdRenameCol(' +
-        ci +
+        ci2 +
         ',this.textContent)" ' +
         "onkeydown=\"if(event.key==='Enter'){event.preventDefault();this.blur();}\">" +
-        escapeHtml(pointDropCols[ci]) +
+        escapeHtml(pointDropCols[ci2]) +
         "</span>" +
         ' <span style="cursor:pointer;color:#c00;font-size:10px;" onclick="window.__pdDelCol(' +
-        ci +
+        ci2 +
         ')">✕</span></th>';
     }
     html += "</tr></thead>";
@@ -178,30 +205,47 @@
         (ri + 1) +
         "</td>";
       html +=
-        '<td style="padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
+        '<td style="width:' +
+        colWidths[1] +
+        ';padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
         escapeAttr(row.lat) +
-        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;" oninput="window.__pdChange(' +
+        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;" title="' +
+        escapeAttr(row.lat) +
+        '" oninput="window.__pdChange(' +
         ri +
         ",'lat',this.value)\"></td>";
       html +=
-        '<td style="padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
+        '<td style="width:' +
+        colWidths[2] +
+        ';padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
         escapeAttr(row.lng) +
-        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;" oninput="window.__pdChange(' +
+        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;" title="' +
+        escapeAttr(row.lng) +
+        '" oninput="window.__pdChange(' +
         ri +
         ",'lng',this.value)\"></td>";
       html +=
-        '<td style="padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
+        '<td style="width:' +
+        colWidths[3] +
+        ';padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
         escapeAttr(row.Name) +
-        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;" oninput="window.__pdChange(' +
+        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;" title="' +
+        escapeAttr(row.Name) +
+        '" oninput="window.__pdChange(' +
         ri +
         ",'Name',this.value)\"></td>";
       for (var cj = 0; cj < pointDropCols.length; cj++) {
         var colName = pointDropCols[cj];
         var val = row[colName] || "";
+        var cw2 = colWidths[4 + cj];
         html +=
-          '<td style="padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
+          '<td style="width:' +
+          cw2 +
+          ';padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
           escapeAttr(val) +
-          '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;" oninput="window.__pdChange(' +
+          '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;" title="' +
+          escapeAttr(val) +
+          '" oninput="window.__pdChange(' +
           ri +
           ",'" +
           escapeJs(colName) +
@@ -447,6 +491,104 @@
   function escapeJs(s) {
     // 用于 JS 字符串字面量
     return String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  }
+
+  // ========== 全局粘贴监听 + 切页自动读取剪贴板 ==========
+  var _lastClipText = ""; // 避免重复读取同一段内容
+
+  // Ctrl+V 粘贴（焦点不在输入框时自动解析）
+  document.addEventListener("paste", function (e) {
+    var tag = ((e.target && e.target.tagName) || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || e.target.isContentEditable)
+      return;
+
+    var text = (e.clipboardData || window.clipboardData).getData("text/plain");
+    if (!text || !text.trim()) return;
+    if (!/\d/.test(text)) return;
+
+    e.preventDefault();
+    _lastClipText = text.trim();
+    autoPasteAndParse(_lastClipText);
+  });
+
+  // 切回页面时主动读取剪贴板（visibilitychange + focus）
+  function tryReadClipboard() {
+    if (
+      typeof navigator.clipboard !== "object" ||
+      typeof navigator.clipboard.readText !== "function"
+    )
+      return;
+    navigator.clipboard
+      .readText()
+      .then(function (text) {
+        if (!text || !text.trim()) return;
+        text = text.trim();
+        if (text === _lastClipText) return; // 和上次一样，跳过
+        if (!/\d/.test(text)) return;
+        _lastClipText = text;
+        autoPasteAndParse(text);
+      })
+      .catch(function () {
+        // 权限拒绝或不可用，静默忽略
+      });
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) setTimeout(tryReadClipboard, 300);
+  });
+  window.addEventListener("focus", function () {
+    setTimeout(tryReadClipboard, 300);
+  });
+
+  function autoPasteAndParse(text) {
+    // 确保投点编辑器已创建并显示
+    if (!pointDropTable) createPointDropTable();
+    if (pointDropTable) pointDropTable.style.display = "";
+
+    // 展开侧边栏并滚动到投点编辑器
+    var layerPanel = document.getElementById("layerPanel");
+    if (layerPanel) {
+      layerPanel.classList.add("active");
+      setTimeout(function () {
+        pointDropTable &&
+          pointDropTable.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+      }, 120);
+    }
+
+    // 填充到粘贴框并触发解析
+    var area = document.getElementById("pdPasteArea");
+    if (area) {
+      area.value = text;
+      onPasteInput();
+    }
+
+    // 成功提示
+    showToast("已识别剪贴板坐标数据，投点编辑器已打开");
+  }
+
+  // ========== 轻量 Toast 提示 ==========
+  function showToast(msg, duration) {
+    duration = duration || 2500;
+    var el = document.createElement("div");
+    el.textContent = msg;
+    el.style.cssText =
+      "position:fixed;bottom:48px;left:50%;transform:translateX(-50%);" +
+      "background:rgba(30,30,30,0.88);color:#fff;padding:8px 18px;border-radius:6px;" +
+      "font-size:13px;z-index:10000;pointer-events:none;" +
+      "opacity:0;transition:opacity 0.3s;";
+    document.body.appendChild(el);
+    requestAnimationFrame(function () {
+      el.style.opacity = "1";
+    });
+    setTimeout(function () {
+      el.style.opacity = "0";
+      setTimeout(function () {
+        el.remove();
+      }, 350);
+    }, duration);
   }
 
   // ========== 初始化：等 DOM Ready 后找锚点 ==========
