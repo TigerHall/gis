@@ -504,11 +504,13 @@
 
     var text = (e.clipboardData || window.clipboardData).getData("text/plain");
     if (!text || !text.trim()) return;
+    text = text.trim();
     if (!/\d/.test(text)) return;
+    if (text === _lastClipText) return; // 和上次一样，跳过
 
     e.preventDefault();
-    _lastClipText = text.trim();
-    autoPasteAndParse(_lastClipText);
+    _lastClipText = text;
+    autoPasteAndParse(text);
   });
 
   // 切回页面时主动读取剪贴板（visibilitychange + focus）
