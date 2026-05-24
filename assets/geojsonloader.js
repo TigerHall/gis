@@ -2649,38 +2649,75 @@
       document
         .querySelectorAll('.layer-item input[type="checkbox"]')
         .forEach(function (cb) {
-          if (cb.checked && !cb.dataset.userLayer) {
-            var checkboxId = cb.id;
+          if (!cb.checked) return;
+          var checkboxId = cb.id;
+          var isUserLayer = !!cb.dataset.userLayer;
+
+          // 判断是否为点要素图层
+          var isPoint = false;
+          if (isUserLayer) {
+            // 用户上传图层：从 userLayerGeoJson 中检测
+            var ud = userLayerGeoJson[checkboxId];
+            if (ud && ud.geoJsonData) {
+              var mt = window.GeoUtils.detectMainGeomType(ud.geoJsonData);
+              isPoint = mt === "point" || mt === "multipoint";
+            }
+          } else {
+            // 内置图层：从 _geomTypeCache 读取
             var filePath = cb.value;
             var fileName = filePath.split("/").pop();
             var mainType = _geomTypeCache[fileName] || "";
-            var isPoint = mainType === "point" || mainType === "multipoint";
-            if (isPoint) {
-              // >10K 图层使用 canvas 渲染，不支持 DOM 标签，跳过重载
-              var cached = layerCache[checkboxId];
-              if (cached && typeof cached.getLayers === "function") {
-                var layers = cached.getLayers();
-                var isCanvas = layers.some(function (l) {
-                  return typeof l.setFeatures === "function";
-                });
-                if (isCanvas) {
-                  // Canvas 图层也需要响应聚类开关：更新 clustering 选项并重绘
-                  layers.forEach(function (l) {
-                    if (typeof l.setFeatures === "function") {
-                      l.options.clustering = clusterEnabled;
-                      l.redraw();
-                    }
-                  });
-                  return;
+            isPoint = mainType === "point" || mainType === "multipoint";
+          }
+
+          if (!isPoint) return;
+
+          // Canvas 图层（>10K 点）：直接更新 clustering 选项并重绘
+          var cached = layerCache[checkboxId];
+          if (cached && typeof cached.getLayers === "function") {
+            var layers = cached.getLayers();
+            var isCanvas = layers.some(function (l) {
+              return typeof l.setFeatures === "function";
+            });
+            if (isCanvas) {
+              layers.forEach(function (l) {
+                if (typeof l.setFeatures === "function") {
+                  l.options.clustering = clusterEnabled;
+                  l.redraw();
                 }
-              }
-              reloadLayerWithNewMode(
-                checkboxId,
-                colorMode[checkboxId],
-                layerColorMap[checkboxId],
-                fieldKey[checkboxId],
-              );
+              });
+              return;
             }
+          }
+
+          // DOM 渲染图层：重载以应用新的聚类/标签设置
+          if (isUserLayer) {
+            // 用户上传图层：清除缓存并用原始数据重建
+            var savedData = userLayerGeoJson[checkboxId];
+            if (!savedData) return;
+            clearHighlight(checkboxId);
+            var oldState = highlightState[checkboxId];
+            if (oldState && oldState.geoLayers) {
+              oldState.geoLayers.forEach(function (gl) {
+                try { map.removeLayer(gl); } catch (e) {}
+              });
+            }
+            if (cached) map.removeLayer(cached);
+            layerCache[checkboxId] = null;
+            var newGroup = buildGeoJsonLayerGroup(
+              savedData.geoJsonData,
+              checkboxId,
+              savedData.fileName,
+            );
+            newGroup.addTo(map);
+            layerCache[checkboxId] = newGroup;
+          } else {
+            reloadLayerWithNewMode(
+              checkboxId,
+              colorMode[checkboxId],
+              layerColorMap[checkboxId],
+              fieldKey[checkboxId],
+            );
           }
         });
     }
