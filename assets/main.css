@@ -348,6 +348,24 @@ body {
 }
 
 /* ========== 聚类开关 ========== */
+.toggle-bars-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-bottom: 1px solid #e8e8e8;
+  margin-bottom: 4px;
+}
+
+.toggle-bars-row .cluster-toggle-bar {
+  flex: 1 1 120px;
+  min-width: 120px;
+  margin-bottom: 0;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
 .cluster-toggle-bar {
   padding: 6px 5px 8px;
   display: block;

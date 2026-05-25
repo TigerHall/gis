@@ -196,7 +196,7 @@
       var STORAGE_KEY = "yugis_panel_width";
       var MIN_WIDTH = 180;
       var MAX_WIDTH = 500;
-      var DEFAULT_WIDTH = 240;
+      var DEFAULT_WIDTH = 300;
 
       // 读取存储宽度
       var savedWidth = parseInt(localStorage.getItem(STORAGE_KEY), 10);
@@ -359,7 +359,10 @@
             );
           } else {
             // 缓存命中：直接使用
-            searchIndexMap[checkboxId] = { tokens: cached.tokens, features: features };
+            searchIndexMap[checkboxId] = {
+              tokens: cached.tokens,
+              features: features,
+            };
             console.log(
               "[GeoJSONLoader] 搜索索引缓存恢复:",
               checkboxId,
@@ -393,6 +396,52 @@
     const DEFAULT_LABEL_FIELD = "Name";
     let clusterEnabled = true;
     let labelEnabled = false;
+
+    // ========== 线/面 hover 标签（mouseover 事件驱动，性能优先）==========
+    // 不在 onEachFeature 中提前 bindTooltip（会导致拖动卡顿），
+    // 而是在 onEachFeature 中注册 mouseover/mouseout，
+    // 鼠标真正进入要素时才绑定 tooltip，离开时立即解绑。
+    // 拖动地图时完全不触发这些事件，零开销。
+
+    function _bindHoverLabel(layer) {
+      layer.on("mouseover", function (e) {
+        if (!labelEnabled) return;
+        var name = _getFeatureName(layer.feature);
+        if (!name) return;
+        layer.bindTooltip(String(name), {
+          permanent: false,
+          direction: "top",
+          offset: [0, -8],
+          className: "feature-label",
+        });
+        // 打开 tooltip
+        layer.openTooltip();
+      });
+      layer.on("mouseout", function () {
+        try {
+          layer.closeTooltip();
+        } catch (e) {}
+        try {
+          layer.unbindTooltip();
+        } catch (e) {}
+      });
+    }
+
+    function _getFeatureName(feature) {
+      if (!feature || !feature.properties) return "";
+      return (
+        feature.properties.Name ||
+        feature.properties.name ||
+        feature.properties.NAME ||
+        ""
+      );
+    }
+
+    function _closeFeatureTooltip() {
+      try {
+        map.closeTooltip();
+      } catch (e) {}
+    }
 
     // ========== 核心样式函数（支持三种颜色模式）==========
     function getFeatureFillColor(feature, checkboxId, fileName, featureIndex) {
@@ -576,12 +625,12 @@
         mainGeomType === "multilinestring" ||
         mainGeomType === "polygon" ||
         mainGeomType === "multipolygon";
-      // 线/面始终做三个副本；点要素只在≤1万时做副本（避免内存爆炸）
+      // 线/面始终做三个副本；点要素只在≤3000时做副本（避免内存爆炸）
       const totalPoints = geojsonData.features
         ? geojsonData.features.length
         : 0;
       const useWorldCopy = isPointType
-        ? totalPoints > 0 && totalPoints <= 10000
+        ? totalPoints > 0 && totalPoints <= 3000
         : isLineOrPolygon;
       const offsets = useWorldCopy ? [-360, 0, 360] : [0];
       const geoLayers = [];
@@ -611,11 +660,13 @@
         if (isPointType) {
           const features = shifted.features || [];
           const totalFeatures = features.length;
+          const originalCount = geojsonData.features
+            ? geojsonData.features.length
+            : 0;
 
           // 大数据集：Canvas 渲染（零 DOM 节点，支持 45 万+ 点）
-          // clustering 由全局 clusterEnabled 开关控制，保持与小数据集聚类行为一致
-          // 注意：不在这里 addTo(map)，统一由层组管理，避免重复添加/移除混乱
-          if (totalFeatures > 10000) {
+          // 用原始要素数判断，不受世界副本（×3）影响
+          if (originalCount > 3000) {
             const canvasLayer = L.markersCanvas({ clustering: clusterEnabled });
 
             // 构建要素数组 [{ lat, lng, color, _idx }]
@@ -796,6 +847,9 @@
               const geomType = (feature.geometry?.type || "").toLowerCase();
               const isPoint = geomType === "point" || geomType === "multipoint";
               if (isPoint) return;
+
+              // 标签：mouseover/mouseout 事件驱动（拖动时零开销）
+              _bindHoverLabel(layer);
 
               layer.on("click", function (e) {
                 const idx = feature._featureIndex || 0;
@@ -2750,27 +2804,27 @@
             isPoint = mainType === "point" || mainType === "multipoint";
           }
 
-          if (!isPoint) return;
-
-          // Canvas 图层（>10K 点）：直接更新 clustering 选项并重绘
-          var cached = layerCache[checkboxId];
-          if (cached && typeof cached.getLayers === "function") {
-            var layers = cached.getLayers();
-            var isCanvas = layers.some(function (l) {
-              return typeof l.setFeatures === "function";
-            });
-            if (isCanvas) {
-              layers.forEach(function (l) {
-                if (typeof l.setFeatures === "function") {
-                  l.options.clustering = clusterEnabled;
-                  l.redraw();
-                }
+          // 点图层 Canvas 渲染：直接更新 clustering 选项并重绘（无需重建）
+          if (isPoint) {
+            var cached = layerCache[checkboxId];
+            if (cached && typeof cached.getLayers === "function") {
+              var layers = cached.getLayers();
+              var isCanvas = layers.some(function (l) {
+                return typeof l.setFeatures === "function";
               });
-              return;
+              if (isCanvas) {
+                layers.forEach(function (l) {
+                  if (typeof l.setFeatures === "function") {
+                    l.options.clustering = clusterEnabled;
+                    l.redraw();
+                  }
+                });
+                return;
+              }
             }
           }
 
-          // DOM 渲染图层：重载以应用新的聚类/标签设置
+          // 所有图层（点/线/面）DOM 渲染：重载以应用新的聚类/标签设置
           if (isUserLayer) {
             // 用户上传图层：清除缓存并用原始数据重建
             var savedData = userLayerGeoJson[checkboxId];
