@@ -170,7 +170,7 @@
 
       // 初始化地图容器
       map = L.map("map", {
-        maxZoom: 21,
+        maxZoom: 19,
         zoomControl: true,
         attributionControl: false,
         maxBounds: [
@@ -305,7 +305,6 @@
 
         html2canvas(mapEl, {
           useCORS: true,
-          allowTaint: true,
           backgroundColor: "#fff",
           scale: Math.min(window.devicePixelRatio || 1, 2),
         })
@@ -338,6 +337,14 @@
           });
       }
 
+      // Ctrl+E 快捷键导出图片
+      document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "e") {
+          e.preventDefault();
+          exportMapImage();
+        }
+      });
+
       // 更新提示 toast
       window._showUpdateToast = function () {
         if (document.getElementById("updateToast")) return;
@@ -368,20 +375,21 @@
       // 0. 天地图全球境界底图
       const tdtIboLayer = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18 },
+        { maxZoom: 18, crossOrigin: "anonymous" },
       );
       // 1. 天地图影像底图
       const tdtImgLayer = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
         {
           maxZoom: 18,
+          crossOrigin: "anonymous",
           attribution:
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图影像</a>",
         },
       );
       const tdtImgAnno = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18 },
+        { maxZoom: 18, crossOrigin: "anonymous" },
       );
       const imgLayers = L.layerGroup([tdtImgLayer, tdtImgAnno]);
       const tdtImgLayer2 = tdtImgLayer;
@@ -390,13 +398,14 @@
         `https://t0.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
         {
           maxZoom: 18,
+          crossOrigin: "anonymous",
           attribution:
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图矢量</a>",
         },
       );
       const tdtVecAnno = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18 },
+        { maxZoom: 18, crossOrigin: "anonymous" },
       );
       const vecLayers = L.layerGroup([tdtVecLayer, tdtVecAnno]);
 
@@ -405,19 +414,20 @@
         `https://t0.tianditu.gov.cn/DataServer?T=ter_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
         {
           maxZoom: 18,
+          crossOrigin: "anonymous",
           attribution:
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图地形</a>",
         },
       );
       const tdtTerAnno = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=cta_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18 },
+        { maxZoom: 18, crossOrigin: "anonymous" },
       );
       const terLayers = L.layerGroup([tdtTerLayer, tdtTerAnno]);
 
       // 3. ArcGIS影像底图
       const ARCGIS_SERVICE_PREFIX =
-        "//server.arcgisonline.com/ArcGIS/rest/services/";
+        "https://server.arcgisonline.com/ArcGIS/rest/services/";
 
       function createArcGISBaseLayer(config, boundaryLayer = null) {
         // 拼接完整的服务地址（公共前缀 + 服务名称 + /MapServer）
@@ -429,6 +439,7 @@
           `${getFullServiceUrl(config.serviceName)}/tile/{z}/{y}/{x}`,
           {
             maxZoom: config.maxZoom || 19,
+            crossOrigin: "anonymous",
             attribution: `<a href='https://www.arcgis.com/' target='_blank'>ArcGIS Online ${config.name}</a>`,
           },
         );
@@ -438,7 +449,7 @@
         if (config.labelServiceName) {
           const labelLayer = L.tileLayer(
             `${getFullServiceUrl(config.labelServiceName)}/tile/{z}/{y}/{x}`,
-            { maxZoom: config.maxZoom || 19 },
+            { maxZoom: config.maxZoom || 19, crossOrigin: "anonymous" },
           );
           layersToGroup.push(labelLayer);
         }
@@ -511,8 +522,8 @@
 
       // 打底的ArcGIS影像底图
       const arcgisLayers = L.tileLayer(
-        "//server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        { maxZoom: 23 },
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 19, crossOrigin: "anonymous" },
       );
 
       // 4. OSM底图
@@ -520,6 +531,7 @@
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
           maxZoom: 19,
+          crossOrigin: "anonymous",
           attribution:
             "<a href='https://www.openstreetmap.org/' target='_blank'>OpenStreetMap</a>",
         },
