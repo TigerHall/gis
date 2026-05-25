@@ -290,21 +290,32 @@
       return JSON.stringify(f.properties).toLowerCase();
     }
 
-    // 从 features 构建倒排 tokens（公共分词逻辑）
-    function tokenizeFeatures(features) {
+    // 从 features 构建倒排 tokens（异步分批，不阻塞主线程）
+    // callback(tokens) 在构建完成后调用
+    function tokenizeFeaturesAsync(features, callback) {
       var tokens = Object.create(null);
-      for (var i = 0; i < features.length; i++) {
-        var str = featureToSearchStr(features[i]);
-        if (!str) continue;
-        var parts = str.split(/[^a-z0-9\u4e00-\u9fff]+/);
-        for (var t = 0; t < parts.length; t++) {
-          var tok = parts[t];
-          if (!tok) continue;
-          if (!tokens[tok]) tokens[tok] = [];
-          tokens[tok].push(i);
+      var BATCH = 5000; // 每批处理条数
+      var i = 0;
+      function nextBatch() {
+        var end = Math.min(i + BATCH, features.length);
+        for (; i < end; i++) {
+          var str = featureToSearchStr(features[i]);
+          if (!str) continue;
+          var parts = str.split(/[^a-z0-9\u4e00-\u9fff]+/);
+          for (var t = 0; t < parts.length; t++) {
+            var tok = parts[t];
+            if (!tok) continue;
+            if (!tokens[tok]) tokens[tok] = [];
+            tokens[tok].push(i);
+          }
+        }
+        if (i < features.length) {
+          setTimeout(nextBatch, 0); // 让出主线程
+        } else {
+          callback(tokens);
         }
       }
-      return tokens;
+      setTimeout(nextBatch, 0);
     }
 
     // 倒排索引构建：为大数据集提供 O(1) 搜索能力
@@ -317,21 +328,20 @@
       }
       // cacheKey 为 null/undefined 时不走 IDB 缓存（用户上传图层）
       if (!cacheKey) {
-        var tokens = tokenizeFeatures(features);
-        searchIndexMap[checkboxId] = { tokens: tokens, features: features };
-        console.log(
-          "[GeoJSONLoader] 搜索索引构建（不上缓存）:",
-          checkboxId,
-          "tokens数量:",
-          Object.keys(tokens).length,
-        );
-        if (callback) callback(false);
+        tokenizeFeaturesAsync(features, function (tokens) {
+          searchIndexMap[checkboxId] = { tokens: tokens, features: features };
+          console.log(
+            "[GeoJSONLoader] 搜索索引构建（不上缓存）:",
+            checkboxId,
+            "tokens数量:",
+            Object.keys(tokens).length,
+          );
+          if (callback) callback(false);
+        });
         return;
       }
       // 先尝试从 IDB 恢复缓存的 tokens
       L.GzIdbLoader.getSearchIndex(cacheKey).then(function (cached) {
-        var tokens = null;
-        var fromCache = false;
         // 缓存命中时校验格式：tokens 必须是对象，且 featureCount 匹配
         if (
           cached &&
@@ -348,27 +358,33 @@
               checkboxId,
             );
           } else {
-            tokens = cached.tokens;
-            fromCache = true;
+            // 缓存命中：直接使用
+            searchIndexMap[checkboxId] = { tokens: cached.tokens, features: features };
+            console.log(
+              "[GeoJSONLoader] 搜索索引缓存恢复:",
+              checkboxId,
+              "tokens数量:",
+              Object.keys(cached.tokens).length,
+            );
+            if (callback) callback(true);
+            return;
           }
         }
-        if (!tokens) {
-          tokens = tokenizeFeatures(features);
+        // 缓存未命中或版本不匹配：异步分批重建
+        tokenizeFeaturesAsync(features, function (tokens) {
           L.GzIdbLoader.setSearchIndex(cacheKey, {
             tokens: tokens,
             featureCount: features.length,
           });
-        }
-        searchIndexMap[checkboxId] = { tokens: tokens, features: features };
-        console.log(
-          "[GeoJSONLoader] 搜索索引",
-          fromCache ? "缓存恢复" : "重新构建",
-          ":",
-          checkboxId,
-          "tokens数量:",
-          Object.keys(tokens).length,
-        );
-        if (callback) callback(fromCache);
+          searchIndexMap[checkboxId] = { tokens: tokens, features: features };
+          console.log(
+            "[GeoJSONLoader] 搜索索引重新构建:",
+            checkboxId,
+            "tokens数量:",
+            Object.keys(tokens).length,
+          );
+          if (callback) callback(false);
+        });
       });
     }
     // 标签配置（委托给 GeoUtils，这里保留引用以便快速判断）
