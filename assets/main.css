@@ -68,6 +68,12 @@ body {
   transform: translateX(0) !important;
 }
 
+/* 面板拖拽时全局状态 */
+body.resizing-panel {
+  cursor: ew-resize !important;
+  user-select: none !important;
+}
+
 /* 悬浮触发按钮（logo/手柄） */
 .layer-trigger {
   position: fixed;

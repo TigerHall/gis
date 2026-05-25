@@ -224,8 +224,7 @@
         e.stopPropagation();
         isResizing = true;
         handle.classList.add("active");
-        document.body.style.cursor = "ew-resize";
-        document.body.style.userSelect = "none";
+        document.body.classList.add("resizing-panel");
         document.addEventListener("mousemove", onResize);
         document.addEventListener("mouseup", stopResize);
         document.addEventListener("touchmove", onResize, { passive: false });
@@ -252,8 +251,7 @@
         if (!isResizing) return;
         isResizing = false;
         handle.classList.remove("active");
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
+        document.body.classList.remove("resizing-panel");
         document.removeEventListener("mousemove", onResize);
         document.removeEventListener("mouseup", stopResize);
         document.removeEventListener("touchmove", onResize);
