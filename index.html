@@ -32,6 +32,7 @@
     <script src="./assets/rbush.js"></script>
     <!-- Canvas 聚类渲染（>10K 点零 DOM 方案） -->
     <script src="./assets/Leaflet.MarkersCanvas.js"></script>
+    <script src="./assets/html2canvas.min.js"></script>
     <script src="./assets/shp.min.js"></script>
     <script src="./assets/togeojson.min.js"></script>
     <script src="./assets/jszip.min.js"></script>
@@ -251,6 +252,7 @@
           menu = document.createElement("div");
           menu.className = "refresh-menu";
           menu.innerHTML =
+            '<button data-mode="export">📷 导出图片</button>' +
             '<button data-mode="refresh">刷新页面</button>' +
             '<button data-mode="sw">清理网页缓存</button>' +
             '<button data-mode="all">彻底清理</button>';
@@ -258,7 +260,9 @@
             var btn = e.target.closest("[data-mode]");
             if (!btn) return;
             menu.remove();
-            if (btn.dataset.mode === "refresh") {
+            if (btn.dataset.mode === "export") {
+              exportMapImage();
+            } else if (btn.dataset.mode === "refresh") {
               location.reload();
             } else {
               doRefresh(btn.dataset.mode === "all");
@@ -273,6 +277,66 @@
           toggleMenu();
         });
       })();
+
+      // ========== 导出地图图片（html2canvas 截图）==========
+      function exportMapImage() {
+        if (!window.map || !window.html2canvas) return;
+        var mapEl = document.getElementById("map");
+        var panel = document.getElementById("layerPanel");
+        var trigger = document.getElementById("layerTrigger");
+
+        // 隐藏 Leaflet 控件（缩放、比例尺、坐标、底图切换、Geoman）
+        var hiddenEls = [];
+        mapEl
+          .querySelectorAll(
+            ".leaflet-control-container > .leaflet-top, .leaflet-control-container > .leaflet-bottom",
+          )
+          .forEach(function (g) {
+            if (g.style.display !== "none") {
+              hiddenEls.push(g);
+              g.style.display = "none";
+            }
+          });
+
+        // 隐藏侧边栏
+        var panelWasActive = panel && panel.classList.contains("active");
+        if (panelWasActive) panel.classList.remove("active");
+        if (trigger) trigger.style.display = "none";
+
+        html2canvas(mapEl, {
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#fff",
+          scale: Math.min(window.devicePixelRatio || 1, 2),
+        })
+          .then(function (canvas) {
+            // 恢复所有隐藏元素
+            hiddenEls.forEach(function (el) {
+              el.style.display = "";
+            });
+            if (panelWasActive && panel) panel.classList.add("active");
+            if (trigger) trigger.style.display = "";
+            // 下载
+            var now = new Date();
+            var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
+              .map(function (n) {
+                return String(n).padStart(2, "0");
+              })
+              .join("");
+            var a = document.createElement("a");
+            a.download = "OGV_" + ts + ".png";
+            a.href = canvas.toDataURL("image/png");
+            a.click();
+          })
+          .catch(function () {
+            // 出错也要恢复
+            hiddenEls.forEach(function (el) {
+              el.style.display = "";
+            });
+            if (panelWasActive && panel) panel.classList.add("active");
+            if (trigger) trigger.style.display = "";
+          });
+      }
 
       // 更新提示 toast
       window._showUpdateToast = function () {
