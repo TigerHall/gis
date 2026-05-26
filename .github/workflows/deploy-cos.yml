@@ -12,21 +12,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 安装腾讯云官方 coscli（比 coscmd 快 2~5 倍，支持并发）
       - name: Install coscli
         run: |
-          wget -q https://github.com/tencentyun/coscli/releases/download/v1.0.8/coscli-v1.0.8-linux-amd64 -O coscli-linux-amd64
-          chmod +x coscli-linux-amd64
-          sudo mv coscli-linux-amd64 /usr/local/bin/coscli
+          wget -q https://github.com/tencentyun/coscli/releases/download/v1.0.8/coscli-v1.0.8-linux-amd64 -O coscli
+          chmod +x coscli
+          sudo mv coscli /usr/local/bin/coscli
 
-      # 直接写配置文件，绕过交互式 init（coscli 首次运行强制交互，-i/-k 会被吞掉）
       - name: Configure coscli
         run: |
-          cat > ~/.cos.yaml <<EOF
+          cat > ~/.cos.yaml <<'EOF'
           cos:
             base:
-              secretid: ${{ secrets.COS_SECRET_ID }}
-              secretkey: ${{ secrets.COS_SECRET_KEY }}
+              secretid: SECRET_ID_PLACEHOLDER
+              secretkey: SECRET_KEY_PLACEHOLDER
               sessiontoken: ""
               mode: "SecretKey"
               cvmrolename: ""
@@ -35,15 +33,19 @@ jobs:
               disable_auto_fetch_bucket_type: false
             buckets:
               - alias: default
-                bucket: ${{ secrets.COS_BUCKET }}
-                region: ${{ secrets.COS_REGION }}
-                endpoint: cos.${{ secrets.COS_REGION }}.myqcloud.com
+                bucket: BUCKET_PLACEHOLDER
+                region: REGION_PLACEHOLDER
+                endpoint: cos.REGION_PLACEHOLDER.myqcloud.com
                 ofs: false
           EOF
+          sed -i "s|SECRET_ID_PLACEHOLDER|${{ secrets.COS_SECRET_ID }}|" ~/.cos.yaml
+          sed -i "s|SECRET_KEY_PLACEHOLDER|${{ secrets.COS_SECRET_KEY }}|" ~/.cos.yaml
+          sed -i "s|BUCKET_PLACEHOLDER|${{ secrets.COS_BUCKET }}|" ~/.cos.yaml
+          sed -i "s|REGION_PLACEHOLDER|${{ secrets.COS_REGION }}|g" ~/.cos.yaml
 
-      # 同步到 COS：并发10、增量上传、忽略 .git 目录
       - name: Sync to COS
         run: |
           coscli sync . cos://${{ secrets.COS_BUCKET }}/ \
-            --exclude '.git/**' \
-            --parallel 10
+            --exclude '\.git/.*' \
+            --routines 10 \
+            --delete
