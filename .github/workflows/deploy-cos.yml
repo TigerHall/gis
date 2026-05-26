@@ -12,12 +12,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install coscmd
-        run: pip install coscmd
+      # 安装腾讯云官方 coscli（比 coscmd 快 2~5 倍，支持并发）
+      - name: Install coscli
+        run: |
+          wget -q https://github.com/TencentCloud/coscli/releases/download/v1.0.0/coscli-linux-amd64
+          chmod +x coscli-linux-amd64
+          sudo mv coscli-linux-amd64 /usr/local/bin/coscli
 
-      - name: Configure coscmd
-        run: coscmd config -a ${{ secrets.COS_SECRET_ID }} -s ${{ secrets.COS_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
+      # 配置密钥
+      - name: Configure coscli
+        run: |
+          coscli config init -a ${{ secrets.COS_SECRET_ID }} \
+                             -s ${{ secrets.COS_SECRET_KEY }} \
+                             -b ${{ secrets.COS_BUCKET }} \
+                             -r ${{ secrets.COS_REGION }}
 
-      - name: Sync to COS (incremental)
-        run: coscmd upload -rs . /
-        # 作用：递归上传 + 增量同步（只传修改/新增文件，跳过不变的）
+      # 同步到 COS：并发10、增量上传、忽略 .git 目录
+      - name: Sync to COS
+        run: |
+          coscli sync . cos://${{ secrets.COS_BUCKET }}/ \
+            --exclude '.git/**' \
+            --parallel 10
