@@ -12,13 +12,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install coscmd
-        run: pip install coscmd
+      - name: Install coscli
+        run: |
+          wget -q https://github.com/tencentyun/coscli/releases/download/v1.0.8/coscli-v1.0.8-linux-amd64 -O coscli
+          chmod +x coscli
 
-      - name: Configure coscmd
-        run: coscmd config -a ${{ secrets.COS_SECRET_ID }} -s ${{ secrets.COS_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
+      - name: Configure coscli
+        run: |
+          cat > ~/.cos.yaml <<EOF
+          cos:
+            base:
+              secretid: ${{ secrets.COS_SECRET_ID }}
+              secretkey: ${{ secrets.COS_SECRET_KEY }}
+              sessiontoken: ""
+              mode: "SecretKey"
+              cvmrolename: ""
+              close_auto_switch_host: false
+              disable_encryption: true
+              disable_auto_fetch_bucket_type: false
+            buckets:
+              - alias: default
+                bucket: ${{ secrets.COS_BUCKET }}
+                region: ${{ secrets.COS_REGION }}
+                endpoint: cos.${{ secrets.COS_REGION }}.myqcloud.com
+                ofs: false
+          EOF
 
       - name: Sync to COS
-        run: coscmd upload -rs . / --ignore './.git/*'
-        # -r      递归上传
-        # -s      增量同步（比对 MD5，只传修改/新增文件，跳过不变的）
+        run: |
+          ./coscli sync . cos://${{ secrets.COS_BUCKET }}/ \
+            --exclude "\.git/.*" \
+            --exclude ".*\.json$" \
+            --exclude ".*\.geojson$" \
+            --exclude "\.workbuddy/.*" \
+            --routines 10
+        # coscli sync 是 Go 实现，多线程并发上传，比 coscmd 快得多
+        # --exclude  排除不需要部署的文件（.json/.geojson 源文件有 .gz 就够了、.git、.workbuddy）
+        # --routines 并发数
