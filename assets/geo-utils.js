@@ -299,21 +299,25 @@
   }
 
   // ========== 标签配置 ==========
+  // 只需列出 field 非 "Name" 的图层；默认所有点图层都用 Name 字段显示标签
   const STATION_LABEL_CONFIG = {
     "DSDP.geojson": { field: "Hole" },
     "ODP.geojson": { field: "Fullname" },
-    "IODP03-13.geojson": { field: "Name" },
     "IODP13-26.geojson": { field: "site" },
+    "volcanos.json": { field: "NAME" },
+    "hotspots.json": { field: "geodesc" },
+    "hydrothermal_vents.geojson": { field: "Name ID" },
   };
 
   function isStationFile(fileName) {
-    return !!STATION_LABEL_CONFIG[fileName];
+    return true; // 所有点图层默认显示标签
   }
 
   function getStationLabel(feature, fileName) {
-    const cfg = STATION_LABEL_CONFIG[fileName];
-    if (!cfg || !feature.properties) return null;
-    return feature.properties[cfg.field] || null;
+    if (!feature.properties) return null;
+    var cfg = STATION_LABEL_CONFIG[fileName];
+    var field = cfg ? cfg.field : "Name";
+    return feature.properties[field] || null;
   }
 
   // ========== 直接根据 GeoJSON 计算 bounds（不构建 Layer，避免大数据内存爆炸）==========

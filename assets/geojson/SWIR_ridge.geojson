@@ -1,0 +1,7355 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "CHN0115-4-005-001",
+        "87Sr/86Sr": "0.703293",
+        "206Pb/204Pb": "19.244",
+        "207Pb/204Pb": "15.619",
+        "208Pb/204Pb": "38.99",
+        "3He/4He (R/Ra)": "0.32",
+        "delta74": "4.2",
+        "delta84": "9.7",
+        "Rerference": "DICKEY, 1977",
+        "_featureIndex": 0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.02,
+          -54.67
+        ]
+      },
+      "_featureIndex": 0
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "CHN0115-4-005-001",
+        "87Sr/86Sr": "0.70325",
+        "Rerference": "DICKEY, 1977",
+        "_featureIndex": 1
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.02,
+          -54.67
+        ]
+      },
+      "_featureIndex": 1
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "CHN0115-4-005-002",
+        "87Sr/86Sr": "0.70333",
+        "3He/4He (R/Ra)": "3.54",
+        "Rerference": "DICKEY, 1977",
+        "_featureIndex": 2
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.02,
+          -54.67
+        ]
+      },
+      "_featureIndex": 2
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-033-001",
+        "87Sr/86Sr": "0.70326",
+        "206Pb/204Pb": "19.09",
+        "207Pb/204Pb": "15.569",
+        "208Pb/204Pb": "38.826",
+        "3He/4He (R/Ra)": "7.44",
+        "delta74": "0.9",
+        "delta84": "11.9",
+        "Rerference": "KURZ, 1982",
+        "_featureIndex": 3
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.068,
+          -54.648
+        ]
+      },
+      "_featureIndex": 3
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-034-015",
+        "87Sr/86Sr": "0.70332",
+        "3He/4He (R/Ra)": "1.13",
+        "Rerference": "KURZ, 1998",
+        "_featureIndex": 4
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.127,
+          -54.635
+        ]
+      },
+      "_featureIndex": 4
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0032-003-002",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51303",
+        "εNd": "7.6",
+        "Rerference": "LE ROUX, 2000",
+        "_featureIndex": 5
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          1.97,
+          -54.12
+        ]
+      },
+      "_featureIndex": 5
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0032-003-099",
+        "87Sr/86Sr": "0.703088",
+        "143Nd/144Nd": "0.513059",
+        "206Pb/204Pb": "18.565",
+        "207Pb/204Pb": "15.555",
+        "208Pb/204Pb": "38.311",
+        "176Hf/177Hf": "0.283098",
+        "εHf": "11.1",
+        "εNd": "8.2",
+        "delta74": "5.2",
+        "delta84": "23.9",
+        "Rerference": "KELLEY, 2013",
+        "_featureIndex": 6
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          1.97,
+          -54.12
+        ]
+      },
+      "_featureIndex": 6
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0032-003-099",
+        "206Pb/204Pb": "18.5816",
+        "207Pb/204Pb": "15.5817",
+        "208Pb/204Pb": "38.3784",
+        "delta74": "7.6",
+        "delta84": "28.6",
+        "Rerference": "KELLEY, 2013",
+        "_featureIndex": 7
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          1.97,
+          -54.12
+        ]
+      },
+      "_featureIndex": 7
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "LEROBOU-WJM-002B",
+        "87Sr/86Sr": "0.7037",
+        "143Nd/144Nd": "0.512865",
+        "206Pb/204Pb": "19.479",
+        "207Pb/204Pb": "15.65",
+        "208Pb/204Pb": "39.086",
+        "176Hf/177Hf": "0.282948",
+        "εHf": "5.8",
+        "εNd": "4.4",
+        "delta74": "4.7",
+        "delta84": "-9.1",
+        "Rerference": "JANNEY, 2005",
+        "_featureIndex": 8
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.5
+        ]
+      },
+      "_featureIndex": 8
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "LEROBOU-WJM-016B",
+        "87Sr/86Sr": "0.70376",
+        "143Nd/144Nd": "0.512861",
+        "206Pb/204Pb": "19.418",
+        "207Pb/204Pb": "15.631",
+        "208Pb/204Pb": "39.05",
+        "176Hf/177Hf": "0.282939",
+        "εHf": "5.4",
+        "εNd": "4.4",
+        "delta74": "3.5",
+        "delta84": "-5.3",
+        "Rerference": "JANNEY, 2005",
+        "_featureIndex": 9
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.5
+        ]
+      },
+      "_featureIndex": 9
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BAK1964-001",
+        "143Nd/144Nd": "0.51285",
+        "εNd": "4.1",
+        "Rerference": "O'NIONS, 1977",
+        "_featureIndex": 10
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.4
+        ]
+      },
+      "_featureIndex": 10
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BAK1964-002",
+        "143Nd/144Nd": "0.51282",
+        "εNd": "3.6",
+        "Rerference": "O'NIONS, 1977",
+        "_featureIndex": 11
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.4
+        ]
+      },
+      "_featureIndex": 11
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BAK1964-003",
+        "143Nd/144Nd": "0.51284",
+        "εNd": "3.9",
+        "Rerference": "O'NIONS, 1977",
+        "_featureIndex": 12
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.4
+        ]
+      },
+      "_featureIndex": 12
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BAK1964-005",
+        "143Nd/144Nd": "0.51285",
+        "εNd": "4.1",
+        "Rerference": "O'NIONS, 1977",
+        "_featureIndex": 13
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.4
+        ]
+      },
+      "_featureIndex": 13
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BAK1964-BV17",
+        "87Sr/86Sr": "0.70367",
+        "Rerference": "O'NIONS, 1974",
+        "_featureIndex": 14
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.4
+        ]
+      },
+      "_featureIndex": 14
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BAK1964-BV18",
+        "87Sr/86Sr": "0.70368",
+        "Rerference": "O'NIONS, 1974",
+        "_featureIndex": 15
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.4
+        ]
+      },
+      "_featureIndex": 15
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BAK1964-BV3",
+        "87Sr/86Sr": "0.70367",
+        "143Nd/144Nd": "0.51284",
+        "εNd": "3.9",
+        "Rerference": "O'NIONS, 1974",
+        "_featureIndex": 16
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.4
+        ]
+      },
+      "_featureIndex": 16
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BAK1964-BV5",
+        "87Sr/86Sr": "0.70374",
+        "143Nd/144Nd": "0.51285",
+        "εNd": "4.1",
+        "Rerference": "O'NIONS, 1974",
+        "_featureIndex": 17
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4,
+          -54.4
+        ]
+      },
+      "_featureIndex": 17
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "148(1)",
+        "206Pb/204Pb": "19.428",
+        "207Pb/204Pb": "15.652",
+        "208Pb/204Pb": "39.066",
+        "delta74": "5.5",
+        "delta84": "-4.9",
+        "Rerference": "WEAVER, 1987",
+        "_featureIndex": 18
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.42,
+          -54.43
+        ]
+      },
+      "_featureIndex": 18
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "149(1)",
+        "206Pb/204Pb": "19.245",
+        "207Pb/204Pb": "15.633",
+        "208Pb/204Pb": "38.855",
+        "delta74": "5.6",
+        "delta84": "-3.9",
+        "Rerference": "SUN SHEN-SU, 1980",
+        "_featureIndex": 19
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.42,
+          -54.43
+        ]
+      },
+      "_featureIndex": 19
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "149(4A)",
+        "206Pb/204Pb": "19.661",
+        "207Pb/204Pb": "15.672",
+        "208Pb/204Pb": "39.273",
+        "delta74": "5.0",
+        "delta84": "-12.4",
+        "Rerference": "WEAVER, 1987",
+        "_featureIndex": 20
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.42,
+          -54.43
+        ]
+      },
+      "_featureIndex": 20
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-048-009",
+        "87Sr/86Sr": "0.7037",
+        "143Nd/144Nd": "0.51284",
+        "206Pb/204Pb": "19.316",
+        "207Pb/204Pb": "15.631",
+        "208Pb/204Pb": "38.987",
+        "3He/4He (R/Ra)": "10.21",
+        "εNd": "3.9",
+        "delta74": "4.6",
+        "delta84": "0.7",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 21
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.522,
+          -54.03
+        ]
+      },
+      "_featureIndex": 21
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-047-003",
+        "87Sr/86Sr": "0.703597",
+        "206Pb/204Pb": "19.311",
+        "207Pb/204Pb": "15.629",
+        "208Pb/204Pb": "38.98",
+        "3He/4He (R/Ra)": "10.1",
+        "delta74": "4.5",
+        "delta84": "0.6",
+        "Rerference": "JENNER, 2012",
+        "_featureIndex": 22
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.552,
+          -54.012
+        ]
+      },
+      "_featureIndex": 22
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-047-011",
+        "87Sr/86Sr": "0.70358",
+        "143Nd/144Nd": "0.51291",
+        "206Pb/204Pb": "19.343",
+        "207Pb/204Pb": "15.638",
+        "208Pb/204Pb": "39.033",
+        "3He/4He (R/Ra)": "9.98",
+        "εNd": "5.3",
+        "delta74": "5.0",
+        "delta84": "2.0",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 23
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.552,
+          -54.012
+        ]
+      },
+      "_featureIndex": 23
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-046-001",
+        "87Sr/86Sr": "0.70322",
+        "143Nd/144Nd": "0.51294",
+        "3He/4He (R/Ra)": "8.1",
+        "εNd": "5.9",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 24
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.593,
+          -53.982
+        ]
+      },
+      "_featureIndex": 24
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "CHN0115-4-008-001",
+        "87Sr/86Sr": "0.70372",
+        "206Pb/204Pb": "19.287",
+        "207Pb/204Pb": "15.647",
+        "208Pb/204Pb": "39.022",
+        "3He/4He (R/Ra)": "12.9",
+        "delta74": "6.5",
+        "delta84": "7.7",
+        "Rerference": "KURZ, 1982",
+        "_featureIndex": 25
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.052,
+          -54.228
+        ]
+      },
+      "_featureIndex": 25
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-052-002",
+        "87Sr/86Sr": "0.70281",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 26
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.74,
+          -54.42
+        ]
+      },
+      "_featureIndex": 26
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-056-001",
+        "87Sr/86Sr": "0.70288",
+        "143Nd/144Nd": "0.51303",
+        "3He/4He (R/Ra)": "7.39",
+        "εNd": "7.6",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 27
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.137,
+          -54.397
+        ]
+      },
+      "_featureIndex": 27
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-056-021",
+        "87Sr/86Sr": "0.702923",
+        "206Pb/204Pb": "18.904",
+        "3He/4He (R/Ra)": "7.45",
+        "Rerference": "KURZ, 1982",
+        "_featureIndex": 28
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.137,
+          -54.397
+        ]
+      },
+      "_featureIndex": 28
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-056-027",
+        "87Sr/86Sr": "0.70297",
+        "143Nd/144Nd": "0.51302",
+        "206Pb/204Pb": "19.163",
+        "207Pb/204Pb": "15.591",
+        "208Pb/204Pb": "38.727",
+        "3He/4He (R/Ra)": "7.12",
+        "εNd": "7.5",
+        "delta74": "2.3",
+        "delta84": "-6.8",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 29
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.137,
+          -54.397
+        ]
+      },
+      "_featureIndex": 29
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ISL1176-060-002",
+        "87Sr/86Sr": "0.70363",
+        "143Nd/144Nd": "0.51295",
+        "εNd": "6.1",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 30
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.35,
+          -54.128
+        ]
+      },
+      "_featureIndex": 30
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-057-002",
+        "87Sr/86Sr": "0.70291",
+        "143Nd/144Nd": "0.51301",
+        "3He/4He (R/Ra)": "7.41",
+        "εNd": "7.3",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 31
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.223,
+          -54.045
+        ]
+      },
+      "_featureIndex": 31
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-057-005",
+        "87Sr/86Sr": "0.70291",
+        "206Pb/204Pb": "18.753",
+        "207Pb/204Pb": "15.574",
+        "208Pb/204Pb": "38.57",
+        "3He/4He (R/Ra)": "7.46",
+        "delta74": "5.0",
+        "delta84": "27.1",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 32
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.223,
+          -54.045
+        ]
+      },
+      "_featureIndex": 32
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-057-009",
+        "87Sr/86Sr": "0.70276",
+        "206Pb/204Pb": "18.652",
+        "207Pb/204Pb": "15.529",
+        "208Pb/204Pb": "38.24",
+        "3He/4He (R/Ra)": "14.9",
+        "delta74": "1.6",
+        "delta84": "6.3",
+        "Rerference": "KURZ, 1998",
+        "_featureIndex": 33
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.223,
+          -54.045
+        ]
+      },
+      "_featureIndex": 33
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-057-013",
+        "3He/4He (R/Ra)": "14.5",
+        "Rerference": "KURZ, 1998",
+        "_featureIndex": 34
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.223,
+          -54.045
+        ]
+      },
+      "_featureIndex": 34
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-057-016",
+        "87Sr/86Sr": "0.70273",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 35
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.223,
+          -54.045
+        ]
+      },
+      "_featureIndex": 35
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-057-025",
+        "87Sr/86Sr": "0.70267",
+        "206Pb/204Pb": "18.657",
+        "207Pb/204Pb": "15.576",
+        "208Pb/204Pb": "38.337",
+        "3He/4He (R/Ra)": "14.3",
+        "delta74": "6.3",
+        "delta84": "15.4",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 36
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.223,
+          -54.045
+        ]
+      },
+      "_featureIndex": 36
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-057-034",
+        "3He/4He (R/Ra)": "14.7",
+        "Rerference": "KURZ, 1998",
+        "_featureIndex": 37
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.223,
+          -54.045
+        ]
+      },
+      "_featureIndex": 37
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-058-012",
+        "87Sr/86Sr": "0.70356",
+        "143Nd/144Nd": "0.51291",
+        "εNd": "5.3",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 38
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.235,
+          -53.98
+        ]
+      },
+      "_featureIndex": 38
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-058-015",
+        "143Nd/144Nd": "0.51307",
+        "εNd": "8.4",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 39
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.235,
+          -53.98
+        ]
+      },
+      "_featureIndex": 39
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0107-6-060-088",
+        "87Sr/86Sr": "0.70364",
+        "143Nd/144Nd": "0.51287",
+        "εNd": "4.5",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 40
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          9.152,
+          -53.428
+        ]
+      },
+      "_featureIndex": 40
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-028-032",
+        "3He/4He (R/Ra)": "3.76",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 41
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          10.67,
+          -52.9
+        ]
+      },
+      "_featureIndex": 41
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-092-003",
+        "143Nd/144Nd": "0.51294",
+        "176Hf/177Hf": "0.283032",
+        "εHf": "8.7",
+        "εNd": "5.9",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 42
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          10.888,
+          -52.855
+        ]
+      },
+      "_featureIndex": 42
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-031-001",
+        "176Hf/177Hf": "0.283175",
+        "3He/4He (R/Ra)": "5.94",
+        "εHf": "13.8",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 43
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.08,
+          -52.81
+        ]
+      },
+      "_featureIndex": 43
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-030-012",
+        "3He/4He (R/Ra)": "6.11",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 44
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.16,
+          -52.99
+        ]
+      },
+      "_featureIndex": 44
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-032-009",
+        "143Nd/144Nd": "0.512978",
+        "εNd": "6.6",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 45
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.22,
+          -52.75
+        ]
+      },
+      "_featureIndex": 45
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-032-011",
+        "176Hf/177Hf": "0.283076",
+        "3He/4He (R/Ra)": "5.94",
+        "εHf": "10.3",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 46
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.22,
+          -52.75
+        ]
+      },
+      "_featureIndex": 46
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ISL1176-075-002",
+        "87Sr/86Sr": "0.70311",
+        "143Nd/144Nd": "0.51294",
+        "176Hf/177Hf": "0.283045",
+        "εHf": "9.2",
+        "εNd": "5.9",
+        "Rerference": "LE ROEX, 1983",
+        "_featureIndex": 47
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.37,
+          -52.828
+        ]
+      },
+      "_featureIndex": 47
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-033-049",
+        "143Nd/144Nd": "0.512952",
+        "εNd": "6.1",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 48
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.39,
+          -52.82
+        ]
+      },
+      "_featureIndex": 48
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-033-051",
+        "3He/4He (R/Ra)": "0.77",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 49
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.39,
+          -52.82
+        ]
+      },
+      "_featureIndex": 49
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-034-023",
+        "143Nd/144Nd": "0.512971",
+        "εNd": "6.5",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 50
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.43,
+          -52.86
+        ]
+      },
+      "_featureIndex": 50
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-034-039",
+        "176Hf/177Hf": "0.283179",
+        "3He/4He (R/Ra)": "6.17",
+        "εHf": "13.9",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 51
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.43,
+          -52.86
+        ]
+      },
+      "_featureIndex": 51
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-036-027",
+        "143Nd/144Nd": "0.513079",
+        "176Hf/177Hf": "0.283101",
+        "3He/4He (R/Ra)": "6.94",
+        "εHf": "11.2",
+        "εNd": "8.6",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 52
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.71,
+          -52.75
+        ]
+      },
+      "_featureIndex": 52
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-041-007",
+        "143Nd/144Nd": "0.512996",
+        "176Hf/177Hf": "0.283121",
+        "εHf": "11.9",
+        "εNd": "7.0",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 53
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.132,
+          -52.589
+        ]
+      },
+      "_featureIndex": 53
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-048-004",
+        "143Nd/144Nd": "0.512982",
+        "176Hf/177Hf": "0.283114",
+        "εHf": "11.6",
+        "εNd": "6.7",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 54
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.799,
+          -52.56
+        ]
+      },
+      "_featureIndex": 54
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-049-013",
+        "143Nd/144Nd": "0.512914",
+        "176Hf/177Hf": "0.283128",
+        "3He/4He (R/Ra)": "6.7",
+        "εHf": "12.1",
+        "εNd": "5.4",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 55
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.86,
+          -52.48
+        ]
+      },
+      "_featureIndex": 55
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "POLANT4-4-006-001",
+        "87Sr/86Sr": "0.70309",
+        "143Nd/144Nd": "0.512951",
+        "206Pb/204Pb": "18.867",
+        "207Pb/204Pb": "15.572",
+        "208Pb/204Pb": "38.822",
+        "3He/4He (R/Ra)": "3.43",
+        "εNd": "6.1",
+        "delta74": "3.6",
+        "delta84": "38.5",
+        "Rerference": "LE ROEX, 1992",
+        "_featureIndex": 56
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.13,
+          -52.35
+        ]
+      },
+      "_featureIndex": 56
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "POLANT4-4-006-002",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.513004",
+        "206Pb/204Pb": "18.741",
+        "207Pb/204Pb": "15.551",
+        "208Pb/204Pb": "38.541",
+        "176Hf/177Hf": "0.2831",
+        "3He/4He (R/Ra)": "3.05",
+        "εHf": "11.1",
+        "εNd": "7.1",
+        "delta74": "2.8",
+        "delta84": "25.6",
+        "Rerference": "LE ROEX, 1992",
+        "_featureIndex": 57
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.13,
+          -52.35
+        ]
+      },
+      "_featureIndex": 57
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-056-088",
+        "143Nd/144Nd": "0.512903",
+        "176Hf/177Hf": "0.283024",
+        "εHf": "8.5",
+        "εNd": "5.2",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 58
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.506,
+          -52.37
+        ]
+      },
+      "_featureIndex": 58
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "POLANT4-4-005-036",
+        "87Sr/86Sr": "0.70292",
+        "143Nd/144Nd": "0.51302",
+        "206Pb/204Pb": "18.769",
+        "207Pb/204Pb": "15.56",
+        "208Pb/204Pb": "38.623",
+        "εNd": "7.5",
+        "delta74": "3.4",
+        "delta84": "30.4",
+        "Rerference": "LE ROEX, 1992",
+        "_featureIndex": 59
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.68,
+          -52.28
+        ]
+      },
+      "_featureIndex": 59
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "POLANT4-4-004-068",
+        "206Pb/204Pb": "18.737",
+        "207Pb/204Pb": "15.556",
+        "208Pb/204Pb": "38.429",
+        "delta74": "3.4",
+        "delta84": "14.9",
+        "Rerference": "LE ROEX, 1992",
+        "_featureIndex": 60
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.12,
+          -52.1
+        ]
+      },
+      "_featureIndex": 60
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "POLANT4-4-004-101",
+        "87Sr/86Sr": "0.70368",
+        "143Nd/144Nd": "0.512852",
+        "206Pb/204Pb": "19.564",
+        "207Pb/204Pb": "15.649",
+        "208Pb/204Pb": "39.157",
+        "176Hf/177Hf": "0.282901",
+        "εHf": "4.1",
+        "εNd": "4.2",
+        "delta74": "3.7",
+        "delta84": "-12.3",
+        "Rerference": "LE ROEX, 1992",
+        "_featureIndex": 61
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.12,
+          -52.1
+        ]
+      },
+      "_featureIndex": 61
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-090-077",
+        "143Nd/144Nd": "0.51287",
+        "176Hf/177Hf": "0.283011",
+        "εHf": "8.0",
+        "εNd": "4.5",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 62
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.353,
+          -52.177
+        ]
+      },
+      "_featureIndex": 62
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-089-002",
+        "143Nd/144Nd": "0.512786",
+        "176Hf/177Hf": "0.282965",
+        "εHf": "6.4",
+        "εNd": "2.9",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 63
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.598,
+          -52.246
+        ]
+      },
+      "_featureIndex": 63
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-061-071",
+        "143Nd/144Nd": "0.512857",
+        "3He/4He (R/Ra)": "0.35",
+        "εNd": "4.3",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 64
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.6,
+          -52.1
+        ]
+      },
+      "_featureIndex": 64
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "POLANT4-4-002-001",
+        "87Sr/86Sr": "0.70338",
+        "143Nd/144Nd": "0.512876",
+        "206Pb/204Pb": "19.243",
+        "207Pb/204Pb": "15.632",
+        "208Pb/204Pb": "39.315",
+        "176Hf/177Hf": "0.283002",
+        "εHf": "7.7",
+        "εNd": "4.6",
+        "delta74": "5.5",
+        "delta84": "42.3",
+        "Rerference": "LE ROEX, 1992",
+        "_featureIndex": 65
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.63,
+          -52.22
+        ]
+      },
+      "_featureIndex": 65
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "POLANT4-4-002-014",
+        "3He/4He (R/Ra)": "6.26",
+        "Rerference": "LE ROEX, 1992",
+        "_featureIndex": 66
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.63,
+          -52.22
+        ]
+      },
+      "_featureIndex": 66
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-088-003",
+        "143Nd/144Nd": "0.51288",
+        "176Hf/177Hf": "0.283068",
+        "εHf": "10.0",
+        "εNd": "4.7",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 67
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.707,
+          -52.217
+        ]
+      },
+      "_featureIndex": 67
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-087-001",
+        "143Nd/144Nd": "0.512877",
+        "176Hf/177Hf": "0.283068",
+        "εHf": "10.0",
+        "εNd": "4.7",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 68
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.789,
+          -52.235
+        ]
+      },
+      "_featureIndex": 68
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-9-064-001",
+        "3He/4He (R/Ra)": "6.4",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 69
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.64,
+          -52.29
+        ]
+      },
+      "_featureIndex": 69
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-083-001",
+        "143Nd/144Nd": "0.51302",
+        "176Hf/177Hf": "0.283059",
+        "εHf": "9.7",
+        "εNd": "7.5",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 70
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.837,
+          -52.173
+        ]
+      },
+      "_featureIndex": 70
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-080-004",
+        "143Nd/144Nd": "0.512992",
+        "176Hf/177Hf": "0.283065",
+        "εHf": "9.9",
+        "εNd": "6.9",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 71
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.007,
+          -52.232
+        ]
+      },
+      "_featureIndex": 71
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-002-001",
+        "143Nd/144Nd": "0.513039",
+        "176Hf/177Hf": "0.283046",
+        "3He/4He (R/Ra)": "6.58",
+        "εHf": "9.2",
+        "εNd": "7.8",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 72
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.23,
+          -52.33
+        ]
+      },
+      "_featureIndex": 72
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-001-001",
+        "87Sr/86Sr": "0.70248",
+        "143Nd/144Nd": "0.513056",
+        "206Pb/204Pb": "19.045",
+        "207Pb/204Pb": "15.557",
+        "208Pb/204Pb": "38.554",
+        "176Hf/177Hf": "0.283078",
+        "3He/4He (R/Ra)": "6.690216228",
+        "εHf": "10.4",
+        "εNd": "8.2",
+        "delta74": "0.2",
+        "delta84": "-9.8",
+        "Rerference": "PARAI, 2015",
+        "_featureIndex": 73
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.91,
+          -52.293
+        ]
+      },
+      "_featureIndex": 73
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-004-013",
+        "143Nd/144Nd": "0.513003",
+        "εNd": "7.1",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 74
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.11,
+          -52.36
+        ]
+      },
+      "_featureIndex": 74
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-004-031",
+        "3He/4He (R/Ra)": "6.55",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 75
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.11,
+          -52.36
+        ]
+      },
+      "_featureIndex": 75
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-005-001",
+        "176Hf/177Hf": "0.283072",
+        "3He/4He (R/Ra)": "6.52",
+        "εHf": "10.1",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 76
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.43,
+          -52.42
+        ]
+      },
+      "_featureIndex": 76
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-006-002",
+        "143Nd/144Nd": "0.512974",
+        "3He/4He (R/Ra)": "6.74",
+        "εNd": "6.6",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 77
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.7,
+          -52.52
+        ]
+      },
+      "_featureIndex": 77
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-007-002",
+        "176Hf/177Hf": "0.283032",
+        "3He/4He (R/Ra)": "6.91",
+        "εHf": "8.7",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 78
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.03,
+          -52.55
+        ]
+      },
+      "_featureIndex": 78
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-008-005",
+        "143Nd/144Nd": "0.513043",
+        "176Hf/177Hf": "0.283049",
+        "3He/4He (R/Ra)": "6.88",
+        "εHf": "9.3",
+        "εNd": "7.9",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 79
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.34,
+          -52.61
+        ]
+      },
+      "_featureIndex": 79
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-003-004",
+        "87Sr/86Sr": "0.70267",
+        "143Nd/144Nd": "0.513048",
+        "206Pb/204Pb": "18.968",
+        "207Pb/204Pb": "15.551",
+        "208Pb/204Pb": "38.767",
+        "176Hf/177Hf": "0.283069",
+        "εHf": "10.0",
+        "εNd": "8.0",
+        "delta74": "0.4",
+        "delta84": "20.8",
+        "Rerference": "JANNEY, 2005",
+        "_featureIndex": 80
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.1,
+          -52.76
+        ]
+      },
+      "_featureIndex": 80
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-005-002",
+        "3He/4He (R/Ra)": "6.97",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 81
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.1,
+          -52.76
+        ]
+      },
+      "_featureIndex": 81
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-005-007",
+        "3He/4He (R/Ra)": "7.03",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 82
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.1,
+          -52.76
+        ]
+      },
+      "_featureIndex": 82
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-005-014",
+        "3He/4He (R/Ra)": "6.67",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 83
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.1,
+          -52.76
+        ]
+      },
+      "_featureIndex": 83
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-005-018",
+        "3He/4He (R/Ra)": "6.87",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 84
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.1,
+          -52.76
+        ]
+      },
+      "_featureIndex": 84
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-011-025",
+        "3He/4He (R/Ra)": "6.947532237",
+        "Rerference": "PARAI, 2015",
+        "_featureIndex": 85
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.2,
+          -52.8
+        ]
+      },
+      "_featureIndex": 85
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-010-021",
+        "143Nd/144Nd": "0.513018",
+        "3He/4He (R/Ra)": "6.71",
+        "εNd": "7.4",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 86
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.27,
+          -52.75
+        ]
+      },
+      "_featureIndex": 86
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-075-029",
+        "143Nd/144Nd": "0.513072",
+        "176Hf/177Hf": "0.283077",
+        "εHf": "10.3",
+        "εNd": "8.5",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 87
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.775,
+          -52.995
+        ]
+      },
+      "_featureIndex": 87
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-013-029",
+        "3He/4He (R/Ra)": "6.82",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 88
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.91,
+          -52.86
+        ]
+      },
+      "_featureIndex": 88
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-014-007",
+        "176Hf/177Hf": "0.283019",
+        "3He/4He (R/Ra)": "6.86",
+        "εHf": "8.3",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 89
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          20.38,
+          -52.92
+        ]
+      },
+      "_featureIndex": 89
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-015-005",
+        "143Nd/144Nd": "0.513047",
+        "εNd": "8.0",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 90
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          20.38,
+          -52.92
+        ]
+      },
+      "_featureIndex": 90
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-017-016",
+        "176Hf/177Hf": "0.283173",
+        "3He/4He (R/Ra)": "7.21",
+        "εHf": "13.7",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 91
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          20.93,
+          -52.95
+        ]
+      },
+      "_featureIndex": 91
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-018-017",
+        "143Nd/144Nd": "0.513057",
+        "3He/4He (R/Ra)": "7.01",
+        "εNd": "8.2",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 92
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          21.41,
+          -52.99
+        ]
+      },
+      "_featureIndex": 92
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELVANC-7-070-087",
+        "143Nd/144Nd": "0.51307",
+        "176Hf/177Hf": "0.283101",
+        "εHf": "11.2",
+        "εNd": "8.4",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 93
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          21.978,
+          -53.043
+        ]
+      },
+      "_featureIndex": 93
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-020-006",
+        "3He/4He (R/Ra)": "7.29",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 94
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          22.18,
+          -53.04
+        ]
+      },
+      "_featureIndex": 94
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-021-002",
+        "3He/4He (R/Ra)": "7.1",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 95
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          22.47,
+          -53.03
+        ]
+      },
+      "_featureIndex": 95
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-023-107",
+        "3He/4He (R/Ra)": "7.01",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 96
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          22.57,
+          -53.17
+        ]
+      },
+      "_featureIndex": 96
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-022-014",
+        "3He/4He (R/Ra)": "7.083758359",
+        "Rerference": "PARAI, 2015",
+        "_featureIndex": 97
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          22.65,
+          -53.11
+        ]
+      },
+      "_featureIndex": 97
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-009-002",
+        "87Sr/86Sr": "0.70256",
+        "143Nd/144Nd": "0.513101",
+        "206Pb/204Pb": "18.418",
+        "207Pb/204Pb": "15.492",
+        "208Pb/204Pb": "37.965",
+        "176Hf/177Hf": "0.28312",
+        "3He/4He (R/Ra)": "7.261742237",
+        "εHf": "11.8",
+        "εNd": "9.0",
+        "delta74": "0.4",
+        "delta84": "7.1",
+        "Rerference": "PARAI, 2015",
+        "_featureIndex": 98
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          22.83,
+          -53.158
+        ]
+      },
+      "_featureIndex": 98
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-024-004",
+        "176Hf/177Hf": "0.28309",
+        "3He/4He (R/Ra)": "7.01",
+        "εHf": "10.8",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 99
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          22.85,
+          -53.16
+        ]
+      },
+      "_featureIndex": 99
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-025-003",
+        "143Nd/144Nd": "0.51307",
+        "3He/4He (R/Ra)": "7.05",
+        "εNd": "8.4",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 100
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          23.12,
+          -53.17
+        ]
+      },
+      "_featureIndex": 100
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "KNO0162-7-026-023",
+        "3He/4He (R/Ra)": "7.28",
+        "Rerference": "GEORGEN, 2003",
+        "_featureIndex": 101
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          23.36,
+          -53.21
+        ]
+      },
+      "_featureIndex": 101
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-013-001",
+        "143Nd/144Nd": "0.513061",
+        "176Hf/177Hf": "0.283078",
+        "3He/4He (R/Ra)": "7.298417703",
+        "εHf": "10.4",
+        "εNd": "8.3",
+        "Rerference": "MALLICK, 2015",
+        "_featureIndex": 102
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          24.758,
+          -53.408
+        ]
+      },
+      "_featureIndex": 102
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0022-008-001",
+        "87Sr/86Sr": "0.70268",
+        "143Nd/144Nd": "0.513082",
+        "206Pb/204Pb": "18.417",
+        "207Pb/204Pb": "15.5",
+        "208Pb/204Pb": "38.012",
+        "176Hf/177Hf": "0.28312",
+        "εHf": "11.8",
+        "εNd": "8.7",
+        "delta74": "1.3",
+        "delta84": "11.9",
+        "Rerference": "JANNEY, 2005",
+        "_featureIndex": 103
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          24.76,
+          -53.41
+        ]
+      },
+      "_featureIndex": 103
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-014-081",
+        "87Sr/86Sr": "0.70275",
+        "143Nd/144Nd": "0.513096",
+        "206Pb/204Pb": "18.246",
+        "207Pb/204Pb": "15.481",
+        "208Pb/204Pb": "37.841",
+        "176Hf/177Hf": "0.283116",
+        "εHf": "11.7",
+        "εNd": "8.9",
+        "delta74": "1.2",
+        "delta84": "15.5",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 104
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          25.327,
+          -53.113
+        ]
+      },
+      "_featureIndex": 104
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-014-089",
+        "87Sr/86Sr": "0.70374",
+        "143Nd/144Nd": "0.512986",
+        "206Pb/204Pb": "18.608",
+        "207Pb/204Pb": "15.6",
+        "208Pb/204Pb": "38.496",
+        "176Hf/177Hf": "0.283149",
+        "εHf": "12.9",
+        "εNd": "6.8",
+        "delta74": "9.2",
+        "delta84": "37.2",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 105
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          25.327,
+          -53.113
+        ]
+      },
+      "_featureIndex": 105
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-014-090",
+        "87Sr/86Sr": "0.70387",
+        "143Nd/144Nd": "0.512995",
+        "206Pb/204Pb": "18.616",
+        "207Pb/204Pb": "15.605",
+        "208Pb/204Pb": "38.503",
+        "176Hf/177Hf": "0.283138",
+        "εHf": "12.5",
+        "εNd": "7.0",
+        "delta74": "9.6",
+        "delta84": "36.9",
+        "Rerference": "LE ROEX, 1989",
+        "_featureIndex": 106
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          25.327,
+          -53.113
+        ]
+      },
+      "_featureIndex": 106
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-011-017",
+        "87Sr/86Sr": "0.70266",
+        "143Nd/144Nd": "0.513058",
+        "206Pb/204Pb": "18.458",
+        "207Pb/204Pb": "15.485",
+        "208Pb/204Pb": "38.049",
+        "176Hf/177Hf": "0.283137",
+        "εHf": "12.4",
+        "εNd": "8.2",
+        "delta74": "-0.7",
+        "delta84": "10.6",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 107
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          25.488,
+          -53.16
+        ]
+      },
+      "_featureIndex": 107
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-012-012",
+        "87Sr/86Sr": "0.70259",
+        "143Nd/144Nd": "0.51307",
+        "206Pb/204Pb": "18.568",
+        "207Pb/204Pb": "15.561",
+        "208Pb/204Pb": "38.265",
+        "176Hf/177Hf": "0.283148",
+        "εHf": "12.8",
+        "εNd": "8.4",
+        "delta74": "5.7",
+        "delta84": "18.9",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 108
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          25.508,
+          -53.175
+        ]
+      },
+      "_featureIndex": 108
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-009-001",
+        "87Sr/86Sr": "0.70255",
+        "143Nd/144Nd": "0.513046",
+        "206Pb/204Pb": "18.339",
+        "207Pb/204Pb": "15.478",
+        "208Pb/204Pb": "37.987",
+        "176Hf/177Hf": "0.283102",
+        "εHf": "11.2",
+        "εNd": "8.0",
+        "delta74": "-0.1",
+        "delta84": "18.8",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 109
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.335,
+          -52.58
+        ]
+      },
+      "_featureIndex": 109
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-009-001G",
+        "Rerference": "JANNEY, 2005",
+        "_featureIndex": 110
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.335,
+          -52.58
+        ]
+      },
+      "_featureIndex": 110
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-009-007",
+        "87Sr/86Sr": "0.70373",
+        "143Nd/144Nd": "0.513005",
+        "206Pb/204Pb": "18.576",
+        "207Pb/204Pb": "15.592",
+        "208Pb/204Pb": "38.482",
+        "εNd": "7.2",
+        "delta74": "8.7",
+        "delta84": "39.7",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 111
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.335,
+          -52.58
+        ]
+      },
+      "_featureIndex": 111
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-015-054",
+        "87Sr/86Sr": "0.70318",
+        "143Nd/144Nd": "0.51304",
+        "206Pb/204Pb": "18.138",
+        "207Pb/204Pb": "15.473",
+        "208Pb/204Pb": "37.95",
+        "εNd": "7.8",
+        "delta74": "1.6",
+        "delta84": "39.4",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 112
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.147,
+          -47.7
+        ]
+      },
+      "_featureIndex": 112
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR01-1-1g",
+        "Elevation(m)": "-3850.00",
+        "3He/4He (R/Ra)": "7.97",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 113
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.55,
+          -47.13
+        ]
+      },
+      "_featureIndex": 113
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0053-001-032",
+        "87Sr/86Sr": "0.70259",
+        "143Nd/144Nd": "0.513119",
+        "206Pb/204Pb": "18.078",
+        "207Pb/204Pb": "15.454",
+        "208Pb/204Pb": "37.59",
+        "εNd": "9.4",
+        "delta74": "0.3",
+        "delta84": "10.7",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 114
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.67,
+          -47.17
+        ]
+      },
+      "_featureIndex": 114
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-003-001-001",
+        "Elevation(m)": "-2220.00",
+        "3He/4He (R/Ra)": "7.27",
+        "Rerference": "GAUTHERON, 2015",
+        "_featureIndex": 115
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.84,
+          -47.15
+        ]
+      },
+      "_featureIndex": 115
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-017-022",
+        "87Sr/86Sr": "0.70329",
+        "143Nd/144Nd": "0.51306",
+        "206Pb/204Pb": "18.118",
+        "207Pb/204Pb": "15.501",
+        "208Pb/204Pb": "37.87",
+        "176Hf/177Hf": "0.283184",
+        "εHf": "14.1",
+        "εNd": "8.2",
+        "delta74": "4.6",
+        "delta84": "33.8",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 116
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.508,
+          -46.378
+        ]
+      },
+      "_featureIndex": 116
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-020-A",
+        "87Sr/86Sr": "0.70359",
+        "143Nd/144Nd": "0.512983",
+        "206Pb/204Pb": "18.261",
+        "207Pb/204Pb": "15.552",
+        "208Pb/204Pb": "38.37",
+        "εNd": "6.7",
+        "delta74": "8.2",
+        "delta84": "66.5",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 117
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.87,
+          -46.495
+        ]
+      },
+      "_featureIndex": 117
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AGU0053-003-003",
+        "87Sr/86Sr": "0.70276",
+        "143Nd/144Nd": "0.513089",
+        "206Pb/204Pb": "18.223",
+        "207Pb/204Pb": "15.469",
+        "208Pb/204Pb": "37.781",
+        "176Hf/177Hf": "0.283164",
+        "εHf": "13.4",
+        "εNd": "8.8",
+        "delta74": "0.3",
+        "delta84": "12.2",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 118
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          34.07,
+          -46.03
+        ]
+      },
+      "_featureIndex": 118
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-004-001-2",
+        "143Nd/144Nd": "0.513179",
+        "206Pb/204Pb": "18.2423",
+        "207Pb/204Pb": "15.5023",
+        "208Pb/204Pb": "37.9802",
+        "176Hf/177Hf": "0.283215",
+        "εHf": "15.2",
+        "εNd": "10.6",
+        "delta74": "3.4",
+        "delta84": "29.8",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 119
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.78,
+          -44.73
+        ]
+      },
+      "_featureIndex": 119
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-004-002-003",
+        "Elevation(m)": "-2635.00",
+        "143Nd/144Nd": "0.51318",
+        "206Pb/204Pb": "18.24",
+        "207Pb/204Pb": "15.50",
+        "208Pb/204Pb": "37.98",
+        "3He/4He (R/Ra)": "7.48",
+        "εNd": "10.6",
+        "delta74": "3.2",
+        "delta84": "30.1",
+        "Rerference": "GAUTHERON, 2015",
+        "_featureIndex": 120
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.78,
+          -44.73
+        ]
+      },
+      "_featureIndex": 120
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-004-002-1",
+        "3He/4He (R/Ra)": "8.32",
+        "Rerference": "RAQUIN, 2009",
+        "_featureIndex": 121
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.78,
+          -44.73
+        ]
+      },
+      "_featureIndex": 121
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-025-211",
+        "87Sr/86Sr": "0.70291",
+        "143Nd/144Nd": "0.513062",
+        "206Pb/204Pb": "18.271",
+        "207Pb/204Pb": "15.484",
+        "208Pb/204Pb": "37.977",
+        "εNd": "8.3",
+        "delta74": "1.2",
+        "delta84": "26.0",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 122
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.847,
+          -44.815
+        ]
+      },
+      "_featureIndex": 122
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-025-217",
+        "87Sr/86Sr": "0.70291",
+        "143Nd/144Nd": "0.513151",
+        "206Pb/204Pb": "18.052",
+        "207Pb/204Pb": "15.473",
+        "208Pb/204Pb": "37.694",
+        "176Hf/177Hf": "0.283227",
+        "εHf": "15.6",
+        "εNd": "10.0",
+        "delta74": "2.5",
+        "delta84": "24.2",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 123
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.847,
+          -44.815
+        ]
+      },
+      "_featureIndex": 123
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-025-240",
+        "87Sr/86Sr": "0.70321",
+        "143Nd/144Nd": "0.513064",
+        "206Pb/204Pb": "18.133",
+        "207Pb/204Pb": "15.476",
+        "208Pb/204Pb": "38.061",
+        "3He/4He (R/Ra)": "7.31",
+        "εNd": "8.3",
+        "delta74": "1.9",
+        "delta84": "51.1",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 124
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.847,
+          -44.815
+        ]
+      },
+      "_featureIndex": 124
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR05-1-2g",
+        "Elevation(m)": "-1270.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51310",
+        "206Pb/204Pb": "18.37",
+        "207Pb/204Pb": "15.52",
+        "208Pb/204Pb": "38.12",
+        "176Hf/177Hf": "0.28318",
+        "3He/4He (R/Ra)": "6.83",
+        "εHf": "13.9",
+        "εNd": "9.0",
+        "delta74": "3.8",
+        "delta84": "28.4",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 125
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.18,
+          -44.86
+        ]
+      },
+      "_featureIndex": 125
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-005-001-1",
+        "3He/4He (R/Ra)": "7.82",
+        "Rerference": "RAQUIN, 2009",
+        "_featureIndex": 126
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.18,
+          -44.86
+        ]
+      },
+      "_featureIndex": 126
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-007",
+        "87Sr/86Sr": "0.7028",
+        "143Nd/144Nd": "0.513041",
+        "206Pb/204Pb": "18.237",
+        "207Pb/204Pb": "15.499",
+        "208Pb/204Pb": "37.976",
+        "176Hf/177Hf": "0.283162",
+        "εHf": "13.3",
+        "εNd": "7.9",
+        "delta74": "3.1",
+        "delta84": "30.0",
+        "Rerference": "HAMELIN, 1985",
+        "_featureIndex": 127
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.302,
+          -44.807
+        ]
+      },
+      "_featureIndex": 127
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR06-3-5g",
+        "Elevation(m)": "-2335.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51315",
+        "206Pb/204Pb": "18.30",
+        "207Pb/204Pb": "15.51",
+        "208Pb/204Pb": "38.05",
+        "3He/4He (R/Ra)": "7.77",
+        "εNd": "10.0",
+        "delta74": "3.5",
+        "delta84": "29.8",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 128
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.47,
+          -44.9
+        ]
+      },
+      "_featureIndex": 128
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-006-001-1",
+        "3He/4He (R/Ra)": "8.17",
+        "Rerference": "RAQUIN, 2009",
+        "_featureIndex": 129
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.47,
+          -44.9
+        ]
+      },
+      "_featureIndex": 129
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-006-002-2",
+        "87Sr/86Sr": "0.702882",
+        "143Nd/144Nd": "0.513147",
+        "206Pb/204Pb": "18.289",
+        "207Pb/204Pb": "15.5095",
+        "208Pb/204Pb": "38.0463",
+        "176Hf/177Hf": "0.283212",
+        "εHf": "15.1",
+        "εNd": "9.9",
+        "delta74": "3.6",
+        "delta84": "30.8",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 130
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.47,
+          -44.9
+        ]
+      },
+      "_featureIndex": 130
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR07-1-1g",
+        "Elevation(m)": "-3270.00",
+        "3He/4He (R/Ra)": "7.90",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 131
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.75,
+          -44.82
+        ]
+      },
+      "_featureIndex": 131
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-026-001",
+        "87Sr/86Sr": "0.70311",
+        "143Nd/144Nd": "0.513059",
+        "206Pb/204Pb": "18.275",
+        "207Pb/204Pb": "15.53",
+        "208Pb/204Pb": "38.063",
+        "εNd": "8.2",
+        "delta74": "5.8",
+        "delta84": "34.2",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 132
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.07,
+          -44.733
+        ]
+      },
+      "_featureIndex": 132
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-008-002-1",
+        "87Sr/86Sr": "0.70296",
+        "143Nd/144Nd": "0.513138",
+        "206Pb/204Pb": "18.3562",
+        "207Pb/204Pb": "15.5229",
+        "208Pb/204Pb": "38.1451",
+        "176Hf/177Hf": "0.28321",
+        "εHf": "15.0",
+        "εNd": "9.8",
+        "delta74": "4.2",
+        "delta84": "32.5",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 133
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.27,
+          -44.61
+        ]
+      },
+      "_featureIndex": 133
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-008-002-3",
+        "87Sr/86Sr": "0.703134",
+        "143Nd/144Nd": "0.513082",
+        "206Pb/204Pb": "18.3469",
+        "207Pb/204Pb": "15.5066",
+        "208Pb/204Pb": "38.126",
+        "176Hf/177Hf": "0.283222",
+        "εHf": "15.5",
+        "εNd": "8.7",
+        "delta74": "2.7",
+        "delta84": "31.8",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 134
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.27,
+          -44.61
+        ]
+      },
+      "_featureIndex": 134
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR09-1-3g",
+        "Elevation(m)": "-2730.00",
+        "87Sr/86Sr": "0.7028",
+        "143Nd/144Nd": "0.513097",
+        "206Pb/204Pb": "18.23",
+        "207Pb/204Pb": "15.50",
+        "208Pb/204Pb": "37.96",
+        "176Hf/177Hf": "0.28322",
+        "3He/4He (R/Ra)": "8.23",
+        "εHf": "15.5",
+        "εNd": "9.0",
+        "delta74": "3.3",
+        "delta84": "29.3",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 135
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.5,
+          -44.63
+        ]
+      },
+      "_featureIndex": 135
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-009-003-1",
+        "3He/4He (R/Ra)": "7.42",
+        "Rerference": "RAQUIN, 2009",
+        "_featureIndex": 136
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.5,
+          -44.63
+        ]
+      },
+      "_featureIndex": 136
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR08-2-4",
+        "Elevation(m)": "-2850.00",
+        "87Sr/86Sr": "0.7031",
+        "206Pb/204Pb": "18.35",
+        "207Pb/204Pb": "15.53",
+        "208Pb/204Pb": "38.15",
+        "176Hf/177Hf": "0.28322",
+        "3He/4He (R/Ra)": "7.95",
+        "εHf": "15.5",
+        "delta74": "5.0",
+        "delta84": "33.8",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 137
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.77,
+          -44.61
+        ]
+      },
+      "_featureIndex": 137
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-006",
+        "87Sr/86Sr": "0.70288",
+        "143Nd/144Nd": "0.51306",
+        "206Pb/204Pb": "18.366",
+        "207Pb/204Pb": "15.503",
+        "208Pb/204Pb": "38.066",
+        "176Hf/177Hf": "0.283204",
+        "εHf": "14.8",
+        "εNd": "8.2",
+        "delta74": "2.1",
+        "delta84": "23.5",
+        "Rerference": "GALE, 2013",
+        "_featureIndex": 138
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.795,
+          -44.18
+        ]
+      },
+      "_featureIndex": 138
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-006",
+        "87Sr/86Sr": "0.7028",
+        "143Nd/144Nd": "0.513071",
+        "206Pb/204Pb": "18.373",
+        "207Pb/204Pb": "15.509",
+        "208Pb/204Pb": "38.096",
+        "176Hf/177Hf": "0.283215",
+        "εHf": "15.2",
+        "εNd": "8.4",
+        "delta74": "2.6",
+        "delta84": "25.6",
+        "Rerference": "GALE, 2013",
+        "_featureIndex": 139
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.795,
+          -44.18
+        ]
+      },
+      "_featureIndex": 139
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-001-001-001",
+        "3He/4He (R/Ra)": "7.97",
+        "Rerference": "GAUTHERON, 2015",
+        "_featureIndex": 140
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.89,
+          -44.19
+        ]
+      },
+      "_featureIndex": 140
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-001-002-6",
+        "3He/4He (R/Ra)": "8.1",
+        "Rerference": "RAQUIN, 2009",
+        "_featureIndex": 141
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.89,
+          -44.19
+        ]
+      },
+      "_featureIndex": 141
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-002-002-2",
+        "3He/4He (R/Ra)": "6.25",
+        "Rerference": "RAQUIN, 2009",
+        "_featureIndex": 142
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.99,
+          -44.21
+        ]
+      },
+      "_featureIndex": 142
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-027-002",
+        "87Sr/86Sr": "0.7044",
+        "143Nd/144Nd": "0.512697",
+        "206Pb/204Pb": "17.449",
+        "207Pb/204Pb": "15.505",
+        "208Pb/204Pb": "37.706",
+        "176Hf/177Hf": "0.282949",
+        "εHf": "5.8",
+        "εNd": "1.2",
+        "delta74": "12.3",
+        "delta84": "98.3",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 143
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.308,
+          -43.612
+        ]
+      },
+      "_featureIndex": 143
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-027-048",
+        "87Sr/86Sr": "0.70446",
+        "143Nd/144Nd": "0.512681",
+        "206Pb/204Pb": "17.436",
+        "207Pb/204Pb": "15.468",
+        "208Pb/204Pb": "37.621",
+        "εNd": "0.8",
+        "delta74": "8.7",
+        "delta84": "91.4",
+        "Rerference": "LE ROEX, 1989",
+        "_featureIndex": 144
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.308,
+          -43.612
+        ]
+      },
+      "_featureIndex": 144
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-027-A",
+        "87Sr/86Sr": "0.70438",
+        "143Nd/144Nd": "0.512692",
+        "206Pb/204Pb": "17.441",
+        "207Pb/204Pb": "15.48",
+        "208Pb/204Pb": "37.663",
+        "176Hf/177Hf": "0.283199",
+        "εHf": "14.6",
+        "εNd": "1.1",
+        "delta74": "9.8",
+        "delta84": "95.0",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 145
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.308,
+          -43.612
+        ]
+      },
+      "_featureIndex": 145
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR16-2-1g",
+        "Elevation(m)": "-3100.00",
+        "87Sr/86Sr": "0.7039",
+        "143Nd/144Nd": "0.51286",
+        "206Pb/204Pb": "17.20",
+        "207Pb/204Pb": "15.44",
+        "208Pb/204Pb": "37.41",
+        "176Hf/177Hf": "0.28308",
+        "3He/4He (R/Ra)": "7.10",
+        "εHf": "10.4",
+        "εNd": "4.3",
+        "delta74": "8.5",
+        "delta84": "98.8",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 146
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.57,
+          -43.39
+        ]
+      },
+      "_featureIndex": 146
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR10-2-2ag",
+        "Elevation(m)": "-3090.00",
+        "87Sr/86Sr": "0.7039",
+        "143Nd/144Nd": "0.51287",
+        "206Pb/204Pb": "17.45",
+        "207Pb/204Pb": "15.45",
+        "208Pb/204Pb": "37.43",
+        "176Hf/177Hf": "0.28307",
+        "3He/4He (R/Ra)": "7.34",
+        "εHf": "10.1",
+        "εNd": "4.5",
+        "delta74": "6.7",
+        "delta84": "70.6",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 147
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.69,
+          -43.36
+        ]
+      },
+      "_featureIndex": 147
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-010-001-4",
+        "3He/4He (R/Ra)": "7.29",
+        "Rerference": "RAQUIN, 2009",
+        "_featureIndex": 148
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.69,
+          -43.36
+        ]
+      },
+      "_featureIndex": 148
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-010-003",
+        "87Sr/86Sr": "0.70393",
+        "143Nd/144Nd": "0.51287",
+        "206Pb/204Pb": "17.2434",
+        "207Pb/204Pb": "15.4496",
+        "208Pb/204Pb": "37.4273",
+        "176Hf/177Hf": "0.283072",
+        "εHf": "10.1",
+        "εNd": "4.5",
+        "delta74": "8.9",
+        "delta84": "95.3",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 149
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.69,
+          -43.36
+        ]
+      },
+      "_featureIndex": 149
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-028-009",
+        "87Sr/86Sr": "0.70399",
+        "143Nd/144Nd": "0.512785",
+        "206Pb/204Pb": "17.152",
+        "207Pb/204Pb": "15.418",
+        "208Pb/204Pb": "37.318",
+        "3He/4He (R/Ra)": "7.53",
+        "εNd": "2.9",
+        "delta74": "6.8",
+        "delta84": "95.4",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 150
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.852,
+          -43.377
+        ]
+      },
+      "_featureIndex": 150
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-028-026",
+        "87Sr/86Sr": "0.7041",
+        "143Nd/144Nd": "0.512808",
+        "206Pb/204Pb": "17.083",
+        "207Pb/204Pb": "15.414",
+        "208Pb/204Pb": "37.296",
+        "176Hf/177Hf": "0.283022",
+        "εHf": "8.4",
+        "εNd": "3.3",
+        "delta74": "7.1",
+        "delta84": "101.6",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 151
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.852,
+          -43.377
+        ]
+      },
+      "_featureIndex": 151
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-028-146",
+        "87Sr/86Sr": "0.70458",
+        "143Nd/144Nd": "0.512694",
+        "206Pb/204Pb": "17.097",
+        "207Pb/204Pb": "15.418",
+        "208Pb/204Pb": "37.288",
+        "176Hf/177Hf": "0.28305",
+        "εHf": "9.4",
+        "εNd": "1.1",
+        "delta74": "7.4",
+        "delta84": "99.1",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 152
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.852,
+          -43.377
+        ]
+      },
+      "_featureIndex": 152
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-012-002-002",
+        "Elevation(m)": "-2860.00",
+        "3He/4He (R/Ra)": "7.09",
+        "Rerference": "GAUTHERON, 2015",
+        "_featureIndex": 153
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.94,
+          -43.37
+        ]
+      },
+      "_featureIndex": 153
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-013-001-19",
+        "Elevation(m)": "-2880.00",
+        "87Sr/86Sr": "0.704746",
+        "143Nd/144Nd": "0.512602",
+        "206Pb/204Pb": "16.5826",
+        "207Pb/204Pb": "15.3558",
+        "208Pb/204Pb": "36.8665",
+        "176Hf/177Hf": "0.282882",
+        "3He/4He (R/Ra)": "6.39",
+        "εHf": "3.4",
+        "εNd": "-0.7",
+        "delta74": "6.7",
+        "delta84": "119.1",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 154
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.98,
+          -43.41
+        ]
+      },
+      "_featureIndex": 154
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-013-001-2",
+        "Elevation(m)": "-2880.00",
+        "87Sr/86Sr": "0.704761",
+        "143Nd/144Nd": "0.512607",
+        "206Pb/204Pb": "16.585",
+        "207Pb/204Pb": "15.3599",
+        "208Pb/204Pb": "36.8753",
+        "176Hf/177Hf": "0.28288",
+        "3He/4He (R/Ra)": "6.35",
+        "εHf": "3.4",
+        "εNd": "-0.6",
+        "delta74": "7.1",
+        "delta84": "119.7",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 155
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.98,
+          -43.41
+        ]
+      },
+      "_featureIndex": 155
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR14-1-1g",
+        "Elevation(m)": "-2705.00",
+        "87Sr/86Sr": "0.7037",
+        "143Nd/144Nd": "0.51287",
+        "206Pb/204Pb": "17.27",
+        "207Pb/204Pb": "15.44",
+        "208Pb/204Pb": "37.41",
+        "176Hf/177Hf": "0.28310",
+        "3He/4He (R/Ra)": "7.83",
+        "εHf": "11.2",
+        "εNd": "4.5",
+        "delta74": "7.7",
+        "delta84": "90.4",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 156
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.1,
+          -43.4
+        ]
+      },
+      "_featureIndex": 156
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-014-001-001",
+        "Rerference": "GAUTHERON, 2015",
+        "_featureIndex": 157
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.1,
+          -43.4
+        ]
+      },
+      "_featureIndex": 157
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-014-001-4",
+        "87Sr/86Sr": "0.703718",
+        "143Nd/144Nd": "0.512871",
+        "206Pb/204Pb": "17.2738",
+        "207Pb/204Pb": "15.4427",
+        "208Pb/204Pb": "37.4116",
+        "176Hf/177Hf": "0.283102",
+        "3He/4He (R/Ra)": "7.83",
+        "εHf": "11.2",
+        "εNd": "4.5",
+        "delta74": "7.9",
+        "delta84": "90.1",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 158
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.1,
+          -43.4
+        ]
+      },
+      "_featureIndex": 158
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR15-2-5g",
+        "Elevation(m)": "-3000.00",
+        "87Sr/86Sr": "0.7039",
+        "143Nd/144Nd": "0.51286",
+        "206Pb/204Pb": "17.16",
+        "207Pb/204Pb": "15.43",
+        "208Pb/204Pb": "37.36",
+        "176Hf/177Hf": "0.28308",
+        "3He/4He (R/Ra)": "7.48",
+        "εHf": "10.4",
+        "εNd": "4.3",
+        "delta74": "7.9",
+        "delta84": "98.7",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 159
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.21,
+          -43.43
+        ]
+      },
+      "_featureIndex": 159
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-016-002-001",
+        "3He/4He (R/Ra)": "7.1",
+        "Rerference": "GAUTHERON, 2015",
+        "_featureIndex": 160
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.21,
+          -43.43
+        ]
+      },
+      "_featureIndex": 160
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-016-003-3",
+        "87Sr/86Sr": "0.703863",
+        "143Nd/144Nd": "0.512863",
+        "206Pb/204Pb": "17.2033",
+        "207Pb/204Pb": "15.4382",
+        "208Pb/204Pb": "37.4102",
+        "176Hf/177Hf": "0.283079",
+        "εHf": "10.4",
+        "εNd": "4.4",
+        "delta74": "8.2",
+        "delta84": "98.4",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 161
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.21,
+          -43.43
+        ]
+      },
+      "_featureIndex": 161
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR18 tube",
+        "Elevation(m)": "-3000.00",
+        "3He/4He (R/Ra)": "8.47",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 162
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.58,
+          -43.86
+        ]
+      },
+      "_featureIndex": 162
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-005",
+        "87Sr/86Sr": "0.70487",
+        "143Nd/144Nd": "0.512437",
+        "206Pb/204Pb": "16.877",
+        "207Pb/204Pb": "15.475",
+        "208Pb/204Pb": "37.245",
+        "176Hf/177Hf": "0.282768",
+        "εHf": "-0.6",
+        "εNd": "-3.9",
+        "delta74": "15.5",
+        "delta84": "121.4",
+        "Rerference": "AREVALO JR, 2008",
+        "_featureIndex": 163
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.653,
+          -43.893
+        ]
+      },
+      "_featureIndex": 163
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-005",
+        "87Sr/86Sr": "0.7047",
+        "143Nd/144Nd": "0.512448",
+        "206Pb/204Pb": "16.927",
+        "207Pb/204Pb": "15.504",
+        "208Pb/204Pb": "37.32",
+        "176Hf/177Hf": "0.282786",
+        "3He/4He (R/Ra)": "7.3",
+        "εHf": "0.0",
+        "εNd": "-3.7",
+        "delta74": "17.8",
+        "delta84": "122.8",
+        "Rerference": "AREVALO JR, 2008",
+        "_featureIndex": 164
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.653,
+          -43.893
+        ]
+      },
+      "_featureIndex": 164
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-005",
+        "87Sr/86Sr": "0.704937",
+        "143Nd/144Nd": "0.512373",
+        "εNd": "-5.2",
+        "Rerference": "AREVALO JR, 2008",
+        "_featureIndex": 165
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.653,
+          -43.893
+        ]
+      },
+      "_featureIndex": 165
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR17-1-3g",
+        "Elevation(m)": "-2550.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51305",
+        "206Pb/204Pb": "18.43",
+        "207Pb/204Pb": "15.53",
+        "208Pb/204Pb": "38.17",
+        "176Hf/177Hf": "0.28316",
+        "3He/4He (R/Ra)": "9.23",
+        "εHf": "13.3",
+        "εNd": "8.0",
+        "delta74": "4.1",
+        "delta84": "26.1",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 166
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.7,
+          -43.89
+        ]
+      },
+      "_featureIndex": 166
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR19-1-6g",
+        "Elevation(m)": "-1970.00",
+        "87Sr/86Sr": "0.7030",
+        "143Nd/144Nd": "0.51309",
+        "206Pb/204Pb": "18.41",
+        "207Pb/204Pb": "15.53",
+        "208Pb/204Pb": "38.14",
+        "176Hf/177Hf": "0.28317",
+        "3He/4He (R/Ra)": "8.46",
+        "εHf": "13.7",
+        "εNd": "8.8",
+        "delta74": "4.3",
+        "delta84": "25.5",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 167
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.81,
+          -43.89
+        ]
+      },
+      "_featureIndex": 167
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR20-1-1g",
+        "Elevation(m)": "-2700.00",
+        "87Sr/86Sr": "0.7030",
+        "143Nd/144Nd": "0.51304",
+        "206Pb/204Pb": "18.41",
+        "207Pb/204Pb": "15.53",
+        "208Pb/204Pb": "38.17",
+        "176Hf/177Hf": "0.28317",
+        "3He/4He (R/Ra)": "8.57",
+        "εHf": "13.4",
+        "εNd": "7.8",
+        "delta74": "4.3",
+        "delta84": "28.5",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 168
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.94,
+          -43.92
+        ]
+      },
+      "_featureIndex": 168
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-029-034",
+        "87Sr/86Sr": "0.70273",
+        "143Nd/144Nd": "0.513213",
+        "206Pb/204Pb": "17.859",
+        "207Pb/204Pb": "15.436",
+        "208Pb/204Pb": "37.418",
+        "εNd": "11.2",
+        "delta74": "0.9",
+        "delta84": "19.9",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 169
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          41.89,
+          -42.685
+        ]
+      },
+      "_featureIndex": 169
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-030-007",
+        "176Hf/177Hf": "0.28326",
+        "3He/4He (R/Ra)": "8.63",
+        "εHf": "16.8",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 170
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          41.985,
+          -42.687
+        ]
+      },
+      "_featureIndex": 170
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-030-075",
+        "87Sr/86Sr": "0.70268",
+        "143Nd/144Nd": "0.513188",
+        "206Pb/204Pb": "17.829",
+        "207Pb/204Pb": "15.448",
+        "208Pb/204Pb": "37.486",
+        "εNd": "10.7",
+        "delta74": "2.4",
+        "delta84": "30.4",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 171
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          41.985,
+          -42.687
+        ]
+      },
+      "_featureIndex": 171
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR23-1-3g",
+        "Elevation(m)": "-2850.00",
+        "3He/4He (R/Ra)": "8.80",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 172
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.13,
+          -42.8
+        ]
+      },
+      "_featureIndex": 172
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELINMD-008-001",
+        "87Sr/86Sr": "0.70253",
+        "143Nd/144Nd": "0.513218",
+        "206Pb/204Pb": "17.71",
+        "207Pb/204Pb": "15.424",
+        "208Pb/204Pb": "37.234",
+        "εNd": "11.3",
+        "delta74": "1.3",
+        "delta84": "19.6",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 173
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.72,
+          -41.98
+        ]
+      },
+      "_featureIndex": 173
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELINMD-005-004",
+        "87Sr/86Sr": "0.70309",
+        "143Nd/144Nd": "0.513201",
+        "206Pb/204Pb": "17.814",
+        "207Pb/204Pb": "15.452",
+        "208Pb/204Pb": "37.312",
+        "εNd": "11.0",
+        "delta74": "3.0",
+        "delta84": "14.8",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 174
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.73,
+          -42.01
+        ]
+      },
+      "_featureIndex": 174
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR25-1-13g",
+        "Elevation(m)": "-3315.00",
+        "3He/4He (R/Ra)": "7.39",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 175
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          43.38,
+          -41
+        ]
+      },
+      "_featureIndex": 175
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-004",
+        "87Sr/86Sr": "0.70299",
+        "143Nd/144Nd": "0.513068",
+        "206Pb/204Pb": "17.761",
+        "207Pb/204Pb": "15.468",
+        "208Pb/204Pb": "37.624",
+        "176Hf/177Hf": "0.283273",
+        "3He/4He (R/Ra)": "8.89",
+        "εHf": "17.3",
+        "εNd": "8.4",
+        "delta74": "5.2",
+        "delta84": "52.4",
+        "Rerference": "GALE, 2013",
+        "_featureIndex": 176
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          43.7,
+          -40.98
+        ]
+      },
+      "_featureIndex": 176
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-004",
+        "206Pb/204Pb": "17.73",
+        "207Pb/204Pb": "15.485",
+        "208Pb/204Pb": "37.615",
+        "176Hf/177Hf": "0.283366",
+        "εHf": "20.5",
+        "delta74": "7.2",
+        "delta84": "55.2",
+        "Rerference": "GALE, 2013",
+        "_featureIndex": 177
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          43.7,
+          -40.98
+        ]
+      },
+      "_featureIndex": 177
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR26 g.s.",
+        "Elevation(m)": "-3170.00",
+        "3He/4He (R/Ra)": "7.80",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 178
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          44.98,
+          -40.98
+        ]
+      },
+      "_featureIndex": 178
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-007-001-001",
+        "3He/4He (R/Ra)": "7.9",
+        "Rerference": "GAUTHERON, 2015",
+        "_featureIndex": 179
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.76,
+          -40.15
+        ]
+      },
+      "_featureIndex": 179
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0125-007-001-4",
+        "3He/4He (R/Ra)": "6.09",
+        "Rerference": "RAQUIN, 2009",
+        "_featureIndex": 180
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.76,
+          -40.15
+        ]
+      },
+      "_featureIndex": 180
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-037-001",
+        "87Sr/86Sr": "0.70383",
+        "143Nd/144Nd": "0.512785",
+        "206Pb/204Pb": "18.351",
+        "207Pb/204Pb": "15.544",
+        "208Pb/204Pb": "38.644",
+        "176Hf/177Hf": "0.283018",
+        "3He/4He (R/Ra)": "6.17",
+        "εHf": "8.2",
+        "εNd": "2.9",
+        "delta74": "6.4",
+        "delta84": "83.1",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 181
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.76,
+          -40.13
+        ]
+      },
+      "_featureIndex": 181
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-037-002",
+        "87Sr/86Sr": "0.70329",
+        "143Nd/144Nd": "0.512985",
+        "206Pb/204Pb": "18.04",
+        "207Pb/204Pb": "15.469",
+        "208Pb/204Pb": "38.16",
+        "176Hf/177Hf": "0.283158",
+        "εHf": "13.2",
+        "εNd": "6.8",
+        "delta74": "2.2",
+        "delta84": "72.3",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 182
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.76,
+          -40.13
+        ]
+      },
+      "_featureIndex": 182
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-041-007",
+        "3He/4He (R/Ra)": "6.99",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 183
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.63,
+          -38.66
+        ]
+      },
+      "_featureIndex": 183
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-041-049",
+        "87Sr/86Sr": "0.70289",
+        "143Nd/144Nd": "0.512995",
+        "206Pb/204Pb": "18.058",
+        "207Pb/204Pb": "15.502",
+        "208Pb/204Pb": "38.107",
+        "176Hf/177Hf": "0.283203",
+        "εHf": "14.8",
+        "εNd": "7.0",
+        "delta74": "5.4",
+        "delta84": "64.8",
+        "Rerference": "LE ROEX, 1989",
+        "_featureIndex": 184
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.63,
+          -38.66
+        ]
+      },
+      "_featureIndex": 184
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-041-073",
+        "87Sr/86Sr": "0.70333",
+        "143Nd/144Nd": "0.513033",
+        "206Pb/204Pb": "17.923",
+        "207Pb/204Pb": "15.486",
+        "208Pb/204Pb": "38.067",
+        "εNd": "7.7",
+        "delta74": "5.2",
+        "delta84": "77.1",
+        "Rerference": "MAHONEY, 1992",
+        "_featureIndex": 185
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.63,
+          -38.66
+        ]
+      },
+      "_featureIndex": 185
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "sw30-41",
+        "3He/4He (R/Ra)": "6.87",
+        "Rerference": "This study",
+        "_featureIndex": 186
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.63,
+          -38.66
+        ]
+      },
+      "_featureIndex": 186
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-042-001",
+        "87Sr/86Sr": "0.70281",
+        "143Nd/144Nd": "0.513099",
+        "206Pb/204Pb": "18.222",
+        "207Pb/204Pb": "15.49",
+        "208Pb/204Pb": "37.943",
+        "3He/4He (R/Ra)": "7.71",
+        "εNd": "9.0",
+        "delta74": "2.4",
+        "delta84": "28.6",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 187
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.713,
+          -38.432
+        ]
+      },
+      "_featureIndex": 187
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELPROT-5-042-011",
+        "87Sr/86Sr": "0.70321",
+        "143Nd/144Nd": "0.513025",
+        "206Pb/204Pb": "18.179",
+        "207Pb/204Pb": "15.495",
+        "208Pb/204Pb": "37.972",
+        "176Hf/177Hf": "0.283211",
+        "εHf": "15.1",
+        "εNd": "7.5",
+        "delta74": "3.3",
+        "delta84": "36.7",
+        "Rerference": "JANNEY, 2005",
+        "_featureIndex": 188
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.713,
+          -38.432
+        ]
+      },
+      "_featureIndex": 188
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR28-1-1g",
+        "Elevation(m)": "-3000.00",
+        "3He/4He (R/Ra)": "7.20",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 189
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          47.09,
+          -38.77
+        ]
+      },
+      "_featureIndex": 189
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR29-2-1g",
+        "Elevation(m)": "-3040.00",
+        "3He/4He (R/Ra)": "7.29",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 190
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          47.37,
+          -38.75
+        ]
+      },
+      "_featureIndex": 190
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW29-8",
+        "87Sr/86Sr": "0.70328389",
+        "143Nd/144Nd": "0.51304009",
+        "206Pb/204Pb": "18.346252",
+        "207Pb/204Pb": "15.608317",
+        "208Pb/204Pb": "38.414762",
+        "176Hf/177Hf": "0.2833025",
+        "3He/4He (R/Ra)": "7",
+        "εHf": "18.3",
+        "εNd": "7.8",
+        "delta74": "12.9",
+        "delta84": "60.7",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 191
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          47.4066,
+          -38.6699
+        ]
+      },
+      "_featureIndex": 191
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-021-004",
+        "87Sr/86Sr": "0.703077",
+        "143Nd/144Nd": "0.513092",
+        "206Pb/204Pb": "18.124",
+        "207Pb/204Pb": "15.478",
+        "208Pb/204Pb": "37.924",
+        "εNd": "8.9",
+        "delta74": "2.2",
+        "delta84": "38.5",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 192
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.6,
+          -38.13
+        ]
+      },
+      "_featureIndex": 192
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR30-1-4g",
+        "Elevation(m)": "-2675.00",
+        "87Sr/86Sr": "0.7032",
+        "143Nd/144Nd": "0.51314",
+        "206Pb/204Pb": "18.14",
+        "207Pb/204Pb": "15.49",
+        "208Pb/204Pb": "37.99",
+        "176Hf/177Hf": "0.28323",
+        "3He/4He (R/Ra)": "9.52",
+        "εHf": "15.6",
+        "εNd": "9.8",
+        "delta74": "3.3",
+        "delta84": "43.2",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 193
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.62,
+          -38.08
+        ]
+      },
+      "_featureIndex": 193
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR32#1",
+        "Elevation(m)": "-2760.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51317",
+        "206Pb/204Pb": "18.16",
+        "207Pb/204Pb": "15.49",
+        "208Pb/204Pb": "37.98",
+        "176Hf/177Hf": "0.28324",
+        "3He/4He (R/Ra)": "9.54",
+        "εHf": "16.2",
+        "εNd": "10.4",
+        "delta74": "3.0",
+        "delta84": "39.8",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 194
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.83,
+          -38.03
+        ]
+      },
+      "_featureIndex": 194
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR32-1-1g",
+        "Elevation(m)": "-2760.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51317",
+        "206Pb/204Pb": "18.16",
+        "207Pb/204Pb": "15.49",
+        "208Pb/204Pb": "37.98",
+        "176Hf/177Hf": "0.28324",
+        "3He/4He (R/Ra)": "9.03",
+        "εHf": "16.2",
+        "εNd": "10.4",
+        "delta74": "3.0",
+        "delta84": "39.8",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 195
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.83,
+          -38.03
+        ]
+      },
+      "_featureIndex": 195
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW29-5",
+        "87Sr/86Sr": "0.70304251",
+        "143Nd/144Nd": "0.5130766",
+        "206Pb/204Pb": "18.192454",
+        "207Pb/204Pb": "15.490724",
+        "208Pb/204Pb": "38.010575",
+        "176Hf/177Hf": "0.28323668",
+        "3He/4He (R/Ra)": "9.22",
+        "εHf": "16.0",
+        "εNd": "8.6",
+        "delta74": "2.8",
+        "delta84": "38.9",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 196
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.8487,
+          -37.9881
+        ]
+      },
+      "_featureIndex": 196
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW29-3",
+        "87Sr/86Sr": "0.70365577",
+        "143Nd/144Nd": "0.5130815",
+        "206Pb/204Pb": "18.18163",
+        "207Pb/204Pb": "15.52303",
+        "208Pb/204Pb": "38.05368",
+        "176Hf/177Hf": "0.28322817",
+        "εHf": "15.7",
+        "εNd": "8.7",
+        "delta74": "6.1",
+        "delta84": "44.5",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 197
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.10183,
+          -37.85237
+        ]
+      },
+      "_featureIndex": 197
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW29-2",
+        "Elevation(m)": "-2196",
+        "3He/4He (R/Ra)": "9.20",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 198
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.1123,
+          -37.83417
+        ]
+      },
+      "_featureIndex": 198
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR33#1",
+        "Elevation(m)": "-2940.00",
+        "3He/4He (R/Ra)": "9.47",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 199
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.19,
+          -37.86
+        ]
+      },
+      "_featureIndex": 199
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR33-1-2g",
+        "Elevation(m)": "-2940.00",
+        "3He/4He (R/Ra)": "9.27",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 200
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.19,
+          -37.86
+        ]
+      },
+      "_featureIndex": 200
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW29-6",
+        "87Sr/86Sr": "0.70293717",
+        "143Nd/144Nd": "0.51309832",
+        "206Pb/204Pb": "18.32549",
+        "207Pb/204Pb": "15.56395",
+        "208Pb/204Pb": "38.208469",
+        "176Hf/177Hf": "0.28321873",
+        "3He/4He (R/Ra)": "8.7",
+        "εHf": "15.3",
+        "εNd": "9.0",
+        "delta74": "8.6",
+        "delta84": "42.6",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 201
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.2549,
+          -37.907
+        ]
+      },
+      "_featureIndex": 201
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR34-2-1g",
+        "Elevation(m)": "-2750.00",
+        "3He/4He (R/Ra)": "9.18",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 202
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.29,
+          -37.88
+        ]
+      },
+      "_featureIndex": 202
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-075-001-1",
+        "87Sr/86Sr": "0.702923",
+        "143Nd/144Nd": "0.513171",
+        "206Pb/204Pb": "18.1444",
+        "207Pb/204Pb": "15.4871",
+        "208Pb/204Pb": "37.9598",
+        "176Hf/177Hf": "0.283256",
+        "εHf": "16.7",
+        "εNd": "10.4",
+        "delta74": "2.9",
+        "delta84": "39.6",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 203
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.34,
+          -37.87
+        ]
+      },
+      "_featureIndex": 203
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW29-1",
+        "87Sr/86Sr": "0.70361099",
+        "143Nd/144Nd": "0.5130121",
+        "206Pb/204Pb": "18.76937",
+        "207Pb/204Pb": "15.651308",
+        "208Pb/204Pb": "38.792742",
+        "176Hf/177Hf": "0.28322681",
+        "3He/4He (R/Ra)": "9.31",
+        "εHf": "15.6",
+        "εNd": "7.3",
+        "delta74": "12.6",
+        "delta84": "47.4",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 204
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.487518,
+          -37.753452
+        ]
+      },
+      "_featureIndex": 204
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW28-14",
+        "87Sr/86Sr": "0.70291028",
+        "143Nd/144Nd": "0.51311357",
+        "206Pb/204Pb": "18.183557",
+        "207Pb/204Pb": "15.561925",
+        "208Pb/204Pb": "38.121464",
+        "176Hf/177Hf": "0.28323254",
+        "εHf": "15.8",
+        "εNd": "9.3",
+        "delta74": "10.0",
+        "delta84": "51.1",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 205
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.63853,
+          -37.7819
+        ]
+      },
+      "_featureIndex": 205
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-017-002A",
+        "87Sr/86Sr": "0.703214",
+        "143Nd/144Nd": "0.513091",
+        "206Pb/204Pb": "18.228",
+        "207Pb/204Pb": "15.5",
+        "208Pb/204Pb": "38.032",
+        "εNd": "8.8",
+        "delta74": "3.3",
+        "delta84": "36.7",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 206
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.65,
+          -37.77
+        ]
+      },
+      "_featureIndex": 206
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW28-11",
+        "87Sr/86Sr": "0.70366442",
+        "143Nd/144Nd": "0.51309578",
+        "206Pb/204Pb": "18.223093",
+        "207Pb/204Pb": "15.499205",
+        "208Pb/204Pb": "38.04213",
+        "176Hf/177Hf": "0.28323596",
+        "εHf": "15.9",
+        "εNd": "8.9",
+        "delta74": "3.3",
+        "delta84": "38.3",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 207
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.65371,
+          -37.87682
+        ]
+      },
+      "_featureIndex": 207
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW28-7",
+        "87Sr/86Sr": "0.70433511",
+        "143Nd/144Nd": "0.5130996",
+        "206Pb/204Pb": "18.57769",
+        "207Pb/204Pb": "15.597831",
+        "208Pb/204Pb": "38.522049",
+        "176Hf/177Hf": "0.28321323",
+        "εHf": "15.1",
+        "εNd": "9.0",
+        "delta74": "9.3",
+        "delta84": "43.5",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 208
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.6613,
+          -37.8322
+        ]
+      },
+      "_featureIndex": 208
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW28-6",
+        "87Sr/86Sr": "0.70279209",
+        "143Nd/144Nd": "0.51318136",
+        "206Pb/204Pb": "18.201402",
+        "207Pb/204Pb": "15.645474",
+        "208Pb/204Pb": "38.296804",
+        "176Hf/177Hf": "0.2833199",
+        "εHf": "18.9",
+        "εNd": "10.6",
+        "delta74": "18.1",
+        "delta84": "66.4",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 209
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.687225,
+          -37.738555
+        ]
+      },
+      "_featureIndex": 209
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW28-5",
+        "87Sr/86Sr": "0.70318154",
+        "143Nd/144Nd": "0.5131236",
+        "206Pb/204Pb": "18.188576",
+        "207Pb/204Pb": "15.492382",
+        "208Pb/204Pb": "37.979651",
+        "176Hf/177Hf": "0.28321298",
+        "εHf": "15.1",
+        "εNd": "9.5",
+        "delta74": "3.0",
+        "delta84": "36.3",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 210
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.712453,
+          -37.851243
+        ]
+      },
+      "_featureIndex": 210
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-076-Glass",
+        "87Sr/86Sr": "0.702819",
+        "143Nd/144Nd": "0.513111",
+        "176Hf/177Hf": "0.283238",
+        "εHf": "16.0",
+        "εNd": "9.2",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 211
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.77,
+          -37.5
+        ]
+      },
+      "_featureIndex": 211
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW28-2",
+        "87Sr/86Sr": "0.70324795",
+        "143Nd/144Nd": "0.5130927",
+        "206Pb/204Pb": "18.208961",
+        "207Pb/204Pb": "15.576141",
+        "208Pb/204Pb": "38.183061",
+        "176Hf/177Hf": "0.28323755",
+        "εHf": "16.0",
+        "εNd": "8.9",
+        "delta74": "11.1",
+        "delta84": "54.1",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 212
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.7819,
+          -37.8463
+        ]
+      },
+      "_featureIndex": 212
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW28-1",
+        "87Sr/86Sr": "0.703137807",
+        "143Nd/144Nd": "0.51310384",
+        "206Pb/204Pb": "18.663397",
+        "207Pb/204Pb": "15.647794",
+        "208Pb/204Pb": "38.699868",
+        "176Hf/177Hf": "0.28324416",
+        "εHf": "16.2",
+        "εNd": "9.1",
+        "delta74": "13.4",
+        "delta84": "50.9",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 213
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.798817,
+          -37.803307
+        ]
+      },
+      "_featureIndex": 213
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-073-002",
+        "Elevation(m)": "-2800.00",
+        "87Sr/86Sr": "0.702722",
+        "143Nd/144Nd": "0.51312",
+        "206Pb/204Pb": "18.226",
+        "207Pb/204Pb": "15.4904",
+        "208Pb/204Pb": "37.9952",
+        "176Hf/177Hf": "0.283218",
+        "3He/4He (R/Ra)": "9.36",
+        "εHf": "15.3",
+        "εNd": "9.4",
+        "delta74": "2.4",
+        "delta84": "33.3",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 214
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.85,
+          -37.69
+        ]
+      },
+      "_featureIndex": 214
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-003",
+        "87Sr/86Sr": "0.70269",
+        "206Pb/204Pb": "18.137",
+        "207Pb/204Pb": "15.491",
+        "208Pb/204Pb": "37.894",
+        "delta74": "3.4",
+        "delta84": "33.9",
+        "Rerference": "GALE, 2013",
+        "_featureIndex": 215
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.882,
+          -37.71
+        ]
+      },
+      "_featureIndex": 215
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-003",
+        "87Sr/86Sr": "0.70279",
+        "143Nd/144Nd": "0.513108",
+        "206Pb/204Pb": "18.218",
+        "207Pb/204Pb": "15.496",
+        "208Pb/204Pb": "38.001",
+        "176Hf/177Hf": "0.283262",
+        "εHf": "16.9",
+        "εNd": "9.2",
+        "delta74": "3.0",
+        "delta84": "34.8",
+        "Rerference": "GALE, 2013",
+        "_featureIndex": 216
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.882,
+          -37.71
+        ]
+      },
+      "_featureIndex": 216
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR77-1-5",
+        "Elevation(m)": "-2250.00",
+        "3He/4He (R/Ra)": "9.81",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 217
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.21,
+          -37.69
+        ]
+      },
+      "_featureIndex": 217
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW27-4",
+        "Elevation(m)": "-1676",
+        "3He/4He (R/Ra)": "8.84",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 218
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.4642,
+          -37.6684
+        ]
+      },
+      "_featureIndex": 218
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-020-005-014-1",
+        "87Sr/86Sr": "0.703358",
+        "143Nd/144Nd": "0.512869",
+        "206Pb/204Pb": "18.664",
+        "207Pb/204Pb": "15.65",
+        "208Pb/204Pb": "38.722",
+        "εNd": "4.5",
+        "delta74": "13.6",
+        "delta84": "53.0",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 219
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.4671,
+          -37.6579
+        ]
+      },
+      "_featureIndex": 219
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-020-005-014-2",
+        "87Sr/86Sr": "0.703354",
+        "143Nd/144Nd": "0.512962",
+        "εNd": "6.3",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 220
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.4671,
+          -37.6579
+        ]
+      },
+      "_featureIndex": 220
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-020-005-012",
+        "87Sr/86Sr": "0.703448",
+        "143Nd/144Nd": "0.512976",
+        "206Pb/204Pb": "18.574",
+        "207Pb/204Pb": "15.595",
+        "208Pb/204Pb": "38.571",
+        "εNd": "6.6",
+        "delta74": "9.1",
+        "delta84": "48.8",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 221
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.47,
+          -37.66
+        ]
+      },
+      "_featureIndex": 221
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW27-6",
+        "87Sr/86Sr": "0.703010171",
+        "143Nd/144Nd": "0.51314633",
+        "206Pb/204Pb": "18.187092",
+        "207Pb/204Pb": "15.488451",
+        "208Pb/204Pb": "37.969392",
+        "176Hf/177Hf": "0.28323804",
+        "εHf": "16.0",
+        "εNd": "9.9",
+        "delta74": "2.6",
+        "delta84": "35.4",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 222
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.4703,
+          -37.6582
+        ]
+      },
+      "_featureIndex": 222
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW27-1",
+        "87Sr/86Sr": "0.702912906",
+        "143Nd/144Nd": "0.51313548",
+        "206Pb/204Pb": "18.179204",
+        "207Pb/204Pb": "15.552389",
+        "208Pb/204Pb": "38.057986",
+        "176Hf/177Hf": "0.28325957",
+        "3He/4He (R/Ra)": "8.58",
+        "εHf": "16.8",
+        "εNd": "9.7",
+        "delta74": "9.1",
+        "delta84": "45.2",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 223
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.4829,
+          -37.6591
+        ]
+      },
+      "_featureIndex": 223
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SWIR DR2-3",
+        "3He/4He (R/Ra)": "9.3",
+        "Rerference": "MARTY, 1999",
+        "_featureIndex": 224
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.52,
+          -37.69
+        ]
+      },
+      "_featureIndex": 224
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW26-4",
+        "87Sr/86Sr": "0.703034612",
+        "143Nd/144Nd": "0.51312191",
+        "206Pb/204Pb": "18.214682",
+        "207Pb/204Pb": "15.532795",
+        "208Pb/204Pb": "38.077806",
+        "176Hf/177Hf": "0.28324098",
+        "εHf": "16.1",
+        "εNd": "9.4",
+        "delta74": "6.7",
+        "delta84": "42.9",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 225
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.8529,
+          -37.6479
+        ]
+      },
+      "_featureIndex": 225
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-020-005-018",
+        "87Sr/86Sr": "0.703127",
+        "143Nd/144Nd": "0.513103",
+        "206Pb/204Pb": "18.182",
+        "207Pb/204Pb": "15.58",
+        "208Pb/204Pb": "38.16",
+        "εNd": "9.1",
+        "delta74": "11.8",
+        "delta84": "55.1",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 226
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.97,
+          -37.61
+        ]
+      },
+      "_featureIndex": 226
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-020-005-020",
+        "87Sr/86Sr": "0.703169",
+        "143Nd/144Nd": "0.513095",
+        "206Pb/204Pb": "18.361",
+        "207Pb/204Pb": "15.594",
+        "208Pb/204Pb": "38.254",
+        "εNd": "8.9",
+        "delta74": "11.3",
+        "delta84": "42.9",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 227
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.99,
+          -37.61
+        ]
+      },
+      "_featureIndex": 227
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW26-2",
+        "87Sr/86Sr": "0.70320756",
+        "143Nd/144Nd": "0.51310914",
+        "206Pb/204Pb": "18.591997",
+        "207Pb/204Pb": "15.623956",
+        "208Pb/204Pb": "38.574383",
+        "176Hf/177Hf": "0.28321801",
+        "εHf": "15.3",
+        "εNd": "9.2",
+        "delta74": "11.8",
+        "delta84": "47.0",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 228
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.9968,
+          -37.5545
+        ]
+      },
+      "_featureIndex": 228
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW26-1",
+        "87Sr/86Sr": "0.703275843",
+        "143Nd/144Nd": "0.513079",
+        "206Pb/204Pb": "18.209643",
+        "207Pb/204Pb": "15.526894",
+        "208Pb/204Pb": "38.067188",
+        "176Hf/177Hf": "0.28322212",
+        "εHf": "15.5",
+        "εNd": "8.6",
+        "delta74": "6.2",
+        "delta84": "42.5",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 229
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.0468,
+          -37.6289
+        ]
+      },
+      "_featureIndex": 229
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR72-1-2",
+        "Elevation(m)": "-2800.00",
+        "87Sr/86Sr": "0.7030",
+        "143Nd/144Nd": "0.51310",
+        "206Pb/204Pb": "18.20",
+        "207Pb/204Pb": "15.50",
+        "208Pb/204Pb": "38.03",
+        "176Hf/177Hf": "0.28323",
+        "3He/4He (R/Ra)": "9.56",
+        "εHf": "15.9",
+        "εNd": "9.0",
+        "delta74": "3.6",
+        "delta84": "39.9",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 230
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.16,
+          -37.47
+        ]
+      },
+      "_featureIndex": 230
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-071-00",
+        "87Sr/86Sr": "0.703067",
+        "143Nd/144Nd": "0.513109",
+        "206Pb/204Pb": "18.2224",
+        "207Pb/204Pb": "15.5073",
+        "208Pb/204Pb": "38.0605",
+        "εNd": "9.2",
+        "delta74": "4.1",
+        "delta84": "40.3",
+        "Rerference": "MEYZEN, 2005",
+        "_featureIndex": 231
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.39,
+          -37.38
+        ]
+      },
+      "_featureIndex": 231
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW25-4",
+        "87Sr/86Sr": "0.703085084",
+        "143Nd/144Nd": "0.51313828",
+        "206Pb/204Pb": "18.192324",
+        "207Pb/204Pb": "15.506973",
+        "208Pb/204Pb": "38.017923",
+        "176Hf/177Hf": "0.28325387",
+        "εHf": "16.6",
+        "εNd": "9.8",
+        "delta74": "4.4",
+        "delta84": "39.6",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 232
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.5628,
+          -37.4248
+        ]
+      },
+      "_featureIndex": 232
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SW25-2",
+        "87Sr/86Sr": "0.703064333",
+        "143Nd/144Nd": "0.51312812",
+        "206Pb/204Pb": "18.183301",
+        "207Pb/204Pb": "15.518126",
+        "208Pb/204Pb": "38.014602",
+        "176Hf/177Hf": "0.28323954",
+        "εHf": "16.1",
+        "εNd": "9.6",
+        "delta74": "5.6",
+        "delta84": "40.4",
+        "Rerference": "Yu et al., 2016",
+        "_featureIndex": 233
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.7079,
+          -37.4188
+        ]
+      },
+      "_featureIndex": 233
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-020-005-021",
+        "87Sr/86Sr": "0.703197",
+        "143Nd/144Nd": "0.513093",
+        "εNd": "8.9",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 234
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.72,
+          -37.47
+        ]
+      },
+      "_featureIndex": 234
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-070-001-1",
+        "87Sr/86Sr": "0.702987",
+        "143Nd/144Nd": "0.513154",
+        "206Pb/204Pb": "18.1003",
+        "207Pb/204Pb": "15.4952",
+        "208Pb/204Pb": "37.9263",
+        "176Hf/177Hf": "0.283252",
+        "εHf": "16.5",
+        "εNd": "10.1",
+        "delta74": "4.2",
+        "delta84": "41.6",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 235
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.81,
+          -37.33
+        ]
+      },
+      "_featureIndex": 235
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-019-008B",
+        "87Sr/86Sr": "0.703167",
+        "143Nd/144Nd": "0.513082",
+        "206Pb/204Pb": "18.197",
+        "207Pb/204Pb": "15.487",
+        "208Pb/204Pb": "37.988",
+        "εNd": "8.7",
+        "delta74": "2.3",
+        "delta84": "36.1",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 236
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          52.49,
+          -36.04
+        ]
+      },
+      "_featureIndex": 236
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-019-009A",
+        "87Sr/86Sr": "0.702946",
+        "143Nd/144Nd": "0.513097",
+        "206Pb/204Pb": "18.21",
+        "207Pb/204Pb": "15.49",
+        "208Pb/204Pb": "38.004",
+        "εNd": "9.0",
+        "delta74": "2.5",
+        "delta84": "36.1",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 237
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          52.49,
+          -36.04
+        ]
+      },
+      "_featureIndex": 237
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR68 tube",
+        "Elevation(m)": "-4050.00",
+        "87Sr/86Sr": "0.7030",
+        "143Nd/144Nd": "0.51307",
+        "206Pb/204Pb": "17.60",
+        "207Pb/204Pb": "15.43",
+        "208Pb/204Pb": "37.54",
+        "176Hf/177Hf": "0.28323",
+        "3He/4He (R/Ra)": "7.41",
+        "εHf": "15.8",
+        "εNd": "8.4",
+        "delta74": "3.1",
+        "delta84": "63.5",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 238
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          53.89,
+          -35.33
+        ]
+      },
+      "_featureIndex": 238
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR68 tube dup 2",
+        "Elevation(m)": "-4050.00",
+        "87Sr/86Sr": "0.7030",
+        "143Nd/144Nd": "0.51307",
+        "206Pb/204Pb": "17.60",
+        "207Pb/204Pb": "15.43",
+        "208Pb/204Pb": "37.54",
+        "176Hf/177Hf": "0.28323",
+        "3He/4He (R/Ra)": "7.28",
+        "εHf": "15.8",
+        "εNd": "8.4",
+        "delta74": "3.1",
+        "delta84": "63.5",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 239
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          53.89,
+          -35.33
+        ]
+      },
+      "_featureIndex": 239
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-068-Tube",
+        "87Sr/86Sr": "0.702973",
+        "143Nd/144Nd": "0.51307",
+        "206Pb/204Pb": "17.6015",
+        "207Pb/204Pb": "15.4278",
+        "208Pb/204Pb": "37.5365",
+        "176Hf/177Hf": "0.283234",
+        "εHf": "15.9",
+        "εNd": "8.4",
+        "delta74": "2.9",
+        "delta84": "62.9",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 240
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          53.89,
+          -35.3
+        ]
+      },
+      "_featureIndex": 240
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 66 varc",
+        "Elevation(m)": "-3700.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51308",
+        "206Pb/204Pb": "18.12",
+        "207Pb/204Pb": "15.49",
+        "208Pb/204Pb": "37.96",
+        "176Hf/177Hf": "0.28307",
+        "3He/4He (R/Ra)": "7.42",
+        "εHf": "10.0",
+        "εNd": "8.6",
+        "delta74": "3.5",
+        "delta84": "42.6",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 241
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          54.37,
+          -34.76
+        ]
+      },
+      "_featureIndex": 241
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-063-001",
+        "87Sr/86Sr": "0.702956",
+        "143Nd/144Nd": "0.513063",
+        "206Pb/204Pb": "17.7754",
+        "207Pb/204Pb": "15.4535",
+        "208Pb/204Pb": "37.6722",
+        "176Hf/177Hf": "0.283144",
+        "εHf": "12.7",
+        "εNd": "8.3",
+        "delta74": "3.6",
+        "delta84": "55.5",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 242
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          54.65,
+          -34.73
+        ]
+      },
+      "_featureIndex": 242
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-061-002-4",
+        "87Sr/86Sr": "0.702916",
+        "143Nd/144Nd": "0.513038",
+        "206Pb/204Pb": "17.8931",
+        "207Pb/204Pb": "15.4613",
+        "208Pb/204Pb": "37.73",
+        "176Hf/177Hf": "0.283123",
+        "εHf": "12.0",
+        "εNd": "7.8",
+        "delta74": "3.1",
+        "delta84": "47.0",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 243
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.13,
+          -34.36
+        ]
+      },
+      "_featureIndex": 243
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 60",
+        "Elevation(m)": "-3700.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51302",
+        "206Pb/204Pb": "17.84",
+        "207Pb/204Pb": "15.46",
+        "208Pb/204Pb": "37.70",
+        "176Hf/177Hf": "0.28313",
+        "3He/4He (R/Ra)": "7.99",
+        "εHf": "12.1",
+        "εNd": "7.5",
+        "delta74": "3.5",
+        "delta84": "50.4",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 244
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.27,
+          -34.37
+        ]
+      },
+      "_featureIndex": 244
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR60 dup",
+        "Elevation(m)": "-3700.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51302",
+        "206Pb/204Pb": "17.84",
+        "207Pb/204Pb": "15.46",
+        "208Pb/204Pb": "37.70",
+        "176Hf/177Hf": "0.28313",
+        "3He/4He (R/Ra)": "8.12",
+        "εHf": "12.1",
+        "εNd": "7.5",
+        "delta74": "3.5",
+        "delta84": "50.4",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 245
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.27,
+          -34.37
+        ]
+      },
+      "_featureIndex": 245
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-057-001-1",
+        "87Sr/86Sr": "0.702907",
+        "143Nd/144Nd": "0.513072",
+        "206Pb/204Pb": "18.1586",
+        "207Pb/204Pb": "15.4967",
+        "208Pb/204Pb": "37.9344",
+        "176Hf/177Hf": "0.283123",
+        "εHf": "12.0",
+        "εNd": "8.5",
+        "delta74": "3.7",
+        "delta84": "35.4",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 246
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.63,
+          -34.14
+        ]
+      },
+      "_featureIndex": 246
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-021-005-001",
+        "87Sr/86Sr": "0.703081",
+        "143Nd/144Nd": "0.513049",
+        "206Pb/204Pb": "17.929",
+        "207Pb/204Pb": "15.464",
+        "208Pb/204Pb": "37.61",
+        "εNd": "8.0",
+        "delta74": "2.9",
+        "delta84": "30.7",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 247
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.71,
+          -34.28
+        ]
+      },
+      "_featureIndex": 247
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 55-2-5",
+        "Elevation(m)": "-3600.00",
+        "87Sr/86Sr": "0.7032",
+        "143Nd/144Nd": "0.51304",
+        "206Pb/204Pb": "17.90",
+        "207Pb/204Pb": "15.47",
+        "208Pb/204Pb": "37.64",
+        "176Hf/177Hf": "0.28312",
+        "3He/4He (R/Ra)": "8.18",
+        "εHf": "11.7",
+        "εNd": "7.8",
+        "delta74": "3.9",
+        "delta84": "37.2",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 248
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.93,
+          -33.8
+        ]
+      },
+      "_featureIndex": 248
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 53-2-3",
+        "Elevation(m)": "-3400.00",
+        "87Sr/86Sr": "0.7027",
+        "143Nd/144Nd": "0.51312",
+        "206Pb/204Pb": "18.08",
+        "207Pb/204Pb": "15.48",
+        "208Pb/204Pb": "37.74",
+        "3He/4He (R/Ra)": "8.54",
+        "εNd": "9.4",
+        "delta74": "2.9",
+        "delta84": "25.4",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 249
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          56.03,
+          -33.86
+        ]
+      },
+      "_featureIndex": 249
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 52 vrac",
+        "Elevation(m)": "-3550.00",
+        "87Sr/86Sr": "0.7027",
+        "143Nd/144Nd": "0.51310",
+        "206Pb/204Pb": "18.13",
+        "207Pb/204Pb": "15.49",
+        "208Pb/204Pb": "37.77",
+        "176Hf/177Hf": "0.28314",
+        "3He/4He (R/Ra)": "9.32",
+        "εHf": "12.5",
+        "εNd": "9.0",
+        "delta74": "3.4",
+        "delta84": "22.4",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 250
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          56.13,
+          -33.79
+        ]
+      },
+      "_featureIndex": 250
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-002",
+        "87Sr/86Sr": "0.70269",
+        "143Nd/144Nd": "0.512981",
+        "206Pb/204Pb": "18.114",
+        "207Pb/204Pb": "15.505",
+        "208Pb/204Pb": "37.839",
+        "176Hf/177Hf": "0.283087",
+        "εHf": "10.7",
+        "εNd": "6.7",
+        "delta74": "5.0",
+        "delta84": "31.2",
+        "Rerference": "HAMELIN, 1985",
+        "_featureIndex": 251
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          56.27,
+          -33.76
+        ]
+      },
+      "_featureIndex": 251
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-051-001-1",
+        "87Sr/86Sr": "0.702822",
+        "143Nd/144Nd": "0.513073",
+        "206Pb/204Pb": "17.9864",
+        "207Pb/204Pb": "15.473",
+        "208Pb/204Pb": "37.6813",
+        "176Hf/177Hf": "0.283143",
+        "εHf": "12.7",
+        "εNd": "8.5",
+        "delta74": "3.2",
+        "delta84": "30.9",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 252
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          56.64,
+          -33.65
+        ]
+      },
+      "_featureIndex": 252
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0093-5-001",
+        "143Nd/144Nd": "0.512994",
+        "3He/4He (R/Ra)": "7.68",
+        "εNd": "6.9",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 253
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          56.95,
+          -32.85
+        ]
+      },
+      "_featureIndex": 253
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SHK0463-003",
+        "143Nd/144Nd": "0.513107",
+        "εNd": "9.1",
+        "Rerference": "COOGAN, 2004",
+        "_featureIndex": 254
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.07,
+          -31.9
+        ]
+      },
+      "_featureIndex": 254
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SHK0464-003",
+        "143Nd/144Nd": "0.513104",
+        "εNd": "9.1",
+        "Rerference": "COOGAN, 2004",
+        "_featureIndex": 255
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.1,
+          -31.98
+        ]
+      },
+      "_featureIndex": 255
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SHK0467-011",
+        "143Nd/144Nd": "0.5131",
+        "εNd": "9.0",
+        "Rerference": "COOGAN, 2004",
+        "_featureIndex": 256
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.18,
+          -32.63
+        ]
+      },
+      "_featureIndex": 256
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "CON2709-009-017",
+        "143Nd/144Nd": "0.51313",
+        "εNd": "9.6",
+        "Rerference": "COOGAN, 2004",
+        "_featureIndex": 257
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.21,
+          -31.981
+        ]
+      },
+      "_featureIndex": 257
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS0208-003-005C",
+        "143Nd/144Nd": "0.513101",
+        "εNd": "9.0",
+        "Rerference": "ROBINSON, 2001",
+        "_featureIndex": 258
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.26,
+          -31.36
+        ]
+      },
+      "_featureIndex": 258
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ODP0118-0735B-023R-004/122-128",
+        "87Sr/86Sr": "0.702756",
+        "143Nd/144Nd": "0.513145",
+        "εNd": "9.9",
+        "Rerference": "KEMPTON, 1991",
+        "_featureIndex": 259
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.266,
+          -32.7233
+        ]
+      },
+      "_featureIndex": 259
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "JCR0031-ROPOS-434-1A",
+        "143Nd/144Nd": "0.513105",
+        "εNd": "9.1",
+        "Rerference": "COOGAN, 2004",
+        "_featureIndex": 260
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.28,
+          -32.74
+        ]
+      },
+      "_featureIndex": 260
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SHK0462-006",
+        "143Nd/144Nd": "0.513032",
+        "εNd": "7.7",
+        "Rerference": "COOGAN, 2004",
+        "_featureIndex": 261
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.3,
+          -32.7
+        ]
+      },
+      "_featureIndex": 261
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 49",
+        "Elevation(m)": "-4050.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51313",
+        "206Pb/204Pb": "17.50",
+        "207Pb/204Pb": "15.41",
+        "208Pb/204Pb": "37.22",
+        "176Hf/177Hf": "0.28318",
+        "3He/4He (R/Ra)": "8.53",
+        "εHf": "14.0",
+        "εNd": "9.6",
+        "delta74": "2.2",
+        "delta84": "43.5",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 262
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.74,
+          -31.73
+        ]
+      },
+      "_featureIndex": 262
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 49 dup",
+        "Elevation(m)": "-4050.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51313",
+        "206Pb/204Pb": "17.50",
+        "207Pb/204Pb": "15.41",
+        "208Pb/204Pb": "37.22",
+        "176Hf/177Hf": "0.28318",
+        "3He/4He (R/Ra)": "8.55",
+        "εHf": "14.0",
+        "εNd": "9.6",
+        "delta74": "2.2",
+        "delta84": "43.5",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 263
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.74,
+          -31.73
+        ]
+      },
+      "_featureIndex": 263
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 49 dup WHOI",
+        "Elevation(m)": "-4050.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51313",
+        "206Pb/204Pb": "17.50",
+        "207Pb/204Pb": "15.41",
+        "208Pb/204Pb": "37.22",
+        "176Hf/177Hf": "0.28318",
+        "3He/4He (R/Ra)": "8.57",
+        "εHf": "14.0",
+        "εNd": "9.6",
+        "delta74": "2.2",
+        "delta84": "43.5",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 264
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.74,
+          -31.73
+        ]
+      },
+      "_featureIndex": 264
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0034-001",
+        "87Sr/86Sr": "0.70276",
+        "143Nd/144Nd": "0.513081",
+        "206Pb/204Pb": "17.497",
+        "207Pb/204Pb": "15.399",
+        "208Pb/204Pb": "37.181",
+        "εNd": "8.6",
+        "delta74": "1.1",
+        "delta84": "40.0",
+        "Rerference": "HAMELIN, 1985",
+        "_featureIndex": 265
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.842,
+          -31.693
+        ]
+      },
+      "_featureIndex": 265
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-048-Tube",
+        "87Sr/86Sr": "0.70295",
+        "143Nd/144Nd": "0.513096",
+        "206Pb/204Pb": "17.5312",
+        "207Pb/204Pb": "15.4134",
+        "208Pb/204Pb": "37.2579",
+        "εNd": "8.9",
+        "delta74": "2.2",
+        "delta84": "43.6",
+        "Rerference": "MEYZEN, 2005",
+        "_featureIndex": 266
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.97,
+          -31.69
+        ]
+      },
+      "_featureIndex": 266
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-046-001-6",
+        "87Sr/86Sr": "0.702707",
+        "143Nd/144Nd": "0.51317",
+        "206Pb/204Pb": "17.429",
+        "207Pb/204Pb": "15.3963",
+        "208Pb/204Pb": "37.1141",
+        "εNd": "10.4",
+        "delta74": "1.6",
+        "delta84": "41.5",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 267
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          58.61,
+          -31.19
+        ]
+      },
+      "_featureIndex": 267
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-017-004A",
+        "87Sr/86Sr": "0.702808",
+        "143Nd/144Nd": "0.513112",
+        "206Pb/204Pb": "17.558",
+        "207Pb/204Pb": "15.49",
+        "208Pb/204Pb": "37.363",
+        "εNd": "9.2",
+        "delta74": "9.6",
+        "delta84": "50.8",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 268
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          59.11,
+          -31.09
+        ]
+      },
+      "_featureIndex": 268
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-042-glass",
+        "87Sr/86Sr": "0.702723",
+        "143Nd/144Nd": "0.513167",
+        "206Pb/204Pb": "17.404",
+        "207Pb/204Pb": "15.398",
+        "208Pb/204Pb": "37.0847",
+        "176Hf/177Hf": "0.283211",
+        "εHf": "15.1",
+        "εNd": "10.3",
+        "delta74": "2.0",
+        "delta84": "41.6",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 269
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          59.12,
+          -31.05
+        ]
+      },
+      "_featureIndex": 269
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-041-001-1",
+        "87Sr/86Sr": "0.702824",
+        "143Nd/144Nd": "0.513157",
+        "206Pb/204Pb": "17.3631",
+        "207Pb/204Pb": "15.3923",
+        "208Pb/204Pb": "37.0698",
+        "176Hf/177Hf": "0.283225",
+        "εHf": "15.6",
+        "εNd": "10.1",
+        "delta74": "1.9",
+        "delta84": "45.1",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 270
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          59.16,
+          -30.92
+        ]
+      },
+      "_featureIndex": 270
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 38-1-1",
+        "Elevation(m)": "-4050.00",
+        "87Sr/86Sr": "0.7028",
+        "143Nd/144Nd": "0.51313",
+        "206Pb/204Pb": "17.42",
+        "207Pb/204Pb": "15.40",
+        "208Pb/204Pb": "37.11",
+        "176Hf/177Hf": "0.28321",
+        "3He/4He (R/Ra)": "8.29",
+        "εHf": "15.0",
+        "εNd": "9.6",
+        "delta74": "2.1",
+        "delta84": "42.2",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 271
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          59.34,
+          -30.91
+        ]
+      },
+      "_featureIndex": 271
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-036-Tube",
+        "87Sr/86Sr": "0.702774",
+        "143Nd/144Nd": "0.51316",
+        "206Pb/204Pb": "17.4323",
+        "207Pb/204Pb": "15.4014",
+        "208Pb/204Pb": "37.1355",
+        "εNd": "10.2",
+        "delta74": "2.1",
+        "delta84": "43.3",
+        "Rerference": "MEYZEN, 2005",
+        "_featureIndex": 272
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          59.56,
+          -30.66
+        ]
+      },
+      "_featureIndex": 272
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-035-pot4",
+        "87Sr/86Sr": "0.702953",
+        "143Nd/144Nd": "0.513118",
+        "206Pb/204Pb": "17.4018",
+        "207Pb/204Pb": "15.4006",
+        "208Pb/204Pb": "37.1097",
+        "εNd": "9.4",
+        "delta74": "2.3",
+        "delta84": "44.4",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 273
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          59.91,
+          -30.52
+        ]
+      },
+      "_featureIndex": 273
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-034-001-3",
+        "87Sr/86Sr": "0.702659",
+        "143Nd/144Nd": "0.513215",
+        "206Pb/204Pb": "17.4023",
+        "207Pb/204Pb": "15.3962",
+        "208Pb/204Pb": "37.0778",
+        "176Hf/177Hf": "0.283205",
+        "εHf": "14.9",
+        "εNd": "11.3",
+        "delta74": "1.9",
+        "delta84": "41.1",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 274
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          60.16,
+          -30.44
+        ]
+      },
+      "_featureIndex": 274
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR32-4-3",
+        "Elevation(m)": "-4330.00",
+        "87Sr/86Sr": "0.7027",
+        "143Nd/144Nd": "0.51317",
+        "206Pb/204Pb": "17.45",
+        "207Pb/204Pb": "15.40",
+        "208Pb/204Pb": "37.13",
+        "176Hf/177Hf": "0.28323",
+        "3He/4He (R/Ra)": "7.98",
+        "εHf": "15.7",
+        "εNd": "10.4",
+        "delta74": "1.7",
+        "delta84": "40.6",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 275
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          60.5,
+          -30.26
+        ]
+      },
+      "_featureIndex": 275
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 29-1-1",
+        "Elevation(m)": "-3600.00",
+        "87Sr/86Sr": "0.7027",
+        "143Nd/144Nd": "0.51310",
+        "206Pb/204Pb": "17.68",
+        "207Pb/204Pb": "15.43",
+        "208Pb/204Pb": "37.54",
+        "176Hf/177Hf": "0.28318",
+        "3He/4He (R/Ra)": "7.48",
+        "εHf": "13.9",
+        "εNd": "9.0",
+        "delta74": "2.2",
+        "delta84": "53.8",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 276
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          61.32,
+          -28.95
+        ]
+      },
+      "_featureIndex": 276
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR29-3-2",
+        "Elevation(m)": "-3600.00",
+        "87Sr/86Sr": "0.7027",
+        "143Nd/144Nd": "0.51310",
+        "206Pb/204Pb": "17.68",
+        "207Pb/204Pb": "15.43",
+        "208Pb/204Pb": "37.54",
+        "176Hf/177Hf": "0.28318",
+        "3He/4He (R/Ra)": "7.69",
+        "εHf": "14.0",
+        "εNd": "9.0",
+        "delta74": "2.2",
+        "delta84": "53.8",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 277
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          61.32,
+          -27.95
+        ]
+      },
+      "_featureIndex": 277
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-028-002-5",
+        "87Sr/86Sr": "0.702747",
+        "143Nd/144Nd": "0.513123",
+        "206Pb/204Pb": "17.7461",
+        "207Pb/204Pb": "15.4337",
+        "208Pb/204Pb": "37.5893",
+        "176Hf/177Hf": "0.283179",
+        "εHf": "13.9",
+        "εNd": "9.5",
+        "delta74": "1.9",
+        "delta84": "50.7",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 278
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          61.44,
+          -28.95
+        ]
+      },
+      "_featureIndex": 278
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-027-tube",
+        "87Sr/86Sr": "0.702748",
+        "143Nd/144Nd": "0.513148",
+        "206Pb/204Pb": "17.9282",
+        "207Pb/204Pb": "15.4535",
+        "208Pb/204Pb": "37.7838",
+        "εNd": "9.9",
+        "delta74": "1.9",
+        "delta84": "48.2",
+        "Rerference": "MEYZEN, 2005",
+        "_featureIndex": 279
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          61.65,
+          -28.8
+        ]
+      },
+      "_featureIndex": 279
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MELANTP-111-010",
+        "87Sr/86Sr": "0.70266",
+        "143Nd/144Nd": "0.5131",
+        "206Pb/204Pb": "17.846",
+        "207Pb/204Pb": "15.439",
+        "208Pb/204Pb": "37.727",
+        "3He/4He (R/Ra)": "8.11",
+        "εNd": "9.0",
+        "delta74": "1.3",
+        "delta84": "52.4",
+        "Rerference": "GALE, 2013",
+        "_featureIndex": 280
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          61.9,
+          -28.85
+        ]
+      },
+      "_featureIndex": 280
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-026-001",
+        "87Sr/86Sr": "0.702868",
+        "143Nd/144Nd": "0.513055",
+        "206Pb/204Pb": "17.9929",
+        "207Pb/204Pb": "15.4874",
+        "208Pb/204Pb": "37.9842",
+        "176Hf/177Hf": "0.283162",
+        "εHf": "13.3",
+        "εNd": "8.1",
+        "delta74": "4.6",
+        "delta84": "60.4",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 281
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          61.93,
+          -28.8
+        ]
+      },
+      "_featureIndex": 281
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-020-001-1",
+        "87Sr/86Sr": "0.70271",
+        "143Nd/144Nd": "0.513152",
+        "206Pb/204Pb": "18.0283",
+        "207Pb/204Pb": "15.4642",
+        "208Pb/204Pb": "37.8426",
+        "176Hf/177Hf": "0.283196",
+        "εHf": "14.5",
+        "εNd": "10.0",
+        "delta74": "1.9",
+        "delta84": "41.9",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 282
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          63.66,
+          -27.98
+        ]
+      },
+      "_featureIndex": 282
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-019-001-3",
+        "87Sr/86Sr": "0.702819",
+        "143Nd/144Nd": "0.51306",
+        "206Pb/204Pb": "17.7962",
+        "207Pb/204Pb": "15.4289",
+        "208Pb/204Pb": "37.6485",
+        "176Hf/177Hf": "0.283181",
+        "εHf": "14.0",
+        "εNd": "8.2",
+        "delta74": "0.9",
+        "delta84": "50.6",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 283
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          63.75,
+          -27.86
+        ]
+      },
+      "_featureIndex": 283
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 16",
+        "Elevation(m)": "-2670.00",
+        "87Sr/86Sr": "0.7028",
+        "143Nd/144Nd": "0.51307",
+        "206Pb/204Pb": "17.80",
+        "207Pb/204Pb": "15.43",
+        "208Pb/204Pb": "37.63",
+        "3He/4He (R/Ra)": "7.27",
+        "εNd": "8.4",
+        "delta74": "0.9",
+        "delta84": "48.3",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 284
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          63.91,
+          -28.85
+        ]
+      },
+      "_featureIndex": 284
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-019-007",
+        "87Sr/86Sr": "0.702942",
+        "143Nd/144Nd": "0.513061",
+        "206Pb/204Pb": "17.793",
+        "207Pb/204Pb": "15.424",
+        "208Pb/204Pb": "37.612",
+        "εNd": "8.3",
+        "delta74": "0.4",
+        "delta84": "47.3",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 285
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          63.94,
+          -27.85
+        ]
+      },
+      "_featureIndex": 285
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DY0115-017-005A",
+        "87Sr/86Sr": "0.702949",
+        "143Nd/144Nd": "0.513057",
+        "206Pb/204Pb": "18.001",
+        "207Pb/204Pb": "15.615",
+        "208Pb/204Pb": "38.067",
+        "εNd": "8.2",
+        "delta74": "17.3",
+        "delta84": "67.7",
+        "Rerference": "YANG YANG, 2013",
+        "_featureIndex": 286
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          63.94,
+          -27.84
+        ]
+      },
+      "_featureIndex": 286
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-012-003-2",
+        "87Sr/86Sr": "0.702904",
+        "143Nd/144Nd": "0.513042",
+        "206Pb/204Pb": "17.8856",
+        "207Pb/204Pb": "15.448",
+        "208Pb/204Pb": "37.7925",
+        "εNd": "7.9",
+        "delta74": "1.8",
+        "delta84": "54.2",
+        "Rerference": "MEYZEN, 2005",
+        "_featureIndex": 287
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.35,
+          -27.74
+        ]
+      },
+      "_featureIndex": 287
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 12-1-2",
+        "Elevation(m)": "-5300.00",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51308",
+        "206Pb/204Pb": "17.89",
+        "207Pb/204Pb": "15.45",
+        "208Pb/204Pb": "37.80",
+        "176Hf/177Hf": "0.28317",
+        "3He/4He (R/Ra)": "7.81",
+        "εHf": "13.8",
+        "εNd": "8.6",
+        "delta74": "2.0",
+        "delta84": "54.4",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 288
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.36,
+          -27.75
+        ]
+      },
+      "_featureIndex": 288
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-013-tube",
+        "87Sr/86Sr": "0.703052",
+        "143Nd/144Nd": "0.513027",
+        "206Pb/204Pb": "17.8093",
+        "207Pb/204Pb": "15.4487",
+        "208Pb/204Pb": "37.7479",
+        "176Hf/177Hf": "0.283159",
+        "εHf": "13.2",
+        "εNd": "7.6",
+        "delta74": "2.7",
+        "delta84": "58.9",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 289
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.42,
+          -27.78
+        ]
+      },
+      "_featureIndex": 289
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-011-001-2",
+        "87Sr/86Sr": "0.703626",
+        "143Nd/144Nd": "0.512911",
+        "206Pb/204Pb": "18.0428",
+        "207Pb/204Pb": "15.4991",
+        "208Pb/204Pb": "38.1612",
+        "176Hf/177Hf": "0.283054",
+        "εHf": "9.5",
+        "εNd": "5.3",
+        "delta74": "5.2",
+        "delta84": "72.0",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 290
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.53,
+          -27.63
+        ]
+      },
+      "_featureIndex": 290
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-011-001-9",
+        "87Sr/86Sr": "0.70361",
+        "143Nd/144Nd": "0.512859",
+        "206Pb/204Pb": "18.0385",
+        "207Pb/204Pb": "15.4936",
+        "208Pb/204Pb": "38.1459",
+        "εNd": "4.3",
+        "delta74": "4.7",
+        "delta84": "71.0",
+        "Rerference": "MEYZEN, 2005",
+        "_featureIndex": 291
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.53,
+          -27.63
+        ]
+      },
+      "_featureIndex": 291
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS0208-010-031A",
+        "143Nd/144Nd": "0.513015",
+        "εNd": "7.4",
+        "Rerference": "ROBINSON, 2001",
+        "_featureIndex": 292
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.683,
+          -27.6
+        ]
+      },
+      "_featureIndex": 292
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS0208-010-033A",
+        "143Nd/144Nd": "0.513037",
+        "εNd": "7.8",
+        "Rerference": "ROBINSON, 2001",
+        "_featureIndex": 293
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.683,
+          -27.6
+        ]
+      },
+      "_featureIndex": 293
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0093-5-006-003",
+        "87Sr/86Sr": "0.70294",
+        "143Nd/144Nd": "0.51307",
+        "206Pb/204Pb": "18.019",
+        "207Pb/204Pb": "15.516",
+        "208Pb/204Pb": "37.728",
+        "εNd": "8.4",
+        "delta74": "7.2",
+        "delta84": "31.6",
+        "Rerference": "PRICE, 1986",
+        "_featureIndex": 294
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.83,
+          -27.6
+        ]
+      },
+      "_featureIndex": 294
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0093-5-006-004",
+        "87Sr/86Sr": "0.70291",
+        "143Nd/144Nd": "0.51304",
+        "206Pb/204Pb": "17.735",
+        "207Pb/204Pb": "15.505",
+        "208Pb/204Pb": "37.71",
+        "εNd": "7.8",
+        "delta74": "9.2",
+        "delta84": "64.1",
+        "Rerference": "PRICE, 1986",
+        "_featureIndex": 295
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.83,
+          -27.6
+        ]
+      },
+      "_featureIndex": 295
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "AII0093-5-006-013",
+        "87Sr/86Sr": "0.70291",
+        "143Nd/144Nd": "0.513042",
+        "206Pb/204Pb": "17.837",
+        "207Pb/204Pb": "15.445",
+        "208Pb/204Pb": "37.716",
+        "εNd": "7.9",
+        "delta74": "2.0",
+        "delta84": "52.4",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 296
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.83,
+          -27.6
+        ]
+      },
+      "_featureIndex": 296
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS0208-013-040M",
+        "143Nd/144Nd": "0.51304",
+        "εNd": "7.8",
+        "Rerference": "ROBINSON, 2001",
+        "_featureIndex": 297
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.878,
+          -27.55
+        ]
+      },
+      "_featureIndex": 297
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS0208-012-037F",
+        "143Nd/144Nd": "0.513055",
+        "εNd": "8.1",
+        "Rerference": "ROBINSON, 2001",
+        "_featureIndex": 298
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.94,
+          -27.613
+        ]
+      },
+      "_featureIndex": 298
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS0208-012-037G",
+        "143Nd/144Nd": "0.513148",
+        "εNd": "9.9",
+        "Rerference": "ROBINSON, 2001",
+        "_featureIndex": 299
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.94,
+          -27.613
+        ]
+      },
+      "_featureIndex": 299
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-010-001-4",
+        "87Sr/86Sr": "0.702889",
+        "143Nd/144Nd": "0.513065",
+        "206Pb/204Pb": "17.8274",
+        "207Pb/204Pb": "15.4469",
+        "208Pb/204Pb": "37.7084",
+        "176Hf/177Hf": "0.283173",
+        "εHf": "13.7",
+        "εNd": "8.3",
+        "delta74": "2.3",
+        "delta84": "52.8",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 300
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          65.98,
+          -27.57
+        ]
+      },
+      "_featureIndex": 300
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS0208-016-046G",
+        "143Nd/144Nd": "0.513",
+        "εNd": "7.1",
+        "Rerference": "ROBINSON, 2001",
+        "_featureIndex": 301
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          66.027,
+          -27.637
+        ]
+      },
+      "_featureIndex": 301
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS0208-014-041C",
+        "143Nd/144Nd": "0.513008",
+        "εNd": "7.2",
+        "Rerference": "ROBINSON, 2001",
+        "_featureIndex": 302
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          66.16,
+          -27.555
+        ]
+      },
+      "_featureIndex": 302
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR9-2-3",
+        "Elevation(m)": "-4000.00",
+        "87Sr/86Sr": "0.7031",
+        "143Nd/144Nd": "0.51302",
+        "206Pb/204Pb": "17.92",
+        "207Pb/204Pb": "15.46",
+        "208Pb/204Pb": "37.84",
+        "176Hf/177Hf": "0.28315",
+        "3He/4He (R/Ra)": "7.62",
+        "εHf": "12.8",
+        "εNd": "7.5",
+        "delta74": "2.6",
+        "delta84": "54.8",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 303
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          66.26,
+          -27.43
+        ]
+      },
+      "_featureIndex": 303
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-008-002",
+        "87Sr/86Sr": "0.702966",
+        "143Nd/144Nd": "0.51305",
+        "206Pb/204Pb": "17.7783",
+        "207Pb/204Pb": "15.441",
+        "208Pb/204Pb": "37.6898",
+        "176Hf/177Hf": "0.283174",
+        "εHf": "13.8",
+        "εNd": "8.0",
+        "delta74": "2.3",
+        "delta84": "56.9",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 304
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          66.34,
+          -27.34
+        ]
+      },
+      "_featureIndex": 304
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "*JC0300201D1",
+        "176Hf/177Hf": "0.283186",
+        "εHf": "14.2",
+        "Rerference": "CHAUVEL, 2001",
+        "_featureIndex": 305
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          66.429,
+          -27.403
+        ]
+      },
+      "_featureIndex": 305
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "CHRRODR-3-001-001",
+        "87Sr/86Sr": "0.702855",
+        "143Nd/144Nd": "0.513016",
+        "206Pb/204Pb": "17.83",
+        "207Pb/204Pb": "15.45",
+        "208Pb/204Pb": "37.74",
+        "εNd": "7.4",
+        "delta74": "2.6",
+        "delta84": "55.7",
+        "Rerference": "AREVALO JR, 2008",
+        "_featureIndex": 306
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          66.429,
+          -27.403
+        ]
+      },
+      "_featureIndex": 306
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-007-002-5",
+        "87Sr/86Sr": "0.703234",
+        "143Nd/144Nd": "0.513013",
+        "206Pb/204Pb": "18.0735",
+        "207Pb/204Pb": "15.4831",
+        "208Pb/204Pb": "38.0759",
+        "176Hf/177Hf": "0.283112",
+        "εHf": "11.6",
+        "εNd": "7.3",
+        "delta74": "3.3",
+        "delta84": "59.8",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 307
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          66.64,
+          -27.36
+        ]
+      },
+      "_featureIndex": 307
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DR 6-4-1",
+        "Elevation(m)": "-4500.00",
+        "87Sr/86Sr": "0.7031",
+        "143Nd/144Nd": "0.51302",
+        "206Pb/204Pb": "17.89",
+        "207Pb/204Pb": "15.46",
+        "208Pb/204Pb": "37.83",
+        "176Hf/177Hf": "0.28316",
+        "3He/4He (R/Ra)": "7.53",
+        "εHf": "13.3",
+        "εNd": "7.5",
+        "delta74": "3.0",
+        "delta84": "57.4",
+        "Rerference": "Gautheron et al., 2015",
+        "_featureIndex": 308
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          67.22,
+          -26.98
+        ]
+      },
+      "_featureIndex": 308
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-005-Glass",
+        "87Sr/86Sr": "0.702867",
+        "143Nd/144Nd": "0.513062",
+        "εNd": "8.3",
+        "Rerference": "MEYZEN, 2005",
+        "_featureIndex": 309
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          67.32,
+          -26.89
+        ]
+      },
+      "_featureIndex": 309
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ARGCIRC-110-013",
+        "87Sr/86Sr": "0.70286",
+        "143Nd/144Nd": "0.513066",
+        "206Pb/204Pb": "17.978",
+        "207Pb/204Pb": "15.461",
+        "208Pb/204Pb": "37.797",
+        "εNd": "8.3",
+        "delta74": "2.1",
+        "delta84": "43.5",
+        "Rerference": "MAHONEY, 1989",
+        "_featureIndex": 310
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          67.53,
+          -26.62
+        ]
+      },
+      "_featureIndex": 310
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ARGCIRC-110-016",
+        "87Sr/86Sr": "0.70284",
+        "143Nd/144Nd": "0.513045",
+        "3He/4He (R/Ra)": "8.09",
+        "εNd": "7.9",
+        "Rerference": "GALE, 2013",
+        "_featureIndex": 311
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          67.53,
+          -26.62
+        ]
+      },
+      "_featureIndex": 311
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-003-002-1",
+        "87Sr/86Sr": "0.702896",
+        "143Nd/144Nd": "0.513069",
+        "206Pb/204Pb": "17.9716",
+        "207Pb/204Pb": "15.458",
+        "208Pb/204Pb": "37.8186",
+        "176Hf/177Hf": "0.283158",
+        "εHf": "13.2",
+        "εNd": "8.4",
+        "delta74": "1.9",
+        "delta84": "46.4",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 312
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          67.98,
+          -26.5
+        ]
+      },
+      "_featureIndex": 312
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-002-001-1",
+        "Elevation(m)": "-3650.00",
+        "87Sr/86Sr": "0.702954",
+        "143Nd/144Nd": "0.513042",
+        "206Pb/204Pb": "17.9881",
+        "207Pb/204Pb": "15.4594",
+        "208Pb/204Pb": "37.8052",
+        "176Hf/177Hf": "0.283157",
+        "3He/4He (R/Ra)": "7.78",
+        "εHf": "13.2",
+        "εNd": "7.9",
+        "delta74": "1.8",
+        "delta84": "43.1",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 313
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          68.44,
+          -26.23
+        ]
+      },
+      "_featureIndex": 313
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-002-Glass",
+        "87Sr/86Sr": "0.702914",
+        "143Nd/144Nd": "0.513103",
+        "206Pb/204Pb": "17.9841",
+        "207Pb/204Pb": "15.4557",
+        "208Pb/204Pb": "37.7952",
+        "εNd": "9.1",
+        "delta74": "1.5",
+        "delta84": "42.5",
+        "Rerference": "MEYZEN, 2005",
+        "_featureIndex": 314
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          68.44,
+          -26.23
+        ]
+      },
+      "_featureIndex": 314
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0107-001-001-1",
+        "87Sr/86Sr": "0.702964",
+        "143Nd/144Nd": "0.513034",
+        "206Pb/204Pb": "18.1426",
+        "207Pb/204Pb": "15.4674",
+        "208Pb/204Pb": "37.9857",
+        "176Hf/177Hf": "0.283143",
+        "εHf": "12.7",
+        "εNd": "7.7",
+        "delta74": "1.0",
+        "delta84": "42.4",
+        "Rerference": "MEYZEN, 2007",
+        "_featureIndex": 315
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          68.73,
+          -26.09
+        ]
+      },
+      "_featureIndex": 315
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "*JC217D1(3)",
+        "Elevation(m)": "-2700",
+        "3He/4He (R/Ra)": "8",
+        "Rerference": "MARTY, 1999",
+        "_featureIndex": 316
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          69.94,
+          -25.61
+        ]
+      },
+      "_featureIndex": 316
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-001-A1",
+        "87Sr/86Sr": "0.70307",
+        "143Nd/144Nd": "0.51304",
+        "3He/4He (R/Ra)": "8.43",
+        "εNd": "7.8",
+        "Rerference": "NISHIO, 2007",
+        "_featureIndex": 317
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          69.9807,
+          -25.381
+        ]
+      },
+      "_featureIndex": 317
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-001-F1",
+        "3He/4He (R/Ra)": "8.13",
+        "Rerference": "NISHIO, 1999",
+        "_featureIndex": 318
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          69.9807,
+          -25.381
+        ]
+      },
+      "_featureIndex": 318
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "*JC0300703D1",
+        "Elevation(m)": "-3100",
+        "3He/4He (R/Ra)": "8",
+        "Rerference": "MARTY, 1999",
+        "_featureIndex": 319
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.02,
+          -25.58
+        ]
+      },
+      "_featureIndex": 319
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-009-A1",
+        "87Sr/86Sr": "0.7031",
+        "143Nd/144Nd": "0.513087",
+        "εNd": "8.8",
+        "Rerference": "NISHIO, 2007",
+        "_featureIndex": 320
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.0275,
+          -25.509
+        ]
+      },
+      "_featureIndex": 320
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-009-G1",
+        "3He/4He (R/Ra)": "7.96",
+        "Rerference": "NISHIO, 1999",
+        "_featureIndex": 321
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.0275,
+          -25.509
+        ]
+      },
+      "_featureIndex": 321
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0023-003-001",
+        "87Sr/86Sr": "0.703135",
+        "143Nd/144Nd": "0.513059",
+        "206Pb/204Pb": "17.316",
+        "207Pb/204Pb": "15.452",
+        "208Pb/204Pb": "37.29",
+        "εNd": "8.2",
+        "delta74": "8.4",
+        "delta84": "72.8",
+        "Rerference": "AREVALO JR, 2008",
+        "_featureIndex": 322
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.064,
+          -25.385
+        ]
+      },
+      "_featureIndex": 322
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-025-A1",
+        "Elevation(m)": "-4271",
+        "3He/4He (R/Ra)": "8.34",
+        "Rerference": "KUMAGAI, 1998",
+        "_featureIndex": 323
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.07,
+          -25.58
+        ]
+      },
+      "_featureIndex": 323
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-025-A1-1",
+        "Elevation(m)": "-4271",
+        "3He/4He (R/Ra)": "7.08",
+        "Rerference": "KUMAGAI, 1998",
+        "_featureIndex": 324
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.07,
+          -25.58
+        ]
+      },
+      "_featureIndex": 324
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-025-A1-2",
+        "Elevation(m)": "-4271",
+        "3He/4He (R/Ra)": "7.12",
+        "Rerference": "KUMAGAI, 1998",
+        "_featureIndex": 325
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.07,
+          -25.58
+        ]
+      },
+      "_featureIndex": 325
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-025-A1-3",
+        "Elevation(m)": "-4271",
+        "3He/4He (R/Ra)": "7.14",
+        "Rerference": "KUMAGAI, 1998",
+        "_featureIndex": 326
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.07,
+          -25.58
+        ]
+      },
+      "_featureIndex": 326
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "HAK9303-025-A2",
+        "Elevation(m)": "-4271",
+        "3He/4He (R/Ra)": "8.41",
+        "Rerference": "NISHIO, 1999",
+        "_featureIndex": 327
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          70.07,
+          -25.58
+        ]
+      },
+      "_featureIndex": 327
+    }
+  ]
+}

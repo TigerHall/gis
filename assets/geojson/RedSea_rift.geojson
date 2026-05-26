@@ -1,0 +1,2885 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "*MBROS-8",
+        "ROCK NAME": "DIABASE",
+        "References": "Brueckner et al., 1988",
+        "87Sr/86Sr": "0.70357",
+        "143Nd/144Nd": "0.51309",
+        "_featureIndex": 0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35,
+          27
+        ]
+      },
+      "_featureIndex": 0
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0031-272",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70308",
+        "_featureIndex": 1
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.3812,
+          26.2647
+        ]
+      },
+      "_featureIndex": 1
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MET31/2-R009-002",
+        "ROCK NAME": "BASALT",
+        "References": "Haase et al., 2000",
+        "87Sr/86Sr": "0.703089",
+        "143Nd/144Nd": "0.513114",
+        "_featureIndex": 2
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.313,
+          26.252
+        ]
+      },
+      "_featureIndex": 2
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MET31/2-R009-001",
+        "ROCK NAME": "BASALT",
+        "References": "Haase et al., 2000",
+        "87Sr/86Sr": "0.703083",
+        "143Nd/144Nd": "0.51311",
+        "_featureIndex": 3
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.313,
+          26.252
+        ]
+      },
+      "_featureIndex": 3
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MET31/2-002-002",
+        "ROCK NAME": "BASALT",
+        "References": "Haase et al., 2000",
+        "87Sr/86Sr": "0.703046",
+        "143Nd/144Nd": "0.513098",
+        "_featureIndex": 4
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.35,
+          26.233
+        ]
+      },
+      "_featureIndex": 4
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MET31/2-002-001",
+        "ROCK NAME": "BASALT",
+        "References": "Haase et al., 2000",
+        "87Sr/86Sr": "0.703077",
+        "143Nd/144Nd": "0.513098",
+        "_featureIndex": 5
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.35,
+          26.233
+        ]
+      },
+      "_featureIndex": 5
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MET31/2-003-001",
+        "ROCK NAME": "BASALT",
+        "References": "Haase et al., 2000",
+        "87Sr/86Sr": "0.703134",
+        "143Nd/144Nd": "0.513089",
+        "_featureIndex": 6
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.3647,
+          26.227
+        ]
+      },
+      "_featureIndex": 6
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MET31/2-001-001",
+        "ROCK NAME": "BASALT",
+        "References": "Haase et al., 2000",
+        "87Sr/86Sr": "0.703148",
+        "143Nd/144Nd": "0.513086",
+        "_featureIndex": 7
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.357,
+          26.223
+        ]
+      },
+      "_featureIndex": 7
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MET31/2-001-003",
+        "ROCK NAME": "BASALT",
+        "References": "Haase et al., 2000",
+        "87Sr/86Sr": "0.703156",
+        "143Nd/144Nd": "0.513072",
+        "_featureIndex": 8
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.357,
+          26.223
+        ]
+      },
+      "_featureIndex": 8
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "MET31/2-G088",
+        "ROCK NAME": "BASALT",
+        "References": "Haase et al., 2000",
+        "87Sr/86Sr": "0.703108",
+        "143Nd/144Nd": "0.513086",
+        "_featureIndex": 9
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.357,
+          26.222
+        ]
+      },
+      "_featureIndex": 9
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SM 126",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "206Pb/204Pb": "18.271",
+        "207Pb/204Pb": "15.594",
+        "208Pb/204Pb": "37.978",
+        "Δ7/4": "12.2",
+        "Δ8/4": "26.1",
+        "_featureIndex": 10
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.3,
+          26.2
+        ]
+      },
+      "_featureIndex": 10
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SM 126",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70308",
+        "206Pb/204Pb": "18.266",
+        "207Pb/204Pb": "15.595",
+        "208Pb/204Pb": "37.98",
+        "Δ7/4": "12.4",
+        "Δ8/4": "26.9",
+        "_featureIndex": 11
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.3,
+          26.2
+        ]
+      },
+      "_featureIndex": 11
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0030-053-RM17",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70331",
+        "_featureIndex": 12
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.143,
+          25.807
+        ]
+      },
+      "_featureIndex": 12
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-370",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70311",
+        "_featureIndex": 13
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.087,
+          25.548
+        ]
+      },
+      "_featureIndex": 13
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-370",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.703121",
+        "143Nd/144Nd": "0.51307",
+        "206Pb/204Pb": "18.859",
+        "207Pb/204Pb": "15.561",
+        "208Pb/204Pb": "38.77",
+        "Δ7/4": "2.6",
+        "Δ8/4": "34.2",
+        "_featureIndex": 14
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.087,
+          25.548
+        ]
+      },
+      "_featureIndex": 14
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "NORGMRO-004-B",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 15
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.0373,
+          25.5132
+        ]
+      },
+      "_featureIndex": 15
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "NORGMRO-004-A",
+        "ROCK NAME": "BASALT",
+        "References": "VOLATILES (HE, C, N, AR) IN MID-OCEAN RIDGE BASALTS: ASSESSMENT OF SHALLOW-LEVEL FRACTIONATION AND CHARACTERIZATION OF SOURCE COMPOSITION",
+        "_featureIndex": 16
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.0373,
+          25.5132
+        ]
+      },
+      "_featureIndex": 16
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0030-048-RM10",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70312",
+        "_featureIndex": 17
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.062,
+          25.492
+        ]
+      },
+      "_featureIndex": 17
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0030-048-RM6",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70321",
+        "_featureIndex": 18
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.062,
+          25.492
+        ]
+      },
+      "_featureIndex": 18
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0030-048-RM2",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70333",
+        "_featureIndex": 19
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.062,
+          25.492
+        ]
+      },
+      "_featureIndex": 19
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0030-048-RM5",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70324",
+        "_featureIndex": 20
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.062,
+          25.492
+        ]
+      },
+      "_featureIndex": 20
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0030-048-RM9",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70311",
+        "_featureIndex": 21
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.062,
+          25.492
+        ]
+      },
+      "_featureIndex": 21
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "NORGMRO-007-A",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 22
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.0758,
+          25.4857
+        ]
+      },
+      "_featureIndex": 22
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "NORGMRO-012-A",
+        "ROCK NAME": "BASALT",
+        "References": "VOLATILES (HE, C, N, AR) IN MID-OCEAN RIDGE BASALTS: ASSESSMENT OF SHALLOW-LEVEL FRACTIONATION AND CHARACTERIZATION OF SOURCE COMPOSITION",
+        "_featureIndex": 23
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.22,
+          25.42
+        ]
+      },
+      "_featureIndex": 23
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "NORGMRO-012",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 24
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.213,
+          25.4068
+        ]
+      },
+      "_featureIndex": 24
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RM 10",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70312",
+        "_featureIndex": 25
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36,
+          25.12
+        ]
+      },
+      "_featureIndex": 25
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RM 17",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70331",
+        "_featureIndex": 26
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36,
+          25.12
+        ]
+      },
+      "_featureIndex": 26
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RM 2",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70333",
+        "_featureIndex": 27
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36,
+          25.12
+        ]
+      },
+      "_featureIndex": 27
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RM 5",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70324",
+        "_featureIndex": 28
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36,
+          25.12
+        ]
+      },
+      "_featureIndex": 28
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RM 6",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70321",
+        "_featureIndex": 29
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36,
+          25.12
+        ]
+      },
+      "_featureIndex": 29
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RM 9",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70311",
+        "_featureIndex": 30
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36,
+          25.12
+        ]
+      },
+      "_featureIndex": 30
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RS 107",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70311",
+        "143Nd/144Nd": "0.513019",
+        "206Pb/204Pb": "18.81",
+        "207Pb/204Pb": "15.6",
+        "208Pb/204Pb": "38.62",
+        "Δ7/4": "7.0",
+        "Δ8/4": "25.2",
+        "_featureIndex": 31
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36,
+          25.12
+        ]
+      },
+      "_featureIndex": 31
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SALMR79-034-A",
+        "ROCK NAME": "BASALT",
+        "References": "Antonini et al., 1998",
+        "87Sr/86Sr": "0.70297",
+        "143Nd/144Nd": "0.51304",
+        "_featureIndex": 32
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.2708,
+          23.1815
+        ]
+      },
+      "_featureIndex": 32
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SALMR79-034-B",
+        "ROCK NAME": "BASALT",
+        "References": "Antonini et al., 1998",
+        "87Sr/86Sr": "0.70364",
+        "143Nd/144Nd": "0.51307",
+        "_featureIndex": 33
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.2708,
+          23.1815
+        ]
+      },
+      "_featureIndex": 33
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "V 78",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70257",
+        "206Pb/204Pb": "18.634",
+        "207Pb/204Pb": "15.622",
+        "208Pb/204Pb": "38.167",
+        "Δ7/4": "11.1",
+        "Δ8/4": "1.1",
+        "_featureIndex": 34
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.2,
+          23.17
+        ]
+      },
+      "_featureIndex": 34
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-485",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70257",
+        "_featureIndex": 35
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.218,
+          23.157
+        ]
+      },
+      "_featureIndex": 35
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-485",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.702878",
+        "143Nd/144Nd": "0.513112",
+        "206Pb/204Pb": "18.624",
+        "207Pb/204Pb": "15.516",
+        "208Pb/204Pb": "38.308",
+        "Δ7/4": "0.6",
+        "Δ8/4": "16.5",
+        "_featureIndex": 36
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.218,
+          23.157
+        ]
+      },
+      "_featureIndex": 36
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BANMR83-003",
+        "ROCK NAME": "BASALT",
+        "References": "Antonini et al., 1998",
+        "87Sr/86Sr": "0.70298",
+        "143Nd/144Nd": "0.51315",
+        "_featureIndex": 37
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.28,
+          23.12
+        ]
+      },
+      "_featureIndex": 37
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BANMR83-003-004",
+        "ROCK NAME": "BASALT",
+        "References": "Antonini et al., 1998",
+        "87Sr/86Sr": "0.70289",
+        "143Nd/144Nd": "0.5131",
+        "_featureIndex": 38
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.28,
+          23.12
+        ]
+      },
+      "_featureIndex": 38
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "BANMR83-003",
+        "ROCK NAME": "BASALT",
+        "References": "Brueckner et al., 1988",
+        "87Sr/86Sr": "0.70298",
+        "143Nd/144Nd": "0.5131",
+        "_featureIndex": 39
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.28,
+          23.12
+        ]
+      },
+      "_featureIndex": 39
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0073-C1035",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 40
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.5517,
+          22.8017
+        ]
+      },
+      "_featureIndex": 40
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "V 83",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70291",
+        "206Pb/204Pb": "18.058",
+        "207Pb/204Pb": "15.561",
+        "208Pb/204Pb": "37.808",
+        "Δ7/4": "11.3",
+        "Δ8/4": "34.9",
+        "_featureIndex": 41
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.77,
+          22.4583
+        ]
+      },
+      "_featureIndex": 41
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-624",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70291",
+        "_featureIndex": 42
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.7762,
+          22.4455
+        ]
+      },
+      "_featureIndex": 42
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0029-414-002",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "206Pb/204Pb": "18.276",
+        "207Pb/204Pb": "15.487",
+        "208Pb/204Pb": "38.071",
+        "Δ7/4": "1.5",
+        "Δ8/4": "34.8",
+        "_featureIndex": 43
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.087,
+          21.3966
+        ]
+      },
+      "_featureIndex": 43
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0029-414-001",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.702691",
+        "143Nd/144Nd": "0.513142",
+        "206Pb/204Pb": "18.258",
+        "207Pb/204Pb": "15.48",
+        "208Pb/204Pb": "38.045",
+        "Δ7/4": "1.0",
+        "Δ8/4": "34.4",
+        "_featureIndex": 44
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.087,
+          21.3966
+        ]
+      },
+      "_featureIndex": 44
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "23/B",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70273",
+        "143Nd/144Nd": "0.513194",
+        "206Pb/204Pb": "18.672",
+        "207Pb/204Pb": "15.543",
+        "208Pb/204Pb": "38.307",
+        "Δ7/4": "2.8",
+        "Δ8/4": "10.6",
+        "_featureIndex": 45
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.083,
+          21.367
+        ]
+      },
+      "_featureIndex": 45
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "V 66",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70289",
+        "206Pb/204Pb": "18.04",
+        "207Pb/204Pb": "15.553",
+        "208Pb/204Pb": "37.843",
+        "Δ7/4": "10.6",
+        "Δ8/4": "40.6",
+        "_featureIndex": 46
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.083,
+          21.367
+        ]
+      },
+      "_featureIndex": 46
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "V 84",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.7024",
+        "206Pb/204Pb": "18.225",
+        "207Pb/204Pb": "15.59",
+        "208Pb/204Pb": "38.074",
+        "Δ7/4": "12.3",
+        "Δ8/4": "41.3",
+        "_featureIndex": 47
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.083,
+          21.367
+        ]
+      },
+      "_featureIndex": 47
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DSDP023-0226-B",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70273",
+        "_featureIndex": 48
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.0822,
+          21.3418
+        ]
+      },
+      "_featureIndex": 48
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0073-068",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 49
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.0667,
+          21.3333
+        ]
+      },
+      "_featureIndex": 49
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-385",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70289",
+        "_featureIndex": 50
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.1048,
+          21.2905
+        ]
+      },
+      "_featureIndex": 50
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0073-C1025",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 51
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.0837,
+          21.29
+        ]
+      },
+      "_featureIndex": 51
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "WAN1969-014",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70252",
+        "_featureIndex": 52
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.0787,
+          21.13
+        ]
+      },
+      "_featureIndex": 52
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "V 19",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70252",
+        "_featureIndex": 53
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.088,
+          21.13
+        ]
+      },
+      "_featureIndex": 53
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-483",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70292",
+        "_featureIndex": 54
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.187,
+          20.733
+        ]
+      },
+      "_featureIndex": 54
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "V 74",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70292",
+        "206Pb/204Pb": "18.277",
+        "207Pb/204Pb": "15.566",
+        "208Pb/204Pb": "38.023",
+        "Δ7/4": "9.4",
+        "Δ8/4": "29.9",
+        "_featureIndex": 55
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.35,
+          20.667
+        ]
+      },
+      "_featureIndex": 55
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-477",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.7028",
+        "_featureIndex": 56
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.51,
+          20.07
+        ]
+      },
+      "_featureIndex": 56
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-477",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.702973",
+        "143Nd/144Nd": "0.513079",
+        "206Pb/204Pb": "18.788",
+        "207Pb/204Pb": "15.546",
+        "208Pb/204Pb": "38.519",
+        "Δ7/4": "1.8",
+        "Δ8/4": "17.7",
+        "_featureIndex": 57
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.51,
+          20.07
+        ]
+      },
+      "_featureIndex": 57
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "V 73",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.7028",
+        "206Pb/204Pb": "18.561",
+        "207Pb/204Pb": "15.576",
+        "208Pb/204Pb": "38.308",
+        "Δ7/4": "7.3",
+        "Δ8/4": "24.1",
+        "_featureIndex": 58
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.513,
+          20.063
+        ]
+      },
+      "_featureIndex": 58
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-472-1385",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70302",
+        "_featureIndex": 59
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.45,
+          20.022
+        ]
+      },
+      "_featureIndex": 59
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-472-1388",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70298",
+        "_featureIndex": 60
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.45,
+          20.022
+        ]
+      },
+      "_featureIndex": 60
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "17/1385",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70302",
+        "_featureIndex": 61
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.45,
+          20.022
+        ]
+      },
+      "_featureIndex": 61
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "17/1388",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70298",
+        "_featureIndex": 62
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.45,
+          20.022
+        ]
+      },
+      "_featureIndex": 62
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-336",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70252",
+        "_featureIndex": 63
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.6932,
+          19.6413
+        ]
+      },
+      "_featureIndex": 63
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0003-336",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.702944",
+        "143Nd/144Nd": "0.51307",
+        "206Pb/204Pb": "18.829",
+        "207Pb/204Pb": "15.551",
+        "208Pb/204Pb": "38.557",
+        "Δ7/4": "1.9",
+        "Δ8/4": "16.6",
+        "_featureIndex": 64
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.6932,
+          19.6413
+        ]
+      },
+      "_featureIndex": 64
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "V 62",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70298",
+        "206Pb/204Pb": "18.519",
+        "207Pb/204Pb": "15.552",
+        "208Pb/204Pb": "38.227",
+        "Δ7/4": "5.4",
+        "Δ8/4": "21.1",
+        "_featureIndex": 65
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.733,
+          19.633
+        ]
+      },
+      "_featureIndex": 65
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0073-C1011",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 66
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.775,
+          19.6233
+        ]
+      },
+      "_featureIndex": 66
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DUF0073-C1012",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 67
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.7267,
+          19.6083
+        ]
+      },
+      "_featureIndex": 67
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-271",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70305",
+        "_featureIndex": 68
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.248,
+          19.072
+        ]
+      },
+      "_featureIndex": 68
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RS 52",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70305",
+        "_featureIndex": 69
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.248,
+          19.072
+        ]
+      },
+      "_featureIndex": 69
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-271",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.70295",
+        "143Nd/144Nd": "0.51309",
+        "_featureIndex": 70
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.248,
+          19.072
+        ]
+      },
+      "_featureIndex": 70
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-247-RS43U",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.7029",
+        "_featureIndex": 71
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.993,
+          18.15
+        ]
+      },
+      "_featureIndex": 71
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "RS 43 U",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.7029",
+        "206Pb/204Pb": "18.889",
+        "207Pb/204Pb": "15.56",
+        "208Pb/204Pb": "38.627",
+        "Δ7/4": "2.1",
+        "Δ8/4": "16.3",
+        "_featureIndex": 72
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.933,
+          18.15
+        ]
+      },
+      "_featureIndex": 72
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-247-RS43U",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.702891",
+        "143Nd/144Nd": "0.513062",
+        "206Pb/204Pb": "18.976",
+        "207Pb/204Pb": "15.562",
+        "208Pb/204Pb": "38.726",
+        "Δ7/4": "1.4",
+        "Δ8/4": "15.7",
+        "_featureIndex": 73
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.993,
+          18.15
+        ]
+      },
+      "_featureIndex": 73
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-247-RS37",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.702913",
+        "143Nd/144Nd": "0.513063",
+        "_featureIndex": 74
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.993,
+          18.15
+        ]
+      },
+      "_featureIndex": 74
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "PS91980-067-001",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 75
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.05,
+          17.98
+        ]
+      },
+      "_featureIndex": 75
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "PS91980-059-004",
+        "ROCK NAME": "BASALT",
+        "References": "VOLATILES (HE, C, N, AR) IN MID-OCEAN RIDGE BASALTS: ASSESSMENT OF SHALLOW-LEVEL FRACTIONATION AND CHARACTERIZATION OF SOURCE COMPOSITION",
+        "_featureIndex": 76
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.07,
+          17.98
+        ]
+      },
+      "_featureIndex": 76
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "PIS1979-059-003",
+        "ROCK NAME": "BASALT",
+        "References": "Eissen et al., 1989",
+        "87Sr/86Sr": "0.702861",
+        "143Nd/144Nd": "0.513056",
+        "206Pb/204Pb": "18.787",
+        "207Pb/204Pb": "15.555",
+        "208Pb/204Pb": "38.575",
+        "Δ7/4": "2.7",
+        "Δ8/4": "23.5",
+        "_featureIndex": 77
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.0642,
+          17.973
+        ]
+      },
+      "_featureIndex": 77
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "PS91980-057-001",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 78
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.07,
+          17.97
+        ]
+      },
+      "_featureIndex": 78
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "PS91980-059-002",
+        "ROCK NAME": "BASALT",
+        "References": "RARE GAS SYSTEMATICS IN RED SEA RIDGE BASALTS",
+        "_featureIndex": 79
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.07,
+          17.97
+        ]
+      },
+      "_featureIndex": 79
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "PIS1979-068-002",
+        "ROCK NAME": "BASALT",
+        "References": "Eissen et al., 1989",
+        "87Sr/86Sr": "0.702914",
+        "143Nd/144Nd": "0.51302",
+        "206Pb/204Pb": "19.141",
+        "207Pb/204Pb": "15.577",
+        "208Pb/204Pb": "38.876",
+        "Δ7/4": "1.1",
+        "Δ8/4": "10.8",
+        "_featureIndex": 80
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.0807,
+          17.9582
+        ]
+      },
+      "_featureIndex": 80
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "PIS1979-071-002",
+        "ROCK NAME": "BASALT",
+        "References": "Eissen et al., 1989",
+        "87Sr/86Sr": "0.702906",
+        "143Nd/144Nd": "0.513014",
+        "206Pb/204Pb": "19.163",
+        "207Pb/204Pb": "15.588",
+        "208Pb/204Pb": "38.895",
+        "Δ7/4": "2.0",
+        "Δ8/4": "10.0",
+        "_featureIndex": 81
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.0867,
+          17.9459
+        ]
+      },
+      "_featureIndex": 81
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "PIS1979-053-002",
+        "ROCK NAME": "BASALT",
+        "References": "Eissen et al., 1989",
+        "87Sr/86Sr": "0.702906",
+        "143Nd/144Nd": "0.51299",
+        "206Pb/204Pb": "19.116",
+        "207Pb/204Pb": "15.59",
+        "208Pb/204Pb": "38.857",
+        "Δ7/4": "2.7",
+        "Δ8/4": "11.9",
+        "_featureIndex": 82
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.084,
+          17.9419
+        ]
+      },
+      "_featureIndex": 82
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0001-182",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70323",
+        "_featureIndex": 83
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 83
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "17/1389",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70323",
+        "206Pb/204Pb": "18.757",
+        "207Pb/204Pb": "15.613",
+        "208Pb/204Pb": "38.517",
+        "Δ7/4": "8.9",
+        "Δ8/4": "21.3",
+        "_featureIndex": 84
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.8,
+          17
+        ]
+      },
+      "_featureIndex": 84
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0001-182-002-RES",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.703171",
+        "143Nd/144Nd": "0.51297",
+        "206Pb/204Pb": "19.6",
+        "207Pb/204Pb": "15.646",
+        "208Pb/204Pb": "39.505",
+        "Δ7/4": "3.0",
+        "Δ8/4": "18.2",
+        "_featureIndex": 85
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 85
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0001-182-001",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.703185",
+        "143Nd/144Nd": "0.512966",
+        "206Pb/204Pb": "19.593",
+        "207Pb/204Pb": "15.646",
+        "208Pb/204Pb": "39.509",
+        "Δ7/4": "3.1",
+        "Δ8/4": "19.4",
+        "_featureIndex": 86
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 86
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0001-182-002-LE2",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.703166",
+        "143Nd/144Nd": "0.512961",
+        "206Pb/204Pb": "19.584",
+        "207Pb/204Pb": "15.643",
+        "208Pb/204Pb": "39.486",
+        "Δ7/4": "2.9",
+        "Δ8/4": "18.2",
+        "_featureIndex": 87
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 87
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VLD0001-182-002-LE1",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1993",
+        "87Sr/86Sr": "0.70316",
+        "143Nd/144Nd": "0.51296",
+        "206Pb/204Pb": "19.156",
+        "207Pb/204Pb": "15.63",
+        "208Pb/204Pb": "38.99",
+        "Δ7/4": "6.2",
+        "Δ8/4": "20.3",
+        "_featureIndex": 88
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 88
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-RS2",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1997",
+        "87Sr/86Sr": "0.703125",
+        "143Nd/144Nd": "0.512962",
+        "206Pb/204Pb": "19.608",
+        "207Pb/204Pb": "15.645",
+        "208Pb/204Pb": "39.51",
+        "Δ7/4": "2.8",
+        "Δ8/4": "17.7",
+        "_featureIndex": 89
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 89
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-RS5",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1997",
+        "87Sr/86Sr": "0.703132",
+        "143Nd/144Nd": "0.512964",
+        "206Pb/204Pb": "19.603",
+        "207Pb/204Pb": "15.639",
+        "208Pb/204Pb": "39.492",
+        "Δ7/4": "2.3",
+        "Δ8/4": "16.5",
+        "_featureIndex": 90
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 90
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-RS8",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1997",
+        "87Sr/86Sr": "0.703132",
+        "143Nd/144Nd": "0.512961",
+        "206Pb/204Pb": "19.595",
+        "207Pb/204Pb": "15.634",
+        "208Pb/204Pb": "39.48",
+        "Δ7/4": "1.9",
+        "Δ8/4": "16.3",
+        "_featureIndex": 91
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 91
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "SON0029-RS4",
+        "ROCK NAME": "BASALT",
+        "References": "Volker et al., 1997",
+        "87Sr/86Sr": "0.70313",
+        "143Nd/144Nd": "0.512962",
+        "206Pb/204Pb": "19.594",
+        "207Pb/204Pb": "15.633",
+        "208Pb/204Pb": "39.474",
+        "Δ7/4": "1.8",
+        "Δ8/4": "15.8",
+        "_featureIndex": 92
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.67,
+          17
+        ]
+      },
+      "_featureIndex": 92
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "438H18",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70336",
+        "_featureIndex": 93
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          41.47,
+          16.88
+        ]
+      },
+      "_featureIndex": 93
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "Z 10",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70332",
+        "143Nd/144Nd": "0.512958",
+        "206Pb/204Pb": "18.857",
+        "207Pb/204Pb": "15.562",
+        "208Pb/204Pb": "38.721",
+        "Δ7/4": "2.7",
+        "Δ8/4": "29.6",
+        "_featureIndex": 94
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.18,
+          15.05
+        ]
+      },
+      "_featureIndex": 94
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "Z4",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70327",
+        "_featureIndex": 95
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.18,
+          15.05
+        ]
+      },
+      "_featureIndex": 95
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "Z48",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70331",
+        "_featureIndex": 96
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.18,
+          15.05
+        ]
+      },
+      "_featureIndex": 96
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "438Z10",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70334",
+        "_featureIndex": 97
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42,
+          15
+        ]
+      },
+      "_featureIndex": 97
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "438Z4",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70327",
+        "_featureIndex": 98
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42,
+          15
+        ]
+      },
+      "_featureIndex": 98
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "438Z48",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1988",
+        "87Sr/86Sr": "0.70331",
+        "_featureIndex": 99
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42,
+          15
+        ]
+      },
+      "_featureIndex": 99
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ZUBAIR-Z2",
+        "ROCK NAME": "BASALT",
+        "References": "Rogers, 1993",
+        "87Sr/86Sr": "0.70343",
+        "143Nd/144Nd": "0.513075",
+        "206Pb/204Pb": "19.041",
+        "207Pb/204Pb": "15.547",
+        "208Pb/204Pb": "38.855",
+        "Δ7/4": "-0.8",
+        "Δ8/4": "20.7",
+        "_featureIndex": 100
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42,
+          15
+        ]
+      },
+      "_featureIndex": 100
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ZUBAIR-Z13",
+        "ROCK NAME": "BASALT",
+        "References": "Rogers, 1993",
+        "87Sr/86Sr": "0.7038",
+        "143Nd/144Nd": "0.513013",
+        "206Pb/204Pb": "19.022",
+        "207Pb/204Pb": "15.567",
+        "208Pb/204Pb": "38.841",
+        "Δ7/4": "1.4",
+        "Δ8/4": "21.6",
+        "_featureIndex": 101
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42,
+          15
+        ]
+      },
+      "_featureIndex": 101
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ZUBAIR-Z4",
+        "ROCK NAME": "ALKALI BASALT",
+        "References": "Volker et al., 1997",
+        "87Sr/86Sr": "0.70333",
+        "143Nd/144Nd": "0.512954",
+        "206Pb/204Pb": "19.133",
+        "207Pb/204Pb": "15.568",
+        "208Pb/204Pb": "39.036",
+        "Δ7/4": "0.3",
+        "Δ8/4": "27.7",
+        "_featureIndex": 102
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42,
+          15
+        ]
+      },
+      "_featureIndex": 102
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "ZUBAIR-Z48",
+        "ROCK NAME": "ALKALI BASALT",
+        "References": "Volker et al., 1997",
+        "87Sr/86Sr": "0.703285",
+        "143Nd/144Nd": "0.51297",
+        "206Pb/204Pb": "19.113",
+        "207Pb/204Pb": "15.573",
+        "208Pb/204Pb": "39.01",
+        "Δ7/4": "1.0",
+        "Δ8/4": "27.5",
+        "_featureIndex": 103
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42,
+          15
+        ]
+      },
+      "_featureIndex": 103
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "H18",
+        "ROCK NAME": "BASALT",
+        "References": "Altherr et al., 1990",
+        "87Sr/86Sr": "0.70336",
+        "_featureIndex": 104
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.73,
+          13.72
+        ]
+      },
+      "_featureIndex": 104
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-044-002",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703099",
+        "143Nd/144Nd": "0.513063",
+        "206Pb/204Pb": "18.579",
+        "207Pb/204Pb": "15.477",
+        "208Pb/204Pb": "38.337",
+        "Δ7/4": "-2.8",
+        "Δ8/4": "24.8",
+        "_featureIndex": 105
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          43.933,
+          12.083
+        ]
+      },
+      "_featureIndex": 105
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-046-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703201",
+        "143Nd/144Nd": "0.513095",
+        "206Pb/204Pb": "18.884",
+        "207Pb/204Pb": "15.546",
+        "208Pb/204Pb": "38.755",
+        "Δ7/4": "0.8",
+        "Δ8/4": "29.7",
+        "_featureIndex": 106
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          44.713,
+          12.058
+        ]
+      },
+      "_featureIndex": 106
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-047-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703176",
+        "143Nd/144Nd": "0.513017",
+        "206Pb/204Pb": "19.073",
+        "207Pb/204Pb": "15.573",
+        "208Pb/204Pb": "38.985",
+        "Δ7/4": "1.4",
+        "Δ8/4": "29.9",
+        "_featureIndex": 107
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          44.833,
+          12.067
+        ]
+      },
+      "_featureIndex": 107
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-048-002",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703296",
+        "143Nd/144Nd": "0.513017",
+        "206Pb/204Pb": "19.118",
+        "207Pb/204Pb": "15.565",
+        "208Pb/204Pb": "39.041",
+        "Δ7/4": "0.2",
+        "Δ8/4": "30.0",
+        "_featureIndex": 108
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.207,
+          12.043
+        ]
+      },
+      "_featureIndex": 108
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-048-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703355",
+        "_featureIndex": 109
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.207,
+          12.043
+        ]
+      },
+      "_featureIndex": 109
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-049-003",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.70339",
+        "_featureIndex": 110
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.508,
+          12.042
+        ]
+      },
+      "_featureIndex": 110
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-049-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703396",
+        "143Nd/144Nd": "0.512874",
+        "206Pb/204Pb": "19.311",
+        "207Pb/204Pb": "15.591",
+        "208Pb/204Pb": "39.237",
+        "Δ7/4": "0.7",
+        "Δ8/4": "26.3",
+        "_featureIndex": 111
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.508,
+          12.042
+        ]
+      },
+      "_featureIndex": 111
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-050-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.70344",
+        "143Nd/144Nd": "0.512937",
+        "206Pb/204Pb": "19.38",
+        "207Pb/204Pb": "15.616",
+        "208Pb/204Pb": "39.42",
+        "Δ7/4": "2.4",
+        "Δ8/4": "36.3",
+        "_featureIndex": 112
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.853,
+          12.102
+        ]
+      },
+      "_featureIndex": 112
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-051-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703399",
+        "143Nd/144Nd": "0.512919",
+        "206Pb/204Pb": "19.405",
+        "207Pb/204Pb": "15.599",
+        "208Pb/204Pb": "39.371",
+        "Δ7/4": "0.4",
+        "Δ8/4": "28.3",
+        "_featureIndex": 113
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.288,
+          12.155
+        ]
+      },
+      "_featureIndex": 113
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-052-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.7028",
+        "143Nd/144Nd": "0.513158",
+        "206Pb/204Pb": "18.745",
+        "207Pb/204Pb": "15.533",
+        "208Pb/204Pb": "38.549",
+        "Δ7/4": "1.0",
+        "Δ8/4": "25.9",
+        "_featureIndex": 114
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.708,
+          12.27
+        ]
+      },
+      "_featureIndex": 114
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-053-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702887",
+        "143Nd/144Nd": "0.513142",
+        "206Pb/204Pb": "18.495",
+        "207Pb/204Pb": "15.513",
+        "208Pb/204Pb": "38.343",
+        "Δ7/4": "1.7",
+        "Δ8/4": "35.6",
+        "_featureIndex": 115
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          47.1,
+          12.422
+        ]
+      },
+      "_featureIndex": 115
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-054-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703121",
+        "143Nd/144Nd": "0.513056",
+        "206Pb/204Pb": "18.868",
+        "207Pb/204Pb": "15.556",
+        "208Pb/204Pb": "38.713",
+        "Δ7/4": "2.0",
+        "Δ8/4": "27.5",
+        "_featureIndex": 116
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          47.25,
+          12.42
+        ]
+      },
+      "_featureIndex": 116
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "DIS1967-6243",
+        "ROCK NAME": "BASALT",
+        "References": "Cohen and O'Nions, 1982",
+        "87Sr/86Sr": "0.7029",
+        "143Nd/144Nd": "0.51295",
+        "206Pb/204Pb": "18.72",
+        "207Pb/204Pb": "15.53",
+        "208Pb/204Pb": "38.46",
+        "Δ7/4": "1.0",
+        "Δ8/4": "20.1",
+        "_featureIndex": 117
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          47.665,
+          12.583
+        ]
+      },
+      "_featureIndex": 117
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-055-002",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703314",
+        "143Nd/144Nd": "0.513083",
+        "206Pb/204Pb": "18.788",
+        "207Pb/204Pb": "15.535",
+        "208Pb/204Pb": "38.613",
+        "Δ7/4": "0.7",
+        "Δ8/4": "27.1",
+        "_featureIndex": 118
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          47.84,
+          12.473
+        ]
+      },
+      "_featureIndex": 118
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-056-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702829",
+        "143Nd/144Nd": "0.51311",
+        "206Pb/204Pb": "18.288",
+        "207Pb/204Pb": "15.48",
+        "208Pb/204Pb": "38.113",
+        "Δ7/4": "0.7",
+        "Δ8/4": "37.6",
+        "_featureIndex": 119
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.272,
+          12.648
+        ]
+      },
+      "_featureIndex": 119
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-6-039-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702805",
+        "143Nd/144Nd": "0.513121",
+        "206Pb/204Pb": "18.224",
+        "207Pb/204Pb": "15.472",
+        "208Pb/204Pb": "38.019",
+        "Δ7/4": "0.6",
+        "Δ8/4": "35.9",
+        "_featureIndex": 120
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.49,
+          12.75
+        ]
+      },
+      "_featureIndex": 120
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-057-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702884",
+        "143Nd/144Nd": "0.513129",
+        "206Pb/204Pb": "18.22",
+        "207Pb/204Pb": "15.458",
+        "208Pb/204Pb": "37.984",
+        "Δ7/4": "-0.8",
+        "Δ8/4": "32.9",
+        "_featureIndex": 121
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.99,
+          12.897
+        ]
+      },
+      "_featureIndex": 121
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-058-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702936",
+        "143Nd/144Nd": "0.51317",
+        "206Pb/204Pb": "18.196",
+        "207Pb/204Pb": "15.488",
+        "208Pb/204Pb": "38.088",
+        "Δ7/4": "2.5",
+        "Δ8/4": "46.2",
+        "_featureIndex": 122
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.355,
+          12.895
+        ]
+      },
+      "_featureIndex": 122
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-059-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702796",
+        "143Nd/144Nd": "0.513136",
+        "206Pb/204Pb": "18.299",
+        "207Pb/204Pb": "15.483",
+        "208Pb/204Pb": "38.146",
+        "Δ7/4": "0.8",
+        "Δ8/4": "39.6",
+        "_featureIndex": 123
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.393,
+          13.038
+        ]
+      },
+      "_featureIndex": 123
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-060-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703214",
+        "143Nd/144Nd": "0.513163",
+        "206Pb/204Pb": "18.474",
+        "207Pb/204Pb": "15.518",
+        "208Pb/204Pb": "38.341",
+        "Δ7/4": "2.4",
+        "Δ8/4": "37.9",
+        "_featureIndex": 124
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.693,
+          13.157
+        ]
+      },
+      "_featureIndex": 124
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-062-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702937",
+        "143Nd/144Nd": "0.513153",
+        "206Pb/204Pb": "18.272",
+        "207Pb/204Pb": "15.448",
+        "208Pb/204Pb": "38.079",
+        "Δ7/4": "-2.4",
+        "Δ8/4": "36.1",
+        "_featureIndex": 125
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.805,
+          13.362
+        ]
+      },
+      "_featureIndex": 125
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-061-002",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702854",
+        "143Nd/144Nd": "0.513102",
+        "206Pb/204Pb": "18.425",
+        "207Pb/204Pb": "15.504",
+        "208Pb/204Pb": "38.256",
+        "Δ7/4": "1.6",
+        "Δ8/4": "35.3",
+        "_featureIndex": 126
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.973,
+          13.263
+        ]
+      },
+      "_featureIndex": 126
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-063-003",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702943",
+        "143Nd/144Nd": "0.513149",
+        "206Pb/204Pb": "18.351",
+        "207Pb/204Pb": "15.491",
+        "208Pb/204Pb": "38.26",
+        "Δ7/4": "1.1",
+        "Δ8/4": "44.7",
+        "_featureIndex": 127
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.323,
+          13.288
+        ]
+      },
+      "_featureIndex": 127
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-064-003",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702899",
+        "143Nd/144Nd": "0.51315",
+        "206Pb/204Pb": "18.269",
+        "207Pb/204Pb": "15.454",
+        "208Pb/204Pb": "38.099",
+        "Δ7/4": "-1.7",
+        "Δ8/4": "38.5",
+        "_featureIndex": 128
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.692,
+          13.337
+        ]
+      },
+      "_featureIndex": 128
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-065-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702979",
+        "143Nd/144Nd": "0.513106",
+        "206Pb/204Pb": "18.403",
+        "207Pb/204Pb": "15.508",
+        "208Pb/204Pb": "38.318",
+        "Δ7/4": "2.2",
+        "Δ8/4": "44.2",
+        "_featureIndex": 129
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.02,
+          13.213
+        ]
+      },
+      "_featureIndex": 129
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-6-035-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702957",
+        "143Nd/144Nd": "0.513148",
+        "206Pb/204Pb": "18.341",
+        "207Pb/204Pb": "15.491",
+        "208Pb/204Pb": "38.178",
+        "Δ7/4": "1.2",
+        "Δ8/4": "37.7",
+        "_featureIndex": 130
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          52.408,
+          14.65
+        ]
+      },
+      "_featureIndex": 130
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-066-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702903",
+        "143Nd/144Nd": "0.513119",
+        "206Pb/204Pb": "18.482",
+        "207Pb/204Pb": "15.512",
+        "208Pb/204Pb": "38.288",
+        "Δ7/4": "1.8",
+        "Δ8/4": "31.6",
+        "_featureIndex": 131
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          52.683,
+          14.392
+        ]
+      },
+      "_featureIndex": 131
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-067-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702843",
+        "143Nd/144Nd": "0.513124",
+        "206Pb/204Pb": "18.425",
+        "207Pb/204Pb": "15.522",
+        "208Pb/204Pb": "38.277",
+        "Δ7/4": "3.4",
+        "Δ8/4": "37.4",
+        "_featureIndex": 132
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          53.58,
+          14.368
+        ]
+      },
+      "_featureIndex": 132
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-6-025-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.703013",
+        "143Nd/144Nd": "0.513061",
+        "206Pb/204Pb": "18.548",
+        "207Pb/204Pb": "15.508",
+        "208Pb/204Pb": "38.327",
+        "Δ7/4": "0.6",
+        "Δ8/4": "27.5",
+        "_featureIndex": 133
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          53.908,
+          14.483
+        ]
+      },
+      "_featureIndex": 133
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-6-024",
+        "ROCK NAME": "BASALT",
+        "References": "U-PB, SM-ND AND RB-SR SYSTEMATICS OF MID-OCEAN RIDGE BASALT GLASSES",
+        "87Sr/86Sr": "0.70278",
+        "143Nd/144Nd": "0.51302",
+        "206Pb/204Pb": "18.43",
+        "207Pb/204Pb": "15.43",
+        "208Pb/204Pb": "38.01",
+        "Δ7/4": "-5.9",
+        "Δ8/4": "10.1",
+        "_featureIndex": 134
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          54.8,
+          14.75
+        ]
+      },
+      "_featureIndex": 134
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-6-024-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702882",
+        "143Nd/144Nd": "0.5131",
+        "206Pb/204Pb": "18.535",
+        "207Pb/204Pb": "15.502",
+        "208Pb/204Pb": "38.324",
+        "Δ7/4": "0.2",
+        "Δ8/4": "28.8",
+        "_featureIndex": 135
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          54.8,
+          14.75
+        ]
+      },
+      "_featureIndex": 135
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-068-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702846",
+        "143Nd/144Nd": "0.513095",
+        "206Pb/204Pb": "18.506",
+        "207Pb/204Pb": "15.528",
+        "208Pb/204Pb": "38.354",
+        "Δ7/4": "3.1",
+        "Δ8/4": "35.3",
+        "_featureIndex": 136
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.712,
+          14.74
+        ]
+      },
+      "_featureIndex": 136
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Name": "VEM0033-7-069-001",
+        "ROCK NAME": "BASALT",
+        "References": "schling et al., 1992",
+        "87Sr/86Sr": "0.702938",
+        "143Nd/144Nd": "0.513106",
+        "206Pb/204Pb": "18.473",
+        "207Pb/204Pb": "15.512",
+        "208Pb/204Pb": "38.312",
+        "Δ7/4": "1.9",
+        "Δ8/4": "35.1",
+        "_featureIndex": 137
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          56.422,
+          14.465
+        ]
+      },
+      "_featureIndex": 137
+    }
+  ]
+}

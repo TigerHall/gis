@@ -41,6 +41,11 @@
           name: "全球陆壳 GlobalContinentalCrust",
           file: "global_continental_crust.json",
         },
+        { name: "NWIR 洋中脊岩样", file: "NWIR_ridge.geojson" },
+        { name: "SWIR 洋中脊岩样", file: "SWIR_ridge.geojson" },
+        { name: "SEIR 洋中脊岩样", file: "SEIR_ridge.geojson" },
+        { name: "SEIR 离轴岩样", file: "SEIR_offaxis.geojson" },
+        { name: "Red Sea 裂谷岩样", file: "RedSea_rift.geojson" },
       ],
     },
     {
@@ -69,8 +74,10 @@
       ],
     },
     {
-      groupName: "海底矿产资源（未加入）",
-      layers: [],
+      groupName: "海底矿产资源",
+      layers: [
+        { name: "热液喷口 HydrothermalVents", file: "hydrothermal_vents.geojson" },
+      ],
     },
     {
       groupName: "地质站位",
@@ -593,20 +600,18 @@
 
       const isNoCluster = !isPointType || !clusterEnabled;
 
-      // 标签字段
+      // 标签字段（配置表统一管理，默认 "Name"）
       const cfg = STATION_LABEL_CONFIG[fileName];
       let labelField = cfg ? cfg.field : DEFAULT_LABEL_FIELD;
-      if (fileName === "volcanos.json") labelField = "NAME";
-      else if (fileName === "hotspots.json") labelField = "geodesc";
 
       const isVolcanoLayer = fileName === "volcanos.json";
-      const isHotspotLayer = fileName === "hotspots.json";
+      const isHotspotLayer = fileName === "hotspots.json" || fileName === "hydrothermal_vents.geojson";
 
       // 创建聚类组
       function createClusterGroup() {
         const layerColor = layerColorMap[checkboxId] || "#8B6914";
-        const isVolcanoCluster = fileName === "volcanos.json";
-        const isHotspotCluster = fileName === "hotspots.json";
+            const isVolcanoCluster = fileName === "volcanos.json";
+            const isHotspotCluster = fileName === "hotspots.json" || fileName === "hydrothermal_vents.geojson";
 
         return L.markerClusterGroup({
           maxClusterRadius: 50,
@@ -974,7 +979,7 @@
         if (colorMode[checkboxId] === undefined) {
           const isPolygon =
             geomType === "polygon" || geomType === "multipolygon";
-          if (fileName === "hotspots.json" || fileName === "volcanos.json") {
+          if (fileName === "hotspots.json" || fileName === "volcanos.json" || fileName === "hydrothermal_vents.geojson") {
             colorMode[checkboxId] = "single";
           } else if (isPolygon) {
             colorMode[checkboxId] = "sequential";
@@ -1816,7 +1821,7 @@
           var fullPath = geoJsonCosPath + layerConfig.file;
           var fileName = layerConfig.file;
           var fixedColor =
-            fileName === "hotspots.json" || fileName === "volcanos.json"
+            fileName === "hotspots.json" || fileName === "volcanos.json" || fileName === "hydrothermal_vents.geojson"
               ? "#FF3333"
               : window.GeoUtils.getFixedColor(idx);
           layerColorMap[checkboxId] = fixedColor;
