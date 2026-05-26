@@ -45,6 +45,7 @@ jobs:
             --exclude ".*\.json$" \
             --exclude ".*\.geojson$" \
             --exclude "\.workbuddy/.*" \
+            --fail-output /tmp/coscli_output \
             --routines 10
         # coscli sync 是 Go 实现，多线程并发上传，比 coscmd 快得多
         # --exclude  排除不需要部署的文件（.json/.geojson 源文件有 .gz 就够了、.git、.workbuddy）
