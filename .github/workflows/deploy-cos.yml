@@ -19,5 +19,5 @@ jobs:
         run: coscmd config -a ${{ secrets.COS_SECRET_ID }} -s ${{ secrets.COS_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
 
       - name: Sync to COS (incremental)
-        run: coscmd sync . /
-        # sync: 只上传有变化的文件（比较大小 + MD5），跳过未变更的
+        run: coscmd upload -rs . /
+        # 作用：递归上传 + 增量同步（只传修改/新增文件，跳过不变的）
