@@ -19,14 +19,27 @@ jobs:
           chmod +x coscli-linux-amd64
           sudo mv coscli-linux-amd64 /usr/local/bin/coscli
 
-      # 配置密钥（init 是交互式的，CI 中不能用；改用 set + add）
+      # 直接写配置文件，绕过交互式 init（coscli 首次运行强制交互，-i/-k 会被吞掉）
       - name: Configure coscli
         run: |
-          coscli config set -i ${{ secrets.COS_SECRET_ID }} \
-                            -k ${{ secrets.COS_SECRET_KEY }}
-          coscli config add -a default \
-                            -b ${{ secrets.COS_BUCKET }} \
-                            -r ${{ secrets.COS_REGION }}
+          cat > ~/.cos.yaml <<EOF
+          cos:
+            base:
+              secretid: ${{ secrets.COS_SECRET_ID }}
+              secretkey: ${{ secrets.COS_SECRET_KEY }}
+              sessiontoken: ""
+              mode: "SecretKey"
+              cvmrolename: ""
+              close_auto_switch_host: false
+              disable_encryption: true
+              disable_auto_fetch_bucket_type: false
+            buckets:
+              - alias: default
+                bucket: ${{ secrets.COS_BUCKET }}
+                region: ${{ secrets.COS_REGION }}
+                endpoint: cos.${{ secrets.COS_REGION }}.myqcloud.com
+                ofs: false
+          EOF
 
       # 同步到 COS：并发10、增量上传、忽略 .git 目录
       - name: Sync to COS
