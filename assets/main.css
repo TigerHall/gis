@@ -133,6 +133,30 @@ body.resizing-panel {
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
 }
+.about-link {
+  color: #999;
+  font-size: 15px;
+  text-decoration: none;
+  line-height: 1;
+  transition: color 0.2s;
+  margin-left: auto;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.about-link:hover {
+  color: #1976d2;
+}
+#selectAllRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
 .layer-item {
   display: flex;
   align-items: center;

@@ -174,14 +174,30 @@
         selectAllCheckbox.title = "全选 / 全不选所有图层";
         selectAllCheckbox.addEventListener("change", function () {
           this.classList.remove("indeterminate");
-          if (this.checked) selectAllLayers();
-          else unselectAllLayers();
+          if (this.checked) {
+            selectAllLayers();
+            // 全选时展开所有组
+            document.querySelectorAll(".layer-group-children").forEach(function (c) {
+              if (!c.classList.contains("open")) c.classList.add("open");
+            });
+            document.querySelectorAll(".layer-group-arrow").forEach(function (a) {
+              if (!a.classList.contains("open")) a.classList.add("open");
+            });
+          } else {
+            unselectAllLayers();
+          }
         });
         const titleSpan = document.createElement("span");
         titleSpan.textContent = titleH3.textContent;
+        const aboutLink = document.createElement("a");
+        aboutLink.href = "about.html";
+        aboutLink.className = "about-link";
+        aboutLink.title = "关于本站";
+        aboutLink.textContent = "ⓘ";
         layerPanel.removeChild(titleH3);
         titleRow.appendChild(selectAllCheckbox);
         titleRow.appendChild(titleSpan);
+        titleRow.appendChild(aboutLink);
         layerPanel.insertBefore(titleRow, layerPanel.firstChild);
       }
     }
@@ -1748,6 +1764,13 @@
               }
             });
             syncSelectAllStatus();
+            // 勾选时展开该组，取消时不折叠（保留用户查看上下文）
+            if (isChecked) {
+              var ch = groupDiv.querySelector(".layer-group-children");
+              var ar = groupDiv.querySelector(".layer-group-arrow");
+              if (ch && !ch.classList.contains("open")) ch.classList.add("open");
+              if (ar && !ar.classList.contains("open")) ar.classList.add("open");
+            }
           });
 
           children = document.createElement("div");
@@ -1755,8 +1778,25 @@
 
           header.addEventListener("click", function (e) {
             if (e.target === groupCb) return;
-            var isOpen = children.classList.toggle("open");
-            arrow.classList.toggle("open", isOpen);
+            if (e.ctrlKey || e.metaKey) {
+              // Ctrl/Cmd + 点击：全部展开或全部折叠
+              var allHeaders = document.querySelectorAll(".layer-group-header");
+              var anyOpen = document.querySelector(".layer-group-children.open");
+              allHeaders.forEach(function (h) {
+                var c = h.nextElementSibling;
+                var a = h.querySelector(".layer-group-arrow");
+                if (anyOpen) {
+                  if (c) c.classList.remove("open");
+                  if (a) a.classList.remove("open");
+                } else {
+                  if (c) c.classList.add("open");
+                  if (a) a.classList.add("open");
+                }
+              });
+            } else {
+              var isOpen = children.classList.toggle("open");
+              arrow.classList.toggle("open", isOpen);
+            }
           });
 
           header.appendChild(arrow);

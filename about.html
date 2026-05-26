@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>关于 - OceanGeoView</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      color: #333;
+      line-height: 1.7;
+      background: #fafafa;
+    }
+    h1 { font-size: 26px; margin-bottom: 6px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+    h2 {
+      font-size: 18px;
+      margin: 36px 0 14px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #9c9;
+      color: #5a5;
+    }
+    h3 { font-size: 15px; margin: 18px 0 8px; color: #444; }
+    p { margin: 8px 0; }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+    .tag {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+      background: #e8f5e8;
+      color: #5a5;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 24px;
+      color: #6a6;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .back-link:hover { text-decoration: underline; }
+    .footer {
+      margin-top: 48px;
+      padding-top: 16px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #aaa;
+      text-align: center;
+    }
+    .footer a { color: #999; }
+  </style>
+</head>
+<body>
+
+<a class="back-link" href="index.html">&#8592; 返回地图</a>
+
+<h1>OceanGeoView</h1>
+<p class="subtitle">海底地质一张图 &mdash; 基于 Web GIS 的海洋地质数据可视化平台</p>
+
+<h2>功能概览</h2>
+<ul>
+  <li><strong>多底图切换</strong>：天地图影像/矢量/地形、ArcGIS 海洋/影像/街道/地形、OSM</li>
+  <li><strong>图层管理</strong>：40+ 矢量图层按分组加载，支持复选框开关、透明度调节</li>
+  <li><strong>颜色模式</strong>：单一色、多色、按字段着色，支持字段值筛选</li>
+  <li><strong>大数据渲染</strong>：Canvas 聚类 + RBush 空间索引，流畅展示 45 万+ 点位</li>
+  <li><strong>智能搜索</strong>：倒排索引 + 模糊匹配，毫秒级检索任意图层要素</li>
+  <li><strong>投点标注</strong>：自定义投点编辑器，支持坐标粘贴批量导入</li>
+  <li><strong>文件上传</strong>：支持 GeoJSON / Shapefile / KML / KMZ 格式加载</li>
+  <li><strong>测量工具</strong>：距离与面积测量（Geoman）</li>
+  <li><strong>导出图片</strong>：Ctrl+E 一键截图导出 PNG</li>
+  <li><strong>PWA 离线</strong>：Service Worker 缓存，离线可用</li>
+</ul>
+
+<h2>数据来源</h2>
+
+<h3>底图服务</h3>
+<ul>
+  <li><span class="tag">天地图</span> 国家地理信息公共服务平台，提供影像/矢量/地形底图及标注</li>
+  <li><span class="tag">ArcGIS</span> Esri 在线地图服务，提供海洋专题底图、卫星影像、街道地图等</li>
+  <li><span class="tag">OSM</span> 开源众包地图，社区贡献的全球地理数据</li>
+</ul>
+
+<h3>全球板块构造</h3>
+<ul>
+  <li><strong>全球16大板块</strong> — USGS 板块边界数据</li>
+  <li><strong>板块 (Hasterok2022)</strong> — Hasterok et al., 2022 新一代板块构造模型</li>
+  <li><strong>大陆板块 / 大洋板块</strong> — 板块分类数据</li>
+  <li><strong>洋中脊</strong> — 全球洋中脊分布</li>
+  <li><strong>海沟</strong> — 全球海沟分布</li>
+  <li><strong>转换断层</strong> — 全球转换断层，含大西洋/印度洋/太平洋分区</li>
+</ul>
+
+<h3>洋中脊作用域</h3>
+<ul>
+  <li><strong>全球洋壳 / 全球陆壳</strong> — 洋壳与陆壳范围</li>
+  <li><strong>大洋域 / 次大洋域 / 洋中脊作用域</strong> — 大洋域分级分类</li>
+  <li><strong>作用域边界</strong> — 1-5 级作用域边界</li>
+</ul>
+
+<h3>海底基础信息</h3>
+<ul>
+  <li><strong>火山</strong> — Smithsonian 全球火山数据库</li>
+  <li><strong>热点</strong> — 全球地幔热点分布</li>
+  <li><strong>大火成岩省 (Johansson)</strong> — Johansson et al. 大火成岩省数据集</li>
+  <li><strong>洋壳年龄 30Ma</strong> — 全球洋壳年龄格网</li>
+  <li><strong>盆地 (Evenick2021)</strong> — Evenick et al., 2021 全球沉积盆地</li>
+  <li><strong>盆地 (CGG)</strong> — CGG 沉积盆地数据</li>
+</ul>
+
+<h3>大型异常区</h3>
+<ul>
+  <li><strong>LLSVP</strong> — 大型低剪切波速省（Large Low-Shear-Velocity Province）</li>
+  <li><strong>Dupal 异常洋</strong> — Dupal 同位素异常洋域</li>
+</ul>
+
+<h3>地质站位</h3>
+<ul>
+  <li><strong>DSDP</strong> — Deep Sea Drilling Project（深海钻探计划，1968-1983）</li>
+  <li><strong>ODP</strong> — Ocean Drilling Program（大洋钻探计划，1985-2003）</li>
+  <li><strong>IODP 航次 3-13 / 13-26</strong> — International Ocean Discovery Program（国际大洋发现计划）</li>
+  <li><strong>古生物学 PBDB</strong> — <a href="https://paleobiodb.org/" target="_blank">Paleobiology Database</a>（古生物学数据库）</li>
+  <li><strong>气候岩性指标</strong> — Boucot 气候岩性指标数据（源自 PBDB）</li>
+</ul>
+
+<h2>技术栈</h2>
+<ul>
+  <li><strong>Leaflet.js</strong> — Web GIS 地图引擎</li>
+  <li><strong>Canvas + RBush</strong> — 大数据集渲染与空间索引</li>
+  <li><strong>Grid Clustering</strong> — O(n) 网格预聚合算法</li>
+  <li><strong>IndexedDB</strong> — GeoJSON 数据与搜索索引本地缓存</li>
+  <li><strong>PWA / Service Worker</strong> — 离线缓存与安装</li>
+  <li><strong>Geoman</strong> — 测量与绘图工具</li>
+  <li><strong>html2canvas</strong> — 地图截图导出</li>
+</ul>
+
+<div class="footer">
+  <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">蜀ICP备2025119436号-2</a>
+</div>
+
+</body>
+</html>
