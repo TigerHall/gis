@@ -112,6 +112,7 @@
     <meta name="theme-color" content="#99cc99" />
     <link rel="icon" href="./assets/images/icon.svg" type="image/svg+xml" />
   </head>
+
   <body>
     <!-- 悬浮触发按钮 -->
     <div class="layer-trigger" id="layerTrigger">要素加载</div>
@@ -163,14 +164,16 @@
     <div id="map"></div>
     <!-- 备案号（合规要求：底部可见，链接跳转工信部） -->
     <div id="beianBar">
-      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">蜀ICP备2025119436号-2</a>
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener"
+        >蜀ICP备2025119436号-2</a
+      >
     </div>
     <!-- 基础设定JS脚本 -->
     <script>
       // 天地图TK配置
       const TDT_TK = "13f1ff3b1c59a59cea87cf63950b4888";
 
-      L.CRS.EPSG3857.projection.MAX_LATITUDE = 89;
+      L.CRS.EPSG3857.projection.MAX_LATITUDE = 86;
 
       // 初始化地图容器
       map = L.map("map", {
