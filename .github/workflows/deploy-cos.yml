@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@latest
+        uses: actions/checkout@6
 
       - name: Install coscmd
         run: pip install coscmd
