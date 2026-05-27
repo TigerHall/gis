@@ -22,8 +22,7 @@ jobs:
             -s ${{ secrets.COS_SECRET_KEY }} \
             -b ${{ secrets.COS_BUCKET }} \
             -r ${{ secrets.COS_REGION }} \
-            --timeout 300 \
-            --max-retry 5
+            --timeout 300
 
       - name: Sync to COS
         run: |
