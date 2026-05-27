@@ -18,9 +18,9 @@
         { name: "板块 (Hasterok2022)", file: "plates_Hasterok2022.geojson" },
         { name: "大陆板块 plate_cont", file: "plate_cont.json" },
         { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
-        { name: "洋中脊 Mid-Ocean Ridge", file: "ridgenew.json" },
+        { name: "洋中脊和转换断层 MOR&TF", file: "ridgenew.json" },
         { name: "海沟 Trench", file: "Pb_trench.json" },
-        { name: "转换断层 Transform", file: "Pb_transformall.json" },
+        { name: "其他板块边界 other boundries", file: "Pb_transformall.json" },
         { name: "大西洋转换断层 Atlantic_FZ", file: "Atlantic_FZ.json" },
         { name: "印度洋转换断层 Indian_FZ", file: "Indian_FZ.json" },
         { name: "太平洋转换断层 Pacific_FZ", file: "Pacific_FZ.json" },
@@ -76,7 +76,10 @@
     {
       groupName: "海底矿产资源",
       layers: [
-        { name: "热液喷口 HydrothermalVents", file: "hydrothermal_vents.geojson" },
+        {
+          name: "热液喷口 HydrothermalVents",
+          file: "hydrothermal_vents.geojson",
+        },
       ],
     },
     {
@@ -184,12 +187,16 @@
           if (this.checked) {
             selectAllLayers();
             // 全选时展开所有组
-            document.querySelectorAll(".layer-group-children").forEach(function (c) {
-              if (!c.classList.contains("open")) c.classList.add("open");
-            });
-            document.querySelectorAll(".layer-group-arrow").forEach(function (a) {
-              if (!a.classList.contains("open")) a.classList.add("open");
-            });
+            document
+              .querySelectorAll(".layer-group-children")
+              .forEach(function (c) {
+                if (!c.classList.contains("open")) c.classList.add("open");
+              });
+            document
+              .querySelectorAll(".layer-group-arrow")
+              .forEach(function (a) {
+                if (!a.classList.contains("open")) a.classList.add("open");
+              });
           } else {
             unselectAllLayers();
           }
@@ -605,13 +612,17 @@
       let labelField = cfg ? cfg.field : DEFAULT_LABEL_FIELD;
 
       const isVolcanoLayer = fileName === "volcanos.json";
-      const isHotspotLayer = fileName === "hotspots.json" || fileName === "hydrothermal_vents.geojson";
+      const isHotspotLayer =
+        fileName === "hotspots.json" ||
+        fileName === "hydrothermal_vents.geojson";
 
       // 创建聚类组
       function createClusterGroup() {
         const layerColor = layerColorMap[checkboxId] || "#8B6914";
-            const isVolcanoCluster = fileName === "volcanos.json";
-            const isHotspotCluster = fileName === "hotspots.json" || fileName === "hydrothermal_vents.geojson";
+        const isVolcanoCluster = fileName === "volcanos.json";
+        const isHotspotCluster =
+          fileName === "hotspots.json" ||
+          fileName === "hydrothermal_vents.geojson";
 
         return L.markerClusterGroup({
           maxClusterRadius: 50,
@@ -979,7 +990,11 @@
         if (colorMode[checkboxId] === undefined) {
           const isPolygon =
             geomType === "polygon" || geomType === "multipolygon";
-          if (fileName === "hotspots.json" || fileName === "volcanos.json" || fileName === "hydrothermal_vents.geojson") {
+          if (
+            fileName === "hotspots.json" ||
+            fileName === "volcanos.json" ||
+            fileName === "hydrothermal_vents.geojson"
+          ) {
             colorMode[checkboxId] = "single";
           } else if (isPolygon) {
             colorMode[checkboxId] = "sequential";
@@ -1773,8 +1788,10 @@
             if (isChecked) {
               var ch = groupDiv.querySelector(".layer-group-children");
               var ar = groupDiv.querySelector(".layer-group-arrow");
-              if (ch && !ch.classList.contains("open")) ch.classList.add("open");
-              if (ar && !ar.classList.contains("open")) ar.classList.add("open");
+              if (ch && !ch.classList.contains("open"))
+                ch.classList.add("open");
+              if (ar && !ar.classList.contains("open"))
+                ar.classList.add("open");
             }
           });
 
@@ -1786,7 +1803,9 @@
             if (e.ctrlKey || e.metaKey) {
               // Ctrl/Cmd + 点击：全部展开或全部折叠
               var allHeaders = document.querySelectorAll(".layer-group-header");
-              var anyOpen = document.querySelector(".layer-group-children.open");
+              var anyOpen = document.querySelector(
+                ".layer-group-children.open",
+              );
               allHeaders.forEach(function (h) {
                 var c = h.nextElementSibling;
                 var a = h.querySelector(".layer-group-arrow");
@@ -1821,7 +1840,9 @@
           var fullPath = geoJsonCosPath + layerConfig.file;
           var fileName = layerConfig.file;
           var fixedColor =
-            fileName === "hotspots.json" || fileName === "volcanos.json" || fileName === "hydrothermal_vents.geojson"
+            fileName === "hotspots.json" ||
+            fileName === "volcanos.json" ||
+            fileName === "hydrothermal_vents.geojson"
               ? "#FF3333"
               : window.GeoUtils.getFixedColor(idx);
           layerColorMap[checkboxId] = fixedColor;
