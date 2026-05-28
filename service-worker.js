@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.6.13";
+const CACHE_NAME = "v1.6.14";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -36,8 +36,10 @@ const STATIC_ASSETS = [
   // 截图
   "./assets/images/screenshot-desktop.jpg",
   "./assets/images/screenshot-mobile.jpg",
+  // 其他网站
+  "./test.html",
+  "./about.html",
 ];
-
 // 安装阶段：只缓存小文件（快速）
 self.addEventListener("install", (event) => {
   event.waitUntil(
