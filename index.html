@@ -592,7 +592,8 @@
       var initialBaseLayer =
         savedBasemap && allBaseLayers[savedBasemap]
           ? allBaseLayers[savedBasemap]
-          : arcgisBaseLayers["ArcGIS-海洋底图"];
+          : tdtImgLayer2;
+      // arcgisBaseLayers["ArcGIS-海洋底图"]
 
       initialBaseLayer.addTo(map);
       tdtIboLayer.addTo(map);
