@@ -587,7 +587,7 @@
         arcgisBaseLayers,
       );
 
-      // 尝试恢复上次选择的底图，没有则用默认
+      // 尝试恢复上次选择的底图，没有则用默认底图
       var savedBasemap = localStorage.getItem(BASEMAP_STORAGE_KEY);
       var initialBaseLayer =
         savedBasemap && allBaseLayers[savedBasemap]
@@ -596,7 +596,7 @@
       // arcgisBaseLayers["ArcGIS-海洋底图"]
 
       initialBaseLayer.addTo(map);
-      tdtIboLayer.addTo(map);
+      // tdtIboLayer.addTo(map);
 
       // 切换底图时保存选择
       map.on("baselayerchange", function (e) {
