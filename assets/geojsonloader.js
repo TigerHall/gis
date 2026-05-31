@@ -208,6 +208,7 @@
         aboutLink.className = "about-link";
         aboutLink.title = "关于本站";
         aboutLink.textContent = "ⓘ";
+        aboutLink.target = "_blank";
         layerPanel.removeChild(titleH3);
         titleRow.appendChild(selectAllCheckbox);
         titleRow.appendChild(titleSpan);
