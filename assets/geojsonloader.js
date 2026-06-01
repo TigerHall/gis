@@ -15,7 +15,10 @@
       groupName: "全球板块构造",
       layers: [
         { name: "全球16大板块 plate16", file: "plate16.geojson" },
-        { name: "全球280个板块 (Hasterok2022)", file: "plates_Hasterok2022.geojson" },
+        {
+          name: "全球280个板块 (Hasterok2022)",
+          file: "plates_Hasterok2022.geojson",
+        },
         { name: "大陆板块 plate_cont", file: "plate_cont.json" },
         { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
         { name: "洋中脊和转换断层 MOR&TF", file: "ridgenew.json" },
@@ -36,7 +39,7 @@
         { name: "2大洋域 OceanDomian", file: "2OceanDomian.json" },
         { name: "3次大洋域 SubOceanDomain", file: "3SubOceanDomain.json" },
         { name: "4洋中脊作用域 RidgeDomain", file: "4RidgeDomain.json" },
-       
+
         {
           name: "全球陆壳 GlobalContinentalCrust",
           file: "global_continental_crust.json",
@@ -72,9 +75,12 @@
     {
       groupName: "海底矿产资源",
       layers: [
-        { name: "热液喷口 HydrothermalVents(ISA)",file: "hydrothermal_vents.geojson" },
-        { name: "多金属结核 Fe-MnNodule(NOAA)",file: "Fe_MnNodule.geojson" },
-        { name: "富钴结壳 Co-richCrust(NOAA)",file: "Co-richCrust.geojson" },
+        {
+          name: "热液喷口 HydrothermalVents(ISA)",
+          file: "hydrothermal_vents.geojson",
+        },
+        { name: "多金属结核 Fe-MnNodule(NOAA)", file: "Fe_MnNodule.geojson" },
+        { name: "富钴结壳 Co-richCrust(NOAA)", file: "Co-richCrust.geojson" },
       ],
     },
     {
@@ -90,10 +96,12 @@
         { name: "SEIR_offaxis_rock", file: "SEIR_offaxis.geojson" },
         { name: "RedSea_rock", file: "RedSea_rift.geojson" },
         {
-          name: "古生物学 PBDB",file: "PBDB.geojson",
+          name: "古生物学 PBDB",
+          file: "PBDB.geojson",
         },
         {
-          name: "气候岩性指标 PBDB",file: "Boucot.geojson",
+          name: "气候岩性指标 PBDB",
+          file: "Boucot.geojson",
         },
       ],
     },
@@ -163,7 +171,8 @@
           layerPanel.classList.contains("active") &&
           !layerPanel.contains(e.target) &&
           !layerTrigger.contains(e.target) &&
-          !window.__yugis_justResized
+          !window.__yugis_justResized &&
+          !document.body.classList.contains("sidebar-pinned")
         ) {
           layerPanel.classList.remove("active");
         }
@@ -211,7 +220,45 @@
         titleRow.appendChild(selectAllCheckbox);
         titleRow.appendChild(titleSpan);
         titleRow.appendChild(aboutLink);
+
+        // 图钉按钮
+        const pinBtn = document.createElement("button");
+        pinBtn.className = "sidebar-pin-btn";
+        pinBtn.title = "钉住侧边栏";
+        pinBtn.innerHTML = "📌";
+        titleRow.appendChild(pinBtn);
+
         layerPanel.insertBefore(titleRow, layerPanel.firstChild);
+
+        // 图钉按钮逻辑
+        pinBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          const isPinned = !document.body.classList.contains("sidebar-pinned");
+          document.body.classList.toggle("sidebar-pinned", isPinned);
+          pinBtn.classList.toggle("active", isPinned);
+          localStorage.setItem("yugis_sidebar_pinned", isPinned);
+
+          if (isPinned) {
+            layerPanel.classList.add("active");
+          }
+
+          // 通知 Leaflet 地图尺寸已变化
+          setTimeout(function () {
+            map.invalidateSize();
+          }, 350);
+        });
+
+        // 恢复图钉状态
+        var savedPinned =
+          localStorage.getItem("yugis_sidebar_pinned") === "true";
+        if (savedPinned) {
+          document.body.classList.add("sidebar-pinned");
+          pinBtn.classList.add("active");
+          layerPanel.classList.add("active");
+          setTimeout(function () {
+            map.invalidateSize();
+          }, 350);
+        }
       }
     }
 

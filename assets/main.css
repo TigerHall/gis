@@ -730,3 +730,46 @@ body.resizing-panel {
 #layerItemsContainer::-webkit-scrollbar-thumb:hover {
   background: rgba(106, 170, 106, 0.45);
 }
+
+/* 侧边栏图钉按钮 */
+.sidebar-pin-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0 4px;
+  opacity: 0.35;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.sidebar-pin-btn:hover {
+  opacity: 0.7;
+}
+.sidebar-pin-btn.active {
+  opacity: 1;
+  transform: rotate(45deg);
+}
+
+/* 侧边栏钉住状态：面板进入文档流，地图让出空间 */
+body.sidebar-pinned {
+  overflow: hidden;
+}
+body.sidebar-pinned #layerPanel {
+  position: relative !important;
+  transform: none !important;
+  transition: none !important;
+  flex-shrink: 0;
+  height: 100%;
+  z-index: auto;
+}
+body.sidebar-pinned #map {
+  flex: 1 !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+body.sidebar-pinned .layer-trigger {
+  display: none !important;
+}
