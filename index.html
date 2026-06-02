@@ -32,7 +32,7 @@
     <script src="./assets/rbush.js"></script>
     <!-- Canvas 聚类渲染（>10K 点零 DOM 方案） -->
     <script src="./assets/Leaflet.MarkersCanvas.js"></script>
-    <script src="./assets/html2canvas.min.js"></script>
+    <script src="./assets/html-to-image.min.js"></script>
     <script src="./assets/shp.min.js"></script>
     <script src="./assets/togeojson.min.js"></script>
     <script src="./assets/jszip.min.js"></script>
@@ -287,61 +287,125 @@
 
       // ========== 导出地图图片（html2canvas 截图）==========
       function exportMapImage() {
-        if (!window.map || !window.html2canvas) return;
+        if (!window.map || !window.htmlToImage) return;
         var mapEl = document.getElementById("map");
         var panel = document.getElementById("layerPanel");
         var trigger = document.getElementById("layerTrigger");
 
-        // 隐藏 Leaflet 控件（缩放、比例尺、坐标、底图切换、Geoman）
-        var hiddenEls = [];
-        mapEl
-          .querySelectorAll(
-            ".leaflet-control-container > .leaflet-top, .leaflet-control-container > .leaflet-bottom",
-          )
-          .forEach(function (g) {
-            if (g.style.display !== "none") {
-              hiddenEls.push(g);
-              g.style.display = "none";
-            }
-          });
+        // 控制节点通过 toPng 的 filter 回调排除，无需移出 DOM
 
         // 隐藏侧边栏
         var panelWasActive = panel && panel.classList.contains("active");
         if (panelWasActive) panel.classList.remove("active");
         if (trigger) trigger.style.display = "none";
 
-        html2canvas(mapEl, {
-          useCORS: true,
-          backgroundColor: "#fff",
-          scale: Math.min(window.devicePixelRatio || 1, 2),
-        })
-          .then(function (canvas) {
-            // 恢复所有隐藏元素
-            hiddenEls.forEach(function (el) {
-              el.style.display = "";
-            });
-            if (panelWasActive && panel) panel.classList.add("active");
-            if (trigger) trigger.style.display = "";
-            // 下载
-            var now = new Date();
-            var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
-              .map(function (n) {
-                return String(n).padStart(2, "0");
-              })
-              .join("");
-            var a = document.createElement("a");
-            a.download = "OGV_" + ts + ".png";
-            a.href = canvas.toDataURL("image/png");
-            a.click();
-          })
-          .catch(function () {
-            // 出错也要恢复
-            hiddenEls.forEach(function (el) {
-              el.style.display = "";
-            });
-            if (panelWasActive && panel) panel.classList.add("active");
-            if (trigger) trigger.style.display = "";
+        // 等一帧 + 等瓦片加载完，再截图，避免底图错位
+        requestAnimationFrame(function () {
+          var tileLayers = [];
+          map.eachLayer(function (layer) {
+            if (layer instanceof L.TileLayer && layer._map) {
+              tileLayers.push(layer);
+            }
           });
+
+          // 等待所有瓦片加载完成（最多等 3 秒）
+          var waitTiles = function (cb) {
+            if (tileLayers.length === 0) { cb(); return; }
+            var loaded = 0;
+            var done = false;
+            tileLayers.forEach(function (ly) {
+              if (ly._loading) {
+                ly.once("load", function () {
+                  loaded++;
+                  if (!done && loaded >= tileLayers.length) { done = true; cb(); }
+                });
+              } else {
+                loaded++;
+              }
+            });
+            if (!done && loaded >= tileLayers.length) { cb(); return; }
+            // 超时保护
+            setTimeout(function () { if (!done) { done = true; cb(); } }, 3000);
+          };
+
+          waitTiles(function () {
+            // 摊平 Leaflet pane 的 transform，避免 html-to-image 处理 translate3d 出错
+            // 原理：读取 pane 的 translate3d(x, y, z)，改成 left/top 定位，清空 transform
+            var savedPanes = [];
+            var panes = mapEl.querySelectorAll('.leaflet-pane');
+            panes.forEach(function (pane) {
+              var st = window.getComputedStyle(pane);
+              var tx = st.transform;
+              if (!tx || tx === 'none') return;
+              // 解析 matrix/matrix3d
+              var mat = tx.match(/matrix(?:3d)?\(([^)]+)\)/);
+              if (!mat) return;
+              var vals = mat[1].split(',').map(parseFloat);
+              var px = 0, py = 0;
+              if (tx.indexOf('matrix3d') === 0) { px = vals[12]; py = vals[13]; }
+              else { px = vals[4]; py = vals[5]; }
+              if (Math.abs(px) < 0.5 && Math.abs(py) < 0.5) return;
+              var pos = pane.style.position || window.getComputedStyle(pane).position;
+              savedPanes.push({
+                el: pane,
+                transform: pane.style.transform,
+                left: pane.style.left,
+                top: pane.style.top,
+                position: pane.style.position,
+              });
+              pane.style.transform = '';
+              pane.style.position = 'absolute';
+              pane.style.left = (pane.offsetLeft + px) + 'px';
+              pane.style.top = (pane.offsetTop + py) + 'px';
+            });
+
+            htmlToImage
+              .toPng(mapEl, {
+                backgroundColor: "#fff",
+                pixelRatio: Math.min(window.devicePixelRatio || 2, 3),
+                filter: function (node) {
+                  if (!node || !node.classList) return true;
+                  if (node.closest) {
+                    return !node.closest(".leaflet-control-container, .leaflet-control, .leaflet-popup, .leaflet-tooltip");
+                  }
+                  return true;
+                },
+              })
+              .then(function (dataUrl) {
+                // 恢复 pane 的 transform
+                savedPanes.forEach(function (item) {
+                  item.el.style.transform = item.transform;
+                  item.el.style.left = item.left;
+                  item.el.style.top = item.top;
+                  item.el.style.position = item.position;
+                });
+                if (panelWasActive && panel) panel.classList.add("active");
+                if (trigger) trigger.style.display = "";
+                map.invalidateSize();
+
+                var now = new Date();
+                var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
+                  .map(function (n) { return String(n).padStart(2, "0"); })
+                  .join("");
+                var a = document.createElement("a");
+                a.download = "OGV_" + ts + ".png";
+                a.href = dataUrl;
+                a.click();
+              })
+              .catch(function () {
+                // 恢复 pane 的 transform
+                savedPanes.forEach(function (item) {
+                  item.el.style.transform = item.transform;
+                  item.el.style.left = item.left;
+                  item.el.style.top = item.top;
+                  item.el.style.position = item.position;
+                });
+                if (panelWasActive && panel) panel.classList.add("active");
+                if (trigger) trigger.style.display = "";
+                map.invalidateSize();
+              });
+          });
+        });
       }
 
       // Ctrl+E 快捷键导出图片

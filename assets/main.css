@@ -773,3 +773,65 @@ body.sidebar-pinned #map {
 body.sidebar-pinned .layer-trigger {
   display: none !important;
 }
+
+/* ========== 打印样式（window.print() 导出图片）========== */
+@media print {
+  /* 隐藏所有非地图元素 */
+  body.sidebar-pinned #layerPanel,
+  #layerPanel,
+  #layerTrigger,
+  .leaflet-control-container,
+  .update-toast,
+  #searchTooltip,
+  .pm-draw,
+  .pm-toolbar,
+  .pm-actions-container,
+  .search-container,
+  .search-input,
+  .search-dropdown,
+  #pointDropEditor,
+  .color-picker-popup,
+  .hover-tooltip,
+  .leaflet-tooltip,
+  .leaflet-popup {
+    display: none !important;
+  }
+
+  /* 地图占满整页 */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  #map, .map-container, #app-wrapper {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* 确保底图图层可见 */
+  .leaflet-layer,
+  .leaflet-tile,
+  .leaflet-tile-loaded,
+  .leaflet-overlay-pane svg,
+  .leaflet-overlay-pane canvas {
+    visibility: visible !important;
+    display: block !important;
+  }
+
+  /* 强制打印背景色（底图瓦片）*/
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
