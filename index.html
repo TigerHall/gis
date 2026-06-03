@@ -84,7 +84,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="#99cc99" />
-    <meta name="apple-mobile-web-app-title" content="YuGIS" />
+    <meta name="apple-mobile-web-app-title" content="Dupal" />
     <!-- iOS 主屏幕图标（优先SVG，降级用PNG） -->
     <link
       rel="apple-touch-icon"
@@ -310,42 +310,63 @@
 
           // 等待所有瓦片加载完成（最多等 3 秒）
           var waitTiles = function (cb) {
-            if (tileLayers.length === 0) { cb(); return; }
+            if (tileLayers.length === 0) {
+              cb();
+              return;
+            }
             var loaded = 0;
             var done = false;
             tileLayers.forEach(function (ly) {
               if (ly._loading) {
                 ly.once("load", function () {
                   loaded++;
-                  if (!done && loaded >= tileLayers.length) { done = true; cb(); }
+                  if (!done && loaded >= tileLayers.length) {
+                    done = true;
+                    cb();
+                  }
                 });
               } else {
                 loaded++;
               }
             });
-            if (!done && loaded >= tileLayers.length) { cb(); return; }
+            if (!done && loaded >= tileLayers.length) {
+              cb();
+              return;
+            }
             // 超时保护
-            setTimeout(function () { if (!done) { done = true; cb(); } }, 3000);
+            setTimeout(function () {
+              if (!done) {
+                done = true;
+                cb();
+              }
+            }, 3000);
           };
 
           waitTiles(function () {
             // 摊平 Leaflet pane 的 transform，避免 html-to-image 处理 translate3d 出错
             // 原理：读取 pane 的 translate3d(x, y, z)，改成 left/top 定位，清空 transform
             var savedPanes = [];
-            var panes = mapEl.querySelectorAll('.leaflet-pane');
+            var panes = mapEl.querySelectorAll(".leaflet-pane");
             panes.forEach(function (pane) {
               var st = window.getComputedStyle(pane);
               var tx = st.transform;
-              if (!tx || tx === 'none') return;
+              if (!tx || tx === "none") return;
               // 解析 matrix/matrix3d
               var mat = tx.match(/matrix(?:3d)?\(([^)]+)\)/);
               if (!mat) return;
-              var vals = mat[1].split(',').map(parseFloat);
-              var px = 0, py = 0;
-              if (tx.indexOf('matrix3d') === 0) { px = vals[12]; py = vals[13]; }
-              else { px = vals[4]; py = vals[5]; }
+              var vals = mat[1].split(",").map(parseFloat);
+              var px = 0,
+                py = 0;
+              if (tx.indexOf("matrix3d") === 0) {
+                px = vals[12];
+                py = vals[13];
+              } else {
+                px = vals[4];
+                py = vals[5];
+              }
               if (Math.abs(px) < 0.5 && Math.abs(py) < 0.5) return;
-              var pos = pane.style.position || window.getComputedStyle(pane).position;
+              var pos =
+                pane.style.position || window.getComputedStyle(pane).position;
               savedPanes.push({
                 el: pane,
                 transform: pane.style.transform,
@@ -353,10 +374,10 @@
                 top: pane.style.top,
                 position: pane.style.position,
               });
-              pane.style.transform = '';
-              pane.style.position = 'absolute';
-              pane.style.left = (pane.offsetLeft + px) + 'px';
-              pane.style.top = (pane.offsetTop + py) + 'px';
+              pane.style.transform = "";
+              pane.style.position = "absolute";
+              pane.style.left = pane.offsetLeft + px + "px";
+              pane.style.top = pane.offsetTop + py + "px";
             });
 
             htmlToImage
@@ -366,7 +387,9 @@
                 filter: function (node) {
                   if (!node || !node.classList) return true;
                   if (node.closest) {
-                    return !node.closest(".leaflet-control-container, .leaflet-control, .leaflet-popup, .leaflet-tooltip");
+                    return !node.closest(
+                      ".leaflet-control-container, .leaflet-control, .leaflet-popup, .leaflet-tooltip",
+                    );
                   }
                   return true;
                 },
@@ -385,7 +408,9 @@
 
                 var now = new Date();
                 var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
-                  .map(function (n) { return String(n).padStart(2, "0"); })
+                  .map(function (n) {
+                    return String(n).padStart(2, "0");
+                  })
                   .join("");
                 var a = document.createElement("a");
                 a.download = "OGV_" + ts + ".png";
@@ -607,64 +632,154 @@
             "<a href='https://www.openstreetmap.org/' target='_blank'>OpenStreetMap</a>",
         },
       );
-      const osmLayers = L.layerGroup([osmLayer]);
+      const osmLayers = L.layerGroup([osmLayer, tdtIboLayer]);
+
+      // 5. ETOPO 2022 全球底图（支持跨180°三副本）
+      // 辅助函数：为图像底图创建三份副本，分别偏移 -360°/0°/+360°，实现跨180°无缝显示
+      function createWorldCopyImageOverlay(url, bounds, options) {
+        var south = bounds[0][0];
+        var west = bounds[0][1];
+        var north = bounds[1][0];
+        var east = bounds[1][1];
+        return L.layerGroup([
+          L.imageOverlay(
+            url,
+            [
+              [south, west - 360],
+              [north, east - 360],
+            ],
+            options,
+          ),
+          L.imageOverlay(
+            url,
+            [
+              [south, west],
+              [north, east],
+            ],
+            options,
+          ),
+          L.imageOverlay(
+            url,
+            [
+              [south, west + 360],
+              [north, east + 360],
+            ],
+            options,
+          ),
+        ]);
+      }
+
+      var etopoBounds = [
+        [-85.06, -180],
+        [85.06, 180],
+      ];
+      const etopoLayer = createWorldCopyImageOverlay(
+        "./assets/xyz/etopo.jpg",
+        etopoBounds,
+        {
+          attribution:
+            '<a href="https://www.ngdc.noaa.gov/" target="_blank">ETOPO 2022</a>',
+        },
+      );
+      const etopohighLayer = createWorldCopyImageOverlay(
+        "./assets/xyz/etopo2022high.jpg",
+        etopoBounds,
+        {
+          attribution:
+            '<a href="https://www.ngdc.noaa.gov/" target="_blank">ETOPO 2022 HD</a>',
+        },
+      );
 
       // ========== 控件配置 ==========
-      // 1. 底图切换控件
-      L.control
-        .layers(
-          {
-            // 天地图系列
-            天地图纯影像: tdtImgLayer2,
-            天地图影像底图: imgLayers,
-            天地图矢量底图: vecLayers,
-            天地图地形底图: terLayers,
-            // ArcGIS系列
-            ...arcgisBaseLayers,
-            // OSM
-            OSM底图_边界有误慎用: osmLayers,
-            // 全球境界: tdtIboLayer,
-          },
-          {
-            全球境界: tdtIboLayer,
-          },
-          {
-            position: "bottomright",
-            collapsed: true,
-            autoZIndex: true,
-          },
-        )
-        .addTo(map);
-
-      // ========== 底图持久化：记住用户上次选择 ==========
-      var BASEMAP_STORAGE_KEY = "yugis_basemap";
-
-      // 所有可切换底图的名称 → layer 映射
-      var allBaseLayers = Object.assign(
+      // 所有底图统一放在 baseLayers 对象中（单一数据源，避免与 L.control 定义不同步）
+      // 注意顺序：先天地图系列，再 ArcGIS 系列，最后 OSM（确保 OSM 在控件列表最末尾）
+      const baseLayers = Object.assign(
         {
+          // ETOPO 2022 全球底图
+          ETOPO: etopoLayer,
+          ETOPO_2022: etopohighLayer,
+          // 天地图系列
           天地图纯影像: tdtImgLayer2,
           天地图影像底图: imgLayers,
           天地图矢量底图: vecLayers,
           天地图地形底图: terLayers,
-          OSM底图_边界有误慎用: osmLayers,
         },
         arcgisBaseLayers,
       );
+      // OSM 放到 ArcGIS 底图后面
+      baseLayers["OSM底图_边界有误慎用"] = osmLayers;
+
+      // 所有覆盖层统一放在 overlays 对象中（单一数据源，支持扩展）
+      const overlays = {
+        全球境界: tdtIboLayer,
+        // 以后新增覆盖层直接在这里加
+      };
+
+      // 1. 底图切换控件
+      L.control
+        .layers(baseLayers, overlays, {
+          position: "bottomright",
+          collapsed: true,
+          autoZIndex: true,
+        })
+        .addTo(map);
+
+      // ========== 底图持久化：记住用户上次选择 ==========
+      var BASEMAP_STORAGE_KEY = "dupal_basemap";
 
       // 尝试恢复上次选择的底图，没有则用默认底图
       var savedBasemap = localStorage.getItem(BASEMAP_STORAGE_KEY);
       var initialBaseLayer =
-        savedBasemap && allBaseLayers[savedBasemap]
-          ? allBaseLayers[savedBasemap]
-          : tdtImgLayer2;
-      // arcgisBaseLayers["ArcGIS-海洋底图"]
+        savedBasemap && baseLayers[savedBasemap]
+          ? baseLayers[savedBasemap]
+          : etopoLayer;
 
       initialBaseLayer.addTo(map);
-      // tdtIboLayer.addTo(map);
+
+      // ========== 覆盖层持久化：记住用户上次选择的覆盖层 ==========
+      var OVERLAY_STORAGE_KEY = "dupal_overlays";
+
+      // 尝试恢复上次选中的覆盖层
+      try {
+        var savedOverlays = JSON.parse(
+          localStorage.getItem(OVERLAY_STORAGE_KEY),
+        );
+        if (!Array.isArray(savedOverlays)) savedOverlays = [];
+      } catch (e) {
+        savedOverlays = [];
+      }
+      savedOverlays.forEach(function (name) {
+        if (overlays[name] && !map.hasLayer(overlays[name])) {
+          map.addLayer(overlays[name]);
+        }
+      });
 
       // 切换底图时保存选择
       map.on("baselayerchange", function (e) {
         localStorage.setItem(BASEMAP_STORAGE_KEY, e.name);
+      });
+
+      // 覆盖层选中/取消时保存选择
+      map.on("overlayadd", function (e) {
+        try {
+          var list =
+            JSON.parse(localStorage.getItem(OVERLAY_STORAGE_KEY)) || [];
+          if (list.indexOf(e.name) === -1) {
+            list.push(e.name);
+            localStorage.setItem(OVERLAY_STORAGE_KEY, JSON.stringify(list));
+          }
+        } catch (ex) {}
+      });
+      map.on("overlayremove", function (e) {
+        try {
+          var list =
+            JSON.parse(localStorage.getItem(OVERLAY_STORAGE_KEY)) || [];
+          var idx = list.indexOf(e.name);
+          if (idx !== -1) {
+            list.splice(idx, 1);
+            localStorage.setItem(OVERLAY_STORAGE_KEY, JSON.stringify(list));
+          }
+        } catch (ex) {}
       });
 
       // ========== Leaflet-Geoman 测量工具 ==========
