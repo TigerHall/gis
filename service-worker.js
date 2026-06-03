@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.6.16";
+const CACHE_NAME = "v1.6.17";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -34,6 +34,9 @@ const STATIC_ASSETS = [
   "./assets/html-to-image.min.js",
   // 图标
   "./assets/images/icon.svg",
+  // 底图
+  "./assets/xyz/etopo.jpg",
+  "./assets/xyz/etopo2022high.jpg",
   // 截图
   "./assets/images/screenshot-desktop.jpg",
   "./assets/images/screenshot-mobile.jpg",
