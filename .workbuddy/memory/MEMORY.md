@@ -74,7 +74,35 @@
 - `_lastClipText` 防重复：paste 和 `tryReadClipboard` 两个入口均检查
 - 自动展开侧边栏 + 滚动到编辑器 + Toast 提示
 
-## Layer Status Dot Download
+## Leaflet.VectorGrid 技术备忘（2026-06-04 测试，暂未合入主应用）
+
+### 适用场景
+用 `L.vectorGrid.slicer()` 替代手动三副本 `shiftLng()` + `L.geoJSON` 渲染大规模面/线数据。
+VectorGrid 自动处理世界循环（跨 180° 反子午线重复），无需手动偏移坐标。
+
+### 关键踩坑：fill 不可见
+- **根因**：`L.SVG.Tile` 重写了 `onAdd = L.Util.falseFn`，导致 `_drawing` 从未设为 `true`；而 `_updatePoly()` 起始有 `if (!this._drawing) return;`
+- **后果**：所有 fill 渲染被跳过，只有 stroke 可见
+- **修复**：`rendererFactory` 中设置 `r._drawing = true`
+```js
+rendererFactory: function(tileCoord, tileSize, opts) {
+    var r = L.svg.tile(tileCoord, tileSize, opts);
+    r._drawing = true;
+    return r;
+}
+```
+
+### 其他注意事项
+- 样式函数必须显式写 `fill: true, stroke: true`
+- 每要素散色：`(props.FID || props.OBJECTID) * 137.508 % 360`（黄金角）
+- `interactive: true` + `.on("mouseover", fn)` 可用，`e.layer.properties` 为 GeoJSON 属性
+- 不要用 `L.canvas.tile`（`L.DomEvent.fakeStop` 兼容报错），用 `L.svg.tile`
+- popup 属性名要按数据实际字段匹配（如 `plate`、`Name` 等）
+
+## Beian 备案信息
+- test.html 和 index.html 均已添加公安备案链接
+- 图标路径：`./assets/images/备案编号图标.png`
+- 图标样式：`vertical-align:-2px;height:1em;margin-right:3px;`（-2px 对齐中文字体）
 - 绿色圆点可点击下载 GeoJSON（`downloadLayerGeoJson` + `triggerDownload`）
 - 预置图层：`searchIndexMap[cbId].features` → `GzIdbLoader.fetch(filePath)`
 - 用户上传图层：`userLayerGeoJson[uid].geoJsonData`

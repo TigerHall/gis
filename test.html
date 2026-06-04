@@ -56,14 +56,25 @@
   </head>
   <body>
     <div id="map"></div>
-    <!-- 备案号（合规要求：底部可见，链接跳转工信部） -->
+    <!-- 备案号（合规要求：底部可见，链接跳转工信部、公安） -->
     <div id="beianBar">
       <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener"
         >蜀ICP备2025119436号</a
       >
+      &nbsp;
+      <a
+        href="https://beian.mps.gov.cn/#/query/webSearch?code=33030402001567"
+        rel="noreferrer"
+        target="_blank"
+        ><img
+          src="./assets/images/备案编号图标.png"
+          style="vertical-align: -2px; height: 1em; margin-right: 3px"
+        />浙公网安备33030402001567号</a
+      >
     </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="./assets/Leaflet.VectorGrid.bundled.min.js"></script>
     <script>
       var map = L.map("map", {
         maxZoom: 19,
@@ -90,10 +101,16 @@
       var overlayLayers = {};
 
       layerDefs.forEach(function (def) {
+        var vectorLayer = null;
+
         var g = L.layerGroup();
         g._done = false;
         g.on("add", function () {
-          if (g._done) return;
+          if (g._done) {
+            // 已创建过 vectorLayer，直接加回地图
+            if (vectorLayer) map.addLayer(vectorLayer);
+            return;
+          }
           g._done = true;
           fetch("./assets/geojson/" + def.file + ".json.gz")
             .then(function (r) {
@@ -104,53 +121,75 @@
               });
             })
             .then(function (data) {
-              [0, 360, -360].forEach(function (offset) {
-                g.addLayer(
-                  L.geoJSON(shiftLng(data, offset), {
-                    style: randomStyle,
-                    onEachFeature: function (f, l) {
-                      var n = f.properties && f.properties.Name;
-                      if (n) l.bindTooltip(n, { sticky: true });
-                    },
-                  }),
-                );
+              vectorLayer = L.vectorGrid.slicer(data, {
+                rendererFactory: function (tileCoord, tileSize, opts) {
+                  var r = L.svg.tile(tileCoord, tileSize, opts);
+                  r._drawing = true; // 否则 _updatePoly 因为 _drawing 为 falsy 而跳过
+                  return r;
+                },
+                vectorTileLayerStyles: {
+                  sliced: function (props, zoom) {
+                    var id = props.FID || props.OBJECTID || 0;
+                    var h = (id * 137.508) % 360; // 黄金角均匀散色
+                    return {
+                      color: "#000",
+                      weight: 0.5,
+                      opacity: 1,
+                      fillColor: "hsl(" + h + ",70%,50%)",
+                      fillOpacity: 0.5,
+                      fill: true,
+                      stroke: true,
+                    };
+                  },
+                },
+                interactive: true,
               });
+
+              vectorLayer
+                .on("mouseover", function (e) {
+                  var p = e.layer && e.layer.properties;
+                  if (!p) return;
+                  var name =
+                    p.plate ||
+                    p.Plate ||
+                    p.PLATE ||
+                    p.Name ||
+                    p.name ||
+                    p.NAME ||
+                    p.title ||
+                    p.Title ||
+                    p.label ||
+                    p.Label ||
+                    p.name_en ||
+                    p.Name_En ||
+                    p.NAME_EN ||
+                    p.namezh ||
+                    p.name_zh ||
+                    p.NameZh ||
+                    "";
+                  if (name) {
+                    L.popup().setContent(name).setLatLng(e.latlng).openOn(map);
+                  }
+                })
+                .on("mouseout", function () {
+                  map.closePopup();
+                })
+                .addTo(map);
             })
             .catch(function (e) {
               console.error(def.name, e);
             });
         });
+
+        // remove 时仅从地图移除，不销毁实例（供重新勾选时复用）
+        g.on("remove", function () {
+          if (vectorLayer) map.removeLayer(vectorLayer);
+        });
+
         overlayLayers[def.name] = g;
       });
 
       L.control.layers({ "ArcGIS 影像": imagery }, overlayLayers).addTo(map);
-
-      function randomStyle() {
-        var h = Math.floor(Math.random() * 360);
-        return {
-          color: "hsl(" + h + ",60%,50%)",
-          weight: 1,
-          opacity: 0.8,
-          fillColor: "hsl(" + h + ",60%,50%)",
-          fillOpacity: 0.4,
-        };
-      }
-
-      // 深拷贝 GeoJSON 并偏移所有经度
-      function shiftLng(geojson, offset) {
-        var copy = JSON.parse(JSON.stringify(geojson));
-        function walk(c) {
-          if (!c) return;
-          if (Array.isArray(c[0])) {
-            for (var i = 0; i < c.length; i++) walk(c[i]);
-          } else c[0] += offset;
-        }
-        if (copy.features)
-          copy.features.forEach(function (f) {
-            walk(f.geometry && f.geometry.coordinates);
-          });
-        return copy;
-      }
     </script>
   </body>
 </html>
