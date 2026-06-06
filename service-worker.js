@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.7.0";
+const CACHE_NAME = "v1.7.1";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -32,6 +32,14 @@ const STATIC_ASSETS = [
   "./assets/pointdrop.js",
   "./assets/geojsonloader.js",
   "./assets/html-to-image.min.js",
+  // Dialog 弹窗
+  "./assets/dialog.js",
+  "./assets/dialog.css",
+  "./assets/marked.min.js",
+  // 文档
+  "./docs/CHANGELOG.md",
+  "./docs/REFERENCES.md",
+  "./README.md",
   // 图标
   "./assets/images/icon.svg",
   // 底图

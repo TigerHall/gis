@@ -852,3 +852,152 @@ body.sidebar-pinned .layer-trigger {
     print-color-adjust: exact !important;
   }
 }
+
+/* ========== 深色模式 ========== */
+@media (prefers-color-scheme: dark) {
+  .layer-panel {
+    background: #222226;
+    border-right-color: #3a4a3a;
+  }
+
+  .layer-panel h3 {
+    color: #8aca8a;
+  }
+
+  .about-link {
+    color: #888;
+  }
+  .about-link:hover {
+    color: #5ab0ff;
+  }
+
+  /* 地图设置折叠区 */
+  .toggle-section {
+    border-color: #3a4a3a;
+    background: #28282c;
+  }
+  .toggle-section summary {
+    color: #7aca7a;
+  }
+  .toggle-section summary:hover {
+    background: #333337;
+    border-radius: 6px 6px 0 0;
+  }
+  .toggle-section:not([open]) summary:hover {
+    border-radius: 6px;
+  }
+  .toggle-section .toggle-bar {
+    border-color: #3a3a3e;
+    background: #2e2e32;
+  }
+  .toggle-section .toggle-bar .cluster-toggle-text {
+    color: #ccc;
+  }
+
+  /* 搜索框 */
+  .search-bar input[type="text"] {
+    border-color: #3a4a3a;
+    background: #28282c;
+    color: #ddd;
+  }
+  .search-bar input[type="text"]:focus {
+    border-color: #5a9a5a;
+    background: #222226;
+  }
+
+  /* 图层要素面板 */
+  details.layer-section {
+    border-color: #3a4a3a;
+    background: #28282c;
+  }
+  details.layer-section > summary {
+    background: #2a2a2e;
+    color: #7aca7a;
+  }
+  details.layer-section > summary:hover {
+    background: #333337;
+  }
+
+  /* 图层组 */
+  details.layer-group > summary {
+    background: #2a2a2e;
+    color: #7aca7a;
+  }
+  details.layer-group > summary:hover {
+    background: #333337;
+  }
+  .layer-group-name {
+    color: #7aca7a;
+  }
+
+  /* 图层项 */
+  .layer-item:hover {
+    background: #2a2a2e;
+  }
+  .layer-item label {
+    color: #bbb;
+  }
+
+  /* 全选框 */
+  #selectAllLayers,
+  .group-select-all {
+    background: #333;
+    border-color: #555;
+  }
+
+  /* 版本号 */
+  .app-version {
+    color: rgba(255, 255, 255, 0.25);
+  }
+
+  /* 用户上传区域 */
+  #userLayerGroup {
+    border-top-color: #3a3a3e;
+    border-bottom-color: #3a3a3e;
+  }
+  #userLayerHint {
+    color: #777 !important;
+  }
+
+  /* 上传按钮 */
+  #userLayerGroup ~ div button {
+    background: #2a3a2a !important;
+    border-color: #3a5a3a !important;
+    color: #8aca8a !important;
+  }
+
+  /* 投点编辑器 */
+  #pointDropTable {
+    background: #333338 !important;
+    border-color: #886633 !important;
+  }
+  #pointDropTable,
+  #pointDropTable * {
+    color: #ddd !important;
+  }
+  #pointDropTable input[type="text"],
+  #pointDropTable textarea,
+  #pdPasteArea {
+    background: #222226 !important;
+    border-color: #555 !important;
+    color: #eee !important;
+  }
+  #pointDropTable input[type="text"]:focus,
+  #pointDropTable textarea:focus,
+  #pdPasteArea:focus {
+    border-color: #cc9933 !important;
+    background: #2a2a1e !important;
+  }
+  #pdTableWrap th {
+    background: #333338 !important;
+    color: #aaa !important;
+  }
+  #pdTableWrap td {
+    color: #ccc !important;
+  }
+
+  /* 本地图层查看提示 */
+  .layer-section-content > div[style*="color:#888"] {
+    color: #999 !important;
+  }
+}

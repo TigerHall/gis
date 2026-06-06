@@ -365,6 +365,22 @@
       // ========== 导出地图图片（html2canvas 截图）==========
       function exportMapImage() {
         if (!window.map || !window.htmlToImage) return;
+        // 先关掉上一次的导出提示
+        if (window._exportToast) {
+          if (window._exportToast.parentNode)
+            window._exportToast.parentNode.removeChild(window._exportToast);
+          window._exportToast = null;
+        }
+        var toastEl = document.createElement("div");
+        toastEl.className = "toast-dialog";
+        toastEl.innerHTML =
+          '<div class="toast-cnt"><span class="toast-msg">⏳ 正在导出地图图片，图层复杂时可能较慢，请勿操作…</span></div>';
+        var c = document.getElementById("_toastContainer") || document.body;
+        c.insertBefore(toastEl, c.firstChild);
+        requestAnimationFrame(function () {
+          toastEl.classList.add("open");
+        });
+        window._exportToast = toastEl;
         var mapEl = document.getElementById("map");
         var panel = document.getElementById("layerPanel");
         var trigger = document.getElementById("layerTrigger");
@@ -493,6 +509,14 @@
                 a.download = "OGV_" + ts + ".png";
                 a.href = dataUrl;
                 a.click();
+                if (window._exportToast) {
+                  if (window._exportToast.parentNode)
+                    window._exportToast.parentNode.removeChild(
+                      window._exportToast,
+                    );
+                  window._exportToast = null;
+                }
+                showToast("✅ 导出成功", { duration: 3000 });
               })
               .catch(function () {
                 // 恢复 pane 的 transform
@@ -505,6 +529,14 @@
                 if (panelWasActive && panel) panel.classList.add("active");
                 if (trigger) trigger.style.display = "";
                 map.invalidateSize();
+                if (window._exportToast) {
+                  if (window._exportToast.parentNode)
+                    window._exportToast.parentNode.removeChild(
+                      window._exportToast,
+                    );
+                  window._exportToast = null;
+                }
+                showToast("❌ 导出失败", { duration: 3000 });
               });
           });
         });
@@ -524,6 +556,7 @@
           ? "新版本 " + _appVersion + " 已就绪"
           : "📦 新版本可用";
         showToast(msg, {
+          duration: 0,
           action: "刷新",
           onAction: function () {
             location.reload();

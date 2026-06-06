@@ -9,6 +9,11 @@
   const geoJsonCosPath =
     "https://dupal-1258052757.cos.ap-shanghai.myqcloud.com/assets/geojson/";
 
+  // 根据域名决定加载优先级：dupal.cn 优先走 COS（快），其他优先走本地（省流量）
+  var isDuPalDomain = window.location.hostname === "dupal.cn";
+  var geoJsonPrimaryPath = isDuPalDomain ? geoJsonCosPath : geoJsonBasePath;
+  var geoJsonFallbackPath = isDuPalDomain ? geoJsonBasePath : geoJsonCosPath;
+
   // ========== GeoJSON 分组配置（路径之后，方便引用 basePath）==========
   const geoJsonGroups = [
     {
@@ -1002,10 +1007,15 @@
     }
 
     function loadGeoJSONLayer(filePath, checkboxId, fitBoundsAfterLoad) {
-      // COS 远程路径自动计算本地回退路径
-      var localFallback = filePath.startsWith("http")
-        ? geoJsonBasePath + filePath.split("/").pop()
-        : null;
+      // 根据优先级计算回退路径
+      var localFallback = null;
+      if (filePath.startsWith("http")) {
+        // 主路径是 COS → 回退到本地
+        localFallback = geoJsonBasePath + filePath.split("/").pop();
+      } else {
+        // 主路径是本地 → 回退到 COS
+        localFallback = geoJsonCosPath + filePath.split("/").pop();
+      }
       if (layerCache[checkboxId]) {
         layerCache[checkboxId].addTo(map);
         const state = highlightState[checkboxId];
@@ -1109,7 +1119,10 @@
         .then(onDataLoaded)
         .catch(function (error) {
           if (localFallback) {
-            console.warn("[GeoJSONLoader] COS加载失败，回退本地:", filePath);
+            console.warn(
+              "[GeoJSONLoader] 主路径加载失败，回退备选路径:",
+              filePath,
+            );
             fetchGzGeoJSON(localFallback)
               .then(onDataLoaded)
               .catch(function (err) {
@@ -1937,7 +1950,7 @@
         group.layers.forEach(function (layerConfig) {
           var idx = globalLayerIndex++;
           var checkboxId = "layer_" + idx;
-          var fullPath = geoJsonCosPath + layerConfig.file;
+          var fullPath = geoJsonPrimaryPath + layerConfig.file;
           var fileName = layerConfig.file;
           var fixedColor =
             fileName === "hotspots.json" ||
