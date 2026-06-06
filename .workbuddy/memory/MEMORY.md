@@ -113,7 +113,26 @@ rendererFactory: function(tileCoord, tileSize, opts) {
 - 不要用 `L.canvas.tile`（`L.DomEvent.fakeStop` 兼容报错），用 `L.svg.tile`
 - popup 属性名要按数据实际字段匹配（如 `plate`、`Name` 等）
 
-## Beian 备案信息
+## Layer Group UI: `<details>` + `<summary>` 方案
+
+- 2026-06-06 从自定义 div（`.layer-group-header` + `.layer-group-children` + JS class toggle）迁移到 `<details>` + `<summary>`
+- 普通点击折叠/展开由浏览器原生处理，无需 JS
+- Ctrl/Cmd+点击：`e.preventDefault()` 阻止原生 toggle，手动遍历所有 `details.open`
+- 总开关全选：`details.open = true`（替代 class toggle）
+- 组全选勾选：`groupDetails.open = true`（替代 class toggle）
+- 箭头旋转：CSS `details[open] .layer-group-arrow` 自动控制，无需 JS
+- CSS 移除 `max-height: 0/600px` 动画，`details[open]` 原生控制显示
+- `.layer-panel { font-size: 0; line-height: 0 }` + `.layer-panel > * { font-size: 13px; line-height: normal }` 消除 DOM 空白文本节点在 flex 布局下的匿名 flex 项间隙（这是地图控制面板上方多余间距的根因）
+- `details.layer-group { margin-bottom: 6px }` 图层组之间保持呼吸感
+- `#layerItemsContainer { border-top: 1px solid #e4e8e4; padding-top: 6px }` 图层组区域上方灰色边界线
+- `.toggle-section { margin-top: 0; margin-bottom: 4px }` 紧贴标题行
+- `#selectAllRow { padding: 7px 12px 2px }` 减少底部间距，标题行更紧凑
+- 地图控制面板自动折叠：监听 `.layer-panel` 的 `click` 事件，点击 toggle-section 外部时折叠（不受 Leaflet stopPropagation 影响）
+- 首次访问自动展开，折叠后持久化到 localStorage，后续不自动展开
+- Dialog 模态遮罩点击关闭：`dialog.addEventListener("click", e => e.target === dialog && dialog.close())`
+- ⓘ 关于链接改为 `showMarkdown("README.md", "关于本站")` 弹窗渲染
+- 地图控制面板 (`toggle-section`) 位于搜索栏上方，`overflow: hidden` 裁剪圆角，`border-radius` hover 分两种状态
+- 点击 toggle-section 外部区域自动折叠（100ms 延迟后激活），持久化到 localStorage
 
 - test.html 和 index.html 均已添加公安备案链接
 - 图标路径：`./assets/images/备案编号图标.png`
@@ -122,3 +141,19 @@ rendererFactory: function(tileCoord, tileSize, opts) {
 - 预置图层：`searchIndexMap[cbId].features` → `GzIdbLoader.fetch(filePath)`
 - 用户上传图层：`userLayerGeoJson[uid].geoJsonData`
 - 投点生成的图层也可通过此方式下载保存
+
+## Sidebar Layout Restructure
+
+- 2026-06-06 侧边栏重构为四个区域：顶部标题 → ⚙️ 地图设置 → 搜索框 → 📑 图层要素（预制数据） → 🗺️ 本地图层查看（用户上传+投点）
+- 本地图层查看面板新增提示"数据仅在本机解析加载，不会上传至任何服务器"
+- 地图控制重命名为"⚙️ 地图设置"
+- 📑 图层要素面板带 ▶ 箭头和全选 checkbox
+- ⓘ📌 在标题行右侧，flex-wrap: wrap 窄面板时换行到下方
+
+## Upload Button: 合并为单按钮 + 弹出菜单
+
+- 2026-06-06 将"上传矢量（单文件）"和"选择文件夹"两个按钮合并为一个"📤 上传数据"按钮
+- 点击按钮向上弹出小菜单，包含"选择文件"和"选择文件夹"两个选项
+- 内部仍保留两个隐藏的 `<input type="file">`（一个 accept 多文件、一个 webkitdirectory）
+- 菜单弹出在按钮上方（`bottom: calc(100% + 4px)`），避免遮挡下方的图层列表
+- 点击菜单外部自动关闭

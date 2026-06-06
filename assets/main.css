@@ -57,19 +57,30 @@ body {
   height: 100%;
   background: #fff;
   border-right: 1px solid #99cc99;
-  padding: 15px 10px;
-  padding-top: 1vh;
+  padding: 8px;
   box-sizing: border-box;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
   z-index: 1666;
+  border-radius: max(6px, 0.6vw);
   transition: transform 0.3s ease;
   /* 面板自身不滚动，用 flex 布局让内容区滚动 */
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* 消除 DOM 中空白文本节点在 flex 布局下产生的匿名 flex 项间隙 */
+  font-size: 0;
+  line-height: 0;
+  /* 侧面板整体禁止选中文字，搜索框例外 */
+  user-select: none;
+  -webkit-user-select: none;
   /* 细滚动条，与面板风格统一 */
   scrollbar-width: thin;
   scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
+}
+/* 为所有直接子元素恢复字体 */
+.layer-panel > * {
+  font-size: 13px;
+  line-height: normal;
 }
 .layer-panel::-webkit-scrollbar {
   width: 6px;
@@ -126,11 +137,10 @@ body.resizing-panel {
 }
 
 .layer-panel h3 {
-  font-size: 16px;
-  color: #333;
-  margin-bottom: 15px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
+  font-size: 15px;
+  color: #3a7a3a;
+  margin: 0 0 2px 0;
+  padding: 10px 12px 4px;
   flex-shrink: 0;
 }
 .about-link {
@@ -255,22 +265,26 @@ body.resizing-panel {
   border-top-color: #8b7355;
 }
 
-/* ========== 搜索框（侧边栏内） ========== */
+/* ========== 搜索框（侧边栏内，介于地图设置与图层要素之间） ========== */
 .search-bar {
-  padding: 0 5px;
+  padding: 0;
   position: relative;
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .search-bar input[type="text"] {
   width: 100%;
-  padding: 7px 28px 7px 12px;
+  padding: 7px 28px 7px 10px;
   font-size: 13px;
-  border: 1px solid #99cc99;
-  border-radius: 16px;
-  background: #f8fcf8;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #d0d8d0;
+  border-radius: 6px;
+  background: #f5f8f5;
+  box-shadow: none;
   outline: none;
-  color: #333;
+  color: #555;
+  user-select: text;
+  -webkit-user-select: text;
   transition:
     border-color 0.2s,
     background 0.2s;
@@ -306,7 +320,6 @@ body.resizing-panel {
 .search-bar input[type="text"]:focus {
   border-color: #4a8c4a;
   background: #fff;
-  border-radius: 16px 16px 0 0;
 }
 
 .search-results {
@@ -399,30 +412,74 @@ body.resizing-panel {
   background: rgba(106, 170, 106, 0.15);
 }
 
-/* ========== 聚类开关 ========== */
-.toggle-bars-row {
+/* ========== 开关折叠区 ========== */
+.toggle-section {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fafcfa;
+  flex-shrink: 0;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.toggle-section summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a8c4a;
+  padding: 8px 10px;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.toggle-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.toggle-section summary::before {
+  content: "▶";
+  font-size: 10px;
+  color: #8ab88a;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.toggle-section[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.toggle-section summary:hover {
+  background: #f0f6f0;
+  border-radius: 6px 6px 0 0;
+}
+
+.toggle-section:not([open]) summary:hover {
+  border-radius: 6px;
+}
+
+.toggle-section .toggle-body {
+  padding: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
-  border-bottom: 1px solid #e8e8e8;
-  margin-bottom: 4px;
+  gap: 3px;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
 }
 
-.toggle-bars-row .cluster-toggle-bar {
+/* 开关折叠区内部的 toggle bar */
+.toggle-section .toggle-bar {
   flex: 1 1 120px;
   min-width: 120px;
+  padding: 5px 4px 6px;
+  border: 1px solid #eee;
+  border-radius: 5px;
   margin-bottom: 0;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-.cluster-toggle-bar {
-  padding: 6px 5px 8px;
-  display: block;
-  border-bottom: 1px solid #e8e8e8;
-  margin-bottom: 4px;
   position: relative;
 }
 
@@ -573,49 +630,6 @@ body.resizing-panel {
   color: rgba(0, 0, 0, 0.55);
 }
 
-/* SW 更新提示 toast */
-.update-toast {
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.85);
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 24px;
-  font-size: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 10000;
-  animation: toastIn 0.3s ease-out;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-.update-toast button {
-  background: #4caf50;
-  color: #fff;
-  border: none;
-  border-radius: 16px;
-  padding: 5px 16px;
-  font-size: 13px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.update-toast button:hover {
-  background: #66bb6a;
-}
-@keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
 /* 版本号清理菜单（版号上方） */
 .refresh-menu {
   display: flex;
@@ -628,7 +642,6 @@ body.resizing-panel {
 /* 版本号固定在面板底部 */
 #appVersion {
   flex-shrink: 0;
-  margin-bottom: -12px;
 }
 .refresh-menu button {
   display: block;
@@ -713,6 +726,7 @@ body.resizing-panel {
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 0; /* flex 子元素溢出滚动必须 */
+  padding-top: 4px;
   /* 细滚动条 */
   scrollbar-width: thin;
   scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
@@ -764,6 +778,7 @@ body.sidebar-pinned #layerPanel {
   flex-shrink: 0;
   height: 100%;
   z-index: auto;
+  margin-right: 2px;
 }
 body.sidebar-pinned #map {
   flex: 1 !important;
@@ -781,7 +796,6 @@ body.sidebar-pinned .layer-trigger {
   #layerPanel,
   #layerTrigger,
   .leaflet-control-container,
-  .update-toast,
   #searchTooltip,
   .pm-draw,
   .pm-toolbar,
@@ -798,7 +812,8 @@ body.sidebar-pinned .layer-trigger {
   }
 
   /* 地图占满整页 */
-  html, body {
+  html,
+  body {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
@@ -806,7 +821,9 @@ body.sidebar-pinned .layer-trigger {
     overflow: hidden !important;
   }
 
-  #map, .map-container, #app-wrapper {
+  #map,
+  .map-container,
+  #app-wrapper {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;

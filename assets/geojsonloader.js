@@ -183,82 +183,87 @@
 
       const titleH3 = layerPanel.querySelector("h3");
       if (titleH3) {
-        const titleRow = document.createElement("div");
-        titleRow.id = "selectAllRow";
-        selectAllCheckbox = document.createElement("input");
-        selectAllCheckbox.type = "checkbox";
-        selectAllCheckbox.id = "selectAllLayers";
-        selectAllCheckbox.title = "全选 / 全不选所有图层";
-        selectAllCheckbox.addEventListener("change", function () {
-          this.classList.remove("indeterminate");
-          if (this.checked) {
-            selectAllLayers();
-            // 全选时展开所有组
-            document
-              .querySelectorAll(".layer-group-children")
-              .forEach(function (c) {
-                if (!c.classList.contains("open")) c.classList.add("open");
-              });
-            document
-              .querySelectorAll(".layer-group-arrow")
-              .forEach(function (a) {
-                if (!a.classList.contains("open")) a.classList.add("open");
-              });
-          } else {
-            unselectAllLayers();
-          }
-        });
-        const titleSpan = document.createElement("span");
-        titleSpan.textContent = titleH3.textContent;
-        const aboutLink = document.createElement("a");
-        aboutLink.href = "about.html";
+        titleH3.textContent = "";
+        titleH3.style.cssText =
+          "display:flex;align-items:center;flex-wrap:wrap;gap:6px;";
+
+        var titleSpan = document.createElement("span");
+        titleSpan.textContent = "OGV-海洋地质一张图";
+
+        // 关于按钮
+        var aboutLink = document.createElement("a");
         aboutLink.className = "about-link";
         aboutLink.title = "关于本站";
         aboutLink.textContent = "ⓘ";
-        aboutLink.target = "_blank";
-        layerPanel.removeChild(titleH3);
-        titleRow.appendChild(selectAllCheckbox);
-        titleRow.appendChild(titleSpan);
-        titleRow.appendChild(aboutLink);
+        aboutLink.href = "#";
+        aboutLink.style.cssText =
+          "color:#999;font-size:15px;text-decoration:none;line-height:1;transition:color 0.2s;cursor:pointer;flex-shrink:0;";
+        aboutLink.addEventListener("mouseenter", function () {
+          this.style.color = "#1976d2";
+        });
+        aboutLink.addEventListener("mouseleave", function () {
+          this.style.color = "#999";
+        });
+        aboutLink.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (typeof showMarkdown === "function") {
+            showMarkdown("README.md", "关于本站");
+          }
+        });
 
         // 图钉按钮
-        const pinBtn = document.createElement("button");
+        var pinBtn = document.createElement("button");
         pinBtn.className = "sidebar-pin-btn";
         pinBtn.title = "钉住侧边栏";
         pinBtn.innerHTML = "📌";
-        titleRow.appendChild(pinBtn);
-
-        layerPanel.insertBefore(titleRow, layerPanel.firstChild);
-
-        // 图钉按钮逻辑
+        pinBtn.style.cssText =
+          "background:none;border:none;cursor:pointer;font-size:15px;padding:0 4px;opacity:0.35;transition:opacity 0.2s,transform 0.2s;line-height:1;flex-shrink:0;";
+        pinBtn.addEventListener("mouseenter", function () {
+          this.style.opacity = "0.7";
+        });
+        pinBtn.addEventListener("mouseleave", function () {
+          this.style.opacity = "0.35";
+        });
         pinBtn.addEventListener("click", function (e) {
           e.stopPropagation();
-          const isPinned = !document.body.classList.contains("sidebar-pinned");
+          var isPinned = !document.body.classList.contains("sidebar-pinned");
           document.body.classList.toggle("sidebar-pinned", isPinned);
           pinBtn.classList.toggle("active", isPinned);
+          if (pinBtn.classList.contains("active")) {
+            pinBtn.style.opacity = "1";
+            pinBtn.style.transform = "rotate(45deg)";
+          } else {
+            pinBtn.style.opacity = "0.35";
+            pinBtn.style.transform = "";
+          }
           localStorage.setItem("yugis_sidebar_pinned", isPinned);
-
           if (isPinned) {
             layerPanel.classList.add("active");
           }
-
-          // 通知 Leaflet 地图尺寸已变化
           setTimeout(function () {
             map.invalidateSize();
           }, 350);
         });
 
         // 恢复图钉状态
-        var savedPinned =
-          localStorage.getItem("yugis_sidebar_pinned") === "true";
-        if (savedPinned) {
-          document.body.classList.add("sidebar-pinned");
-          pinBtn.classList.add("active");
-          layerPanel.classList.add("active");
-          setTimeout(function () {
-            map.invalidateSize();
-          }, 350);
-        }
+        (function () {
+          var savedPinned =
+            localStorage.getItem("yugis_sidebar_pinned") === "true";
+          if (savedPinned) {
+            document.body.classList.add("sidebar-pinned");
+            pinBtn.classList.add("active");
+            pinBtn.style.opacity = "1";
+            pinBtn.style.transform = "rotate(45deg)";
+            layerPanel.classList.add("active");
+            setTimeout(function () {
+              map.invalidateSize();
+            }, 350);
+          }
+        })();
+
+        titleH3.appendChild(titleSpan);
+        titleH3.appendChild(aboutLink);
+        titleH3.appendChild(pinBtn);
       }
     }
 
@@ -1523,6 +1528,32 @@
         }[status] || status;
       const gd = li.closest(".layer-group");
       if (gd) syncGroupLoadingStatus(gd);
+      // 状态变更后同步勾选框状态（解决加载完成后勾选框未同步的问题）
+      if (gd) syncGroupStatus(gd);
+      // 同步图层要素面板全选状态
+      syncSelectAllStatus();
+      // 同步本地图层面板全选状态
+      var localCb = document.querySelector(
+        ".layer-section > summary > .group-select-all",
+      );
+      if (localCb) {
+        var localItems = document.querySelectorAll(
+          '#userLayerGroup .layer-item input[type="checkbox"]',
+        );
+        var checkedCount = Array.from(localItems).filter(function (c) {
+          return c.checked;
+        }).length;
+        if (checkedCount === 0) {
+          localCb.checked = false;
+          localCb.classList.remove("indeterminate");
+        } else if (checkedCount === localItems.length) {
+          localCb.checked = true;
+          localCb.classList.remove("indeterminate");
+        } else {
+          localCb.checked = false;
+          localCb.classList.add("indeterminate");
+        }
+      }
     }
 
     // ========== 下载图层 GeoJSON ==========
@@ -1781,17 +1812,57 @@
 
     function generateLayerItems() {
       const container = document.getElementById("layerItemsContainer");
+
+      // 创建图层组面板（可折叠），摘要行 = 全选复选框 + "图层要素"
+      var layerSection = document.createElement("details");
+      layerSection.className = "layer-section";
+      layerSection.open = true;
+      var layerSummary = document.createElement("summary");
+
+      selectAllCheckbox = document.createElement("input");
+      selectAllCheckbox.type = "checkbox";
+      selectAllCheckbox.id = "selectAllLayers";
+      selectAllCheckbox.title = "全选 / 全不选所有图层";
+      selectAllCheckbox.addEventListener("change", function () {
+        this.classList.remove("indeterminate");
+        if (this.checked) {
+          selectAllLayers();
+          document
+            .querySelectorAll("details.layer-group")
+            .forEach(function (d) {
+              if (!d.open) d.open = true;
+            });
+        } else {
+          unselectAllLayers();
+        }
+      });
+
+      var arrow = document.createElement("span");
+      arrow.className = "layer-group-arrow";
+      arrow.textContent = "▶";
+
+      var sectionTitle = document.createElement("span");
+      sectionTitle.textContent = "📑 图层要素";
+      sectionTitle.style.cssText = "flex:1;";
+
+      layerSummary.appendChild(arrow);
+      layerSummary.appendChild(sectionTitle);
+      layerSummary.appendChild(selectAllCheckbox);
+      layerSection.appendChild(layerSummary);
+      var layerContent = document.createElement("div");
+      layerContent.className = "layer-section-content";
+      layerSection.appendChild(layerContent);
+
       geoJsonGroups.forEach(function (group) {
         const isPlain = !group.groupName; // 无分组名 = 直接显示图层
-        const groupDiv = document.createElement("div");
-        groupDiv.className = isPlain ? "layer-plain" : "layer-group";
-
-        let header = null;
-        let children;
+        var groupDetails = null;
+        var children;
 
         if (!isPlain) {
-          header = document.createElement("div");
-          header.className = "layer-group-header";
+          groupDetails = document.createElement("details");
+          groupDetails.className = "layer-group";
+
+          var summary = document.createElement("summary");
 
           const arrow = document.createElement("span");
           arrow.className = "layer-group-arrow";
@@ -1814,7 +1885,7 @@
           });
           groupCb.addEventListener("change", function () {
             this.classList.remove("indeterminate");
-            var items = groupDiv.querySelectorAll(
+            var items = groupDetails.querySelectorAll(
               '.layer-item input[type="checkbox"]',
             );
             var isChecked = this.checked;
@@ -1830,54 +1901,37 @@
               }
             });
             syncSelectAllStatus();
-            // 勾选时展开该组，取消时不折叠（保留用户查看上下文）
-            if (isChecked) {
-              var ch = groupDiv.querySelector(".layer-group-children");
-              var ar = groupDiv.querySelector(".layer-group-arrow");
-              if (ch && !ch.classList.contains("open"))
-                ch.classList.add("open");
-              if (ar && !ar.classList.contains("open"))
-                ar.classList.add("open");
-            }
+            // 勾选时展开该组
+            if (isChecked && !groupDetails.open) groupDetails.open = true;
           });
 
           children = document.createElement("div");
           children.className = "layer-group-children";
 
-          header.addEventListener("click", function (e) {
+          // summary 点击处理：Ctrl/Cmd+点击 = 全部切换，普通点击由浏览器原生处理
+          summary.addEventListener("click", function (e) {
             if (e.target === groupCb) return;
             if (e.ctrlKey || e.metaKey) {
-              // Ctrl/Cmd + 点击：全部展开或全部折叠
-              var allHeaders = document.querySelectorAll(".layer-group-header");
-              var anyOpen = document.querySelector(
-                ".layer-group-children.open",
-              );
-              allHeaders.forEach(function (h) {
-                var c = h.nextElementSibling;
-                var a = h.querySelector(".layer-group-arrow");
-                if (anyOpen) {
-                  if (c) c.classList.remove("open");
-                  if (a) a.classList.remove("open");
-                } else {
-                  if (c) c.classList.add("open");
-                  if (a) a.classList.add("open");
-                }
+              e.preventDefault(); // 阻止 details 原生 toggle
+              var allDetails = document.querySelectorAll("details.layer-group");
+              var anyOpen = document.querySelector("details.layer-group[open]");
+              allDetails.forEach(function (d) {
+                d.open = !anyOpen;
               });
-            } else {
-              var isOpen = children.classList.toggle("open");
-              arrow.classList.toggle("open", isOpen);
             }
+            // 普通点击：浏览器自动处理 open 属性
           });
 
-          header.appendChild(arrow);
-          header.appendChild(groupName);
-          header.appendChild(groupStatus);
-          header.appendChild(groupCb);
-          groupDiv.appendChild(header);
+          summary.appendChild(arrow);
+          summary.appendChild(groupName);
+          summary.appendChild(groupStatus);
+          summary.appendChild(groupCb);
+          groupDetails.appendChild(summary);
         }
 
         if (isPlain) {
-          children = groupDiv;
+          children = document.createElement("div");
+          children.className = "layer-plain";
         }
 
         group.layers.forEach(function (layerConfig) {
@@ -1952,23 +2006,90 @@
           children.appendChild(layerItem);
         });
 
-        if (!isPlain) {
-          groupDiv.appendChild(children);
+        if (groupDetails) {
+          groupDetails.appendChild(children);
+          layerContent.appendChild(groupDetails);
+        } else {
+          layerContent.appendChild(children);
         }
-        container.appendChild(groupDiv);
       });
+
+      // ====== 本地图层查看面板（用户上传 + 投点，独立于预制图层） ======
+      var localSection = document.createElement("details");
+      localSection.className = "layer-section";
+      localSection.open = true;
+      var localSummary = document.createElement("summary");
+      var localArrow = document.createElement("span");
+      localArrow.className = "layer-group-arrow";
+      localArrow.textContent = "▶";
+      var localTitle = document.createElement("span");
+      localTitle.textContent = "🗺️ 本地图层查看";
+      localTitle.style.cssText = "flex:1;";
+      localSummary.appendChild(localArrow);
+      localSummary.appendChild(localTitle);
+
+      // 本地图层全选/全不选
+      var localSelectAll = document.createElement("input");
+      localSelectAll.type = "checkbox";
+      localSelectAll.className = "group-select-all";
+      localSelectAll.title = "全选/全不选所有本地图层";
+      localSelectAll.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+      localSelectAll.addEventListener("change", function () {
+        var items = document.querySelectorAll(
+          '#userLayerGroup .layer-item input[type="checkbox"]',
+        );
+        var isChecked = this.checked;
+        items.forEach(function (cb) {
+          if (isChecked && !cb.checked) {
+            cb.checked = true;
+            var lc = layerCache[cb.id];
+            cb.style.background = cb.style.getPropertyValue("--layer-color");
+            if (lc) lc.addTo(map);
+          } else if (!isChecked && cb.checked) {
+            cb.checked = false;
+            cb.style.background = "#fff";
+            if (layerCache[cb.id]) map.removeLayer(layerCache[cb.id]);
+          }
+        });
+      });
+      localSummary.appendChild(localSelectAll);
+      localSection.appendChild(localSummary);
+      var localContent = document.createElement("div");
+      localContent.className = "layer-section-content";
+      localSection.appendChild(localContent);
+
+      // 提示文字（仅本地解析）
+      var localHint = document.createElement("div");
+      localHint.style.cssText =
+        "font-size:11px;color:#999;padding:2px 4px 6px;";
+      localHint.textContent = "数据仅在本机解析加载，不会上传至任何服务器";
+      localContent.appendChild(localHint);
 
       var userGroup = document.createElement("div");
       userGroup.id = "userLayerGroup";
-      userGroup.innerHTML =
-        '<div style="font-size:12px;color:#888;padding:0 10px 4px;">用户上传图层</div>';
-      container.appendChild(userGroup);
+      // 空状态提示
+      var emptyHint = document.createElement("div");
+      emptyHint.id = "userLayerHint";
+      emptyHint.style.cssText =
+        "font-size:12px;color:#888;padding:10px 4px;text-align:center;line-height:1.7;";
+      emptyHint.innerHTML =
+        "还没有本地图层载入<br>" +
+        '<span style="font-size:11px;color:#666;font-weight:600;">💡 可拖拽文件/文件夹到页面中直接加载</span>';
+      userGroup.appendChild(emptyHint);
+      localContent.appendChild(userGroup);
 
       var uploadDiv = document.createElement("div");
-      uploadDiv.style.cssText =
-        "padding:10px;border-top:1px dashed #ccc;margin-top:8px;";
+      uploadDiv.style.cssText = "padding:10px 0 0;margin-top:6px;";
+
+      // 投点按钮锚点（pointdrop.js 在这里插入按钮和处理面板），放在上传按钮上方
+      var pdAnchor = document.createElement("div");
+      pdAnchor.id = "pointDropAnchor";
+      uploadDiv.appendChild(pdAnchor);
+
       var uploadBtn = document.createElement("button");
-      uploadBtn.textContent = "上传矢量（单文件）";
+      uploadBtn.textContent = "📄 上传矢量（单文件）";
       uploadBtn.title =
         "支持格式：GeoJSON、JSON、KML、KMZ、ZIP（内可含 SHP/KML/GeoJSON）";
       uploadBtn.style.cssText =
@@ -1994,7 +2115,7 @@
 
       // 选择文件夹按钮
       var folderBtn = document.createElement("button");
-      folderBtn.textContent = "选择文件夹";
+      folderBtn.textContent = "📁 选择文件夹";
       folderBtn.title =
         "递归搜索文件夹内的 shp、kml、kmz、json、geojson 文件并添加为图层";
       folderBtn.style.cssText =
@@ -2016,12 +2137,12 @@
       folderInput.addEventListener("change", handleFolderUpload);
       uploadDiv.appendChild(folderBtn);
       uploadDiv.appendChild(folderInput);
-      // 投点按钮锚点（pointdrop.js 在这里插入按钮）
-      var pdAnchor = document.createElement("div");
-      pdAnchor.id = "pointDropAnchor";
-      container.appendChild(pdAnchor);
 
-      container.appendChild(uploadDiv);
+      localContent.appendChild(uploadDiv);
+
+      // 将两个面板放入容器
+      container.appendChild(layerSection);
+      container.appendChild(localSection);
     }
 
     // ========== 文件上传 ==========
@@ -2322,6 +2443,28 @@
         } else {
           if (layerCache[uid]) map.removeLayer(layerCache[uid]);
         }
+        // 同步本地图层面板全选状态
+        var localCb = document.querySelector(
+          ".layer-section > summary > .group-select-all",
+        );
+        if (localCb) {
+          var items = document.querySelectorAll(
+            '#userLayerGroup .layer-item input[type="checkbox"]',
+          );
+          var cc = Array.from(items).filter(function (c) {
+            return c.checked;
+          }).length;
+          if (cc === 0) {
+            localCb.checked = false;
+            localCb.classList.remove("indeterminate");
+          } else if (cc === items.length) {
+            localCb.checked = true;
+            localCb.classList.remove("indeterminate");
+          } else {
+            localCb.checked = false;
+            localCb.classList.add("indeterminate");
+          }
+        }
       });
 
       var label = document.createElement("label");
@@ -2371,6 +2514,12 @@
         delete layerBoundsCache[uid];
         delete highlightState[uid];
         layerItem.remove();
+        // 如果删光了，恢复空状态提示
+        var ug = document.getElementById("userLayerGroup");
+        var ht = document.getElementById("userLayerHint");
+        if (ug && ht && ug.querySelectorAll(".layer-item").length === 0) {
+          ht.style.display = "";
+        }
       });
 
       layerItem.appendChild(checkbox);
@@ -2380,6 +2529,9 @@
       layerItem.appendChild(locateBtn);
       layerItem.appendChild(removeBtn);
       userGroup.appendChild(layerItem);
+      // 隐藏空状态提示
+      var hint = document.getElementById("userLayerHint");
+      if (hint) hint.style.display = "none";
 
       if (!searchRegistry.find((e) => e.checkboxId === uid)) {
         searchRegistry.push({
@@ -2429,7 +2581,7 @@
         inp.placeholder = "建立搜索索引中...";
       } else {
         inp.disabled = false;
-        inp.placeholder = "搜索...";
+        inp.placeholder = "🔍 索引已就绪，输入关键词搜索";
       }
     }
 

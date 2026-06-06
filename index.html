@@ -42,6 +42,7 @@
     <!-- <script src="https://unpkg.com/jszip@3/dist/jszip.min.js"></script> -->
     <!-- 自定义css -->
     <link rel="stylesheet" href="./assets/main.css" />
+    <link rel="stylesheet" href="./assets/dialog.css" />
 
     <!-- WPA -->
     <link rel="manifest" href="./manifest.json" />
@@ -118,8 +119,98 @@
     <div class="layer-trigger" id="layerTrigger">要素加载</div>
     <!-- 左侧图层控制面板 -->
     <div class="layer-panel" id="layerPanel">
-      <h3>图层要素</h3>
+      <h3>OGV-海洋地质一张图</h3>
       <div class="panel-resize-handle" id="panelResizeHandle"></div>
+      <!-- 地图设置（由标题行 ⚙️ 按钮控制） -->
+      <details class="toggle-section" id="toggleSection">
+        <summary>⚙️ 地图设置</summary>
+        <div class="toggle-body">
+          <!-- 聚类开关 -->
+          <div
+            class="toggle-bar"
+            id="clusterToggleBar"
+            title="开启后点要素按空间距离聚合成群组显示，大幅减轻渲染压力，页面操作更流畅"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">点要素聚类</span>
+              <input type="checkbox" id="clusterToggle" checked />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+          <!-- 标签开关 -->
+          <div
+            class="toggle-bar"
+            id="labelToggleBar"
+            title="开启后在地图上显示各点要素的名称标签，便于识别站位和热点位置"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">显示标签</span>
+              <input type="checkbox" id="labelToggle" />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+          <!-- 编辑测量开关 -->
+          <div
+            class="toggle-bar"
+            id="geomenToggleBar"
+            title="开启/关闭要素编辑与测量工具栏（绘制、修改、删除、测距、测面）"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">编辑测量</span>
+              <input type="checkbox" id="geomenToggle" />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+          <!-- 鼠标坐标开关 -->
+          <div
+            class="toggle-bar"
+            id="mouseCoordToggleBar"
+            title="开启/关闭鼠标位置经纬度坐标显示控件，实时查看光标所在位置的经纬度"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">鼠标坐标</span>
+              <input type="checkbox" id="mouseCoordToggle" checked />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+          <!-- 缩放控件开关 -->
+          <div
+            class="toggle-bar"
+            id="zoomToggleBar"
+            title="开启/关闭地图左上角的加减号缩放控件（仍可用鼠标滚轮缩放）"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">缩放控件</span>
+              <input type="checkbox" id="zoomToggle" />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+          <!-- 比例尺开关 -->
+          <div
+            class="toggle-bar"
+            id="scaleToggleBar"
+            title="开启/关闭地图左下角的比例尺条，直观显示当前缩放级别下的距离比例"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">比例尺</span>
+              <input type="checkbox" id="scaleToggle" />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+          <!-- 图层控件开关 -->
+          <div
+            class="toggle-bar"
+            id="layerCtrlToggleBar"
+            title="开启/关闭右上角的图层切换控件，可切换天地图不同底图图层"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">图层控件</span>
+              <input type="checkbox" id="layerCtrlToggle" checked />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+        </div>
+      </details>
       <!-- 搜索框 -->
       <div class="search-bar" id="searchBar">
         <input
@@ -130,32 +221,6 @@
         />
         <span class="search-clear" id="searchClear" title="清空搜索">❌</span>
         <div class="search-results" id="searchResults"></div>
-      </div>
-      <div class="toggle-bars-row">
-        <!-- 聚类开关 -->
-        <div
-          class="cluster-toggle-bar"
-          id="clusterToggleBar"
-          title="关闭后所有点要素展开显示"
-        >
-          <label class="cluster-toggle-label">
-            <span class="cluster-toggle-text">点要素聚类</span>
-            <input type="checkbox" id="clusterToggle" checked />
-            <span class="cluster-toggle-switch"></span>
-          </label>
-        </div>
-        <!-- 标签开关 -->
-        <div
-          class="cluster-toggle-bar"
-          id="labelToggleBar"
-          title="开启后显示点要素标签"
-        >
-          <label class="cluster-toggle-label">
-            <span class="cluster-toggle-text">显示标签</span>
-            <input type="checkbox" id="labelToggle" checked />
-            <span class="cluster-toggle-switch"></span>
-          </label>
-        </div>
       </div>
       <div id="layerItemsContainer"></div>
       <div id="appVersion" class="app-version"></div>
@@ -198,7 +263,7 @@
       }).setView([32, 107], 3);
 
       // 2. 比例尺控件
-      L.control
+      var scaleControl = L.control
         .scale({
           imperial: false,
           maxWidth: 100,
@@ -207,7 +272,8 @@
         .addTo(map);
 
       // 从 service-worker.js 读取 CACHE_NAME 保持版本同步
-      // 版本号显示在图层面板底部
+      // 版本号显示在图层面板底部，也用于 PWA 更新弹窗
+      var _appVersion = "";
       fetch("service-worker.js")
         .then(function (r) {
           return r.text();
@@ -215,6 +281,7 @@
         .then(function (src) {
           var m = src.match(/CACHE_NAME\s*=\s*["']([^"']+)["']/);
           if (m) {
+            _appVersion = m[1];
             document.getElementById("appVersion").textContent = m[1];
           }
         })
@@ -453,20 +520,20 @@
 
       // 更新提示 toast
       window._showUpdateToast = function () {
-        if (document.getElementById("updateToast")) return;
-        const toast = document.createElement("div");
-        toast.id = "updateToast";
-        toast.className = "update-toast";
-        toast.innerHTML =
-          '<span>新版本可用，点击刷新</span><button onclick="location.reload()">刷新</button>';
-        document.body.appendChild(toast);
+        var msg = _appVersion
+          ? "新版本 " + _appVersion + " 已就绪"
+          : "📦 新版本可用";
+        showToast(msg, {
+          action: "刷新",
+          onAction: function () {
+            location.reload();
+          },
+        });
       };
-      if (window._swUpdateAvailable && window._showUpdateToast) {
-        window._showUpdateToast();
-      }
+      if (window._swUpdateAvailable) window._showUpdateToast();
 
       // 3. 鼠标坐标控件
-      L.control
+      var mousePosControl = L.control
         .mousePosition({
           position: "topright",
           showZoom: true,
@@ -726,7 +793,7 @@
       };
 
       // 1. 底图切换控件
-      L.control
+      var layerCtrlControl = L.control
         .layers(baseLayers, overlays, {
           position: "bottomright",
           collapsed: true,
@@ -875,6 +942,117 @@
         area = (Math.abs(area) * R * R) / 2;
         return area;
       }
+
+      // ========== 地图控件开关持久化 ==========
+      (function () {
+        var TOGGLE_PREFIX = "dupal_toggle_";
+
+        // Geoman 选项
+        var GEOMEN_OPTS = {
+          position: "topright",
+          drawCircleMarker: true,
+          drawText: true,
+          drawMarker: false,
+          drawCircle: true,
+          drawPolyline: true,
+          drawPolygon: true,
+          drawRectangle: false,
+          editMode: false,
+          dragMode: true,
+          cutPolygon: false,
+          rotateMode: false,
+          removalMode: true,
+        };
+
+        // 开关配置：cbId → { storageKey, control?, enable?, disable? }
+        var toggleConfig = {
+          geomenToggle: {
+            storageKey: TOGGLE_PREFIX + "geomen",
+            enable: function () {
+              map.pm.addControls(GEOMEN_OPTS);
+            },
+            disable: function () {
+              map.pm.removeControls();
+            },
+          },
+          mouseCoordToggle: {
+            storageKey: TOGGLE_PREFIX + "mouseCoord",
+            control: mousePosControl,
+          },
+          zoomToggle: {
+            storageKey: TOGGLE_PREFIX + "zoom",
+            control: map.zoomControl,
+          },
+          scaleToggle: {
+            storageKey: TOGGLE_PREFIX + "scale",
+            control: scaleControl,
+          },
+          layerCtrlToggle: {
+            storageKey: TOGGLE_PREFIX + "layerCtrl",
+            control: layerCtrlControl,
+          },
+        };
+
+        function initToggle(cbId, cfg) {
+          var cb = document.getElementById(cbId);
+          if (!cb) return;
+
+          var saved = localStorage.getItem(cfg.storageKey);
+          var defaultChecked = cb.checked; // 取 HTML 默认状态
+          var checked = saved !== null ? saved === "true" : defaultChecked;
+          cb.checked = checked;
+
+          // 若上次保存为关闭，移除对应控件
+          if (!checked) {
+            if (cfg.disable) cfg.disable();
+            else if (cfg.control) map.removeControl(cfg.control);
+          }
+
+          cb.addEventListener("change", function () {
+            localStorage.setItem(cfg.storageKey, String(this.checked));
+            if (this.checked) {
+              if (cfg.enable) cfg.enable();
+              else if (cfg.control) cfg.control.addTo(map);
+            } else {
+              if (cfg.disable) cfg.disable();
+              else if (cfg.control) map.removeControl(cfg.control);
+            }
+          });
+        }
+
+        for (var cbId in toggleConfig) {
+          if (toggleConfig.hasOwnProperty(cbId))
+            initToggle(cbId, toggleConfig[cbId]);
+        }
+
+        // 折叠区 open/close 持久化
+        var sectionEl = document.getElementById("toggleSection");
+        if (sectionEl) {
+          var secSaved = localStorage.getItem(TOGGLE_PREFIX + "sectionOpen");
+          sectionEl.open = secSaved !== null ? secSaved === "true" : true;
+          sectionEl.addEventListener("toggle", function () {
+            localStorage.setItem(
+              TOGGLE_PREFIX + "sectionOpen",
+              String(this.open),
+            );
+          });
+        }
+
+        // 地图控制面板：点击面板其他区域自动折叠
+        (function () {
+          var sec = document.getElementById("toggleSection");
+          var panel = document.querySelector(".layer-panel");
+          if (sec && panel) {
+            panel.addEventListener("click", function (e) {
+              if (!sec.open) return;
+              // 点击在 toggle-section 外部 → 折叠
+              if (sec !== e.target && !sec.contains(e.target)) {
+                sec.open = false;
+              }
+            });
+          }
+        })();
+      })();
 
       // ========== 外部文件处理（支持 GeoJSON / SHP / KML / KMZ / ZIP → 统一走 addUserLayer）==========
       window.loadFileAsUserLayer = function loadFileAsUserLayer(
@@ -1425,6 +1603,8 @@
     <script src="./assets/geojsonloader.js"></script>
     <!-- 投点功能（独立模块） -->
     <script src="./assets/pointdrop.js"></script>
+    <script src="./assets/marked.min.js"></script>
+    <script src="./assets/dialog.js"></script>
     <script>
       // 悬浮窗：popup 打开时插入右下角缩放按钮
       map.on("popupopen", function (e) {
