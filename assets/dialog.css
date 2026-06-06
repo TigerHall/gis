@@ -1,8 +1,44 @@
 /* ============================================
-   Dialog 样式系统
-   用法：
-     模态弹窗：<dialog class="app-dialog modal-dialog">...
-     Toast 通知：<dialog class="toast-dialog">...
+   Dialog 样式系统 v1.1.0
+   ============================================
+   依赖：无（纯 CSS，原生 <dialog>）
+   配合：dialog.js（JS 工具函数）
+
+   使用方式：
+     <link rel="stylesheet" href="./assets/dialog.css">
+
+   ── 弹窗类型 ──────────────────────────────
+
+   1. 模态弹窗（有遮罩，居中）
+      <dialog class="app-dialog modal-dialog">
+        <div class="dialog-header">
+          <h3>标题</h3>
+          <button class="dialog-close">×</button>
+        </div>
+        <div class="dialog-body">内容</div>
+      </dialog>
+
+   2. Toast 通知（无遮罩，flex 堆叠，自动重排）
+      由 dialog.js 的 showToast() 自动创建。
+
+      位置支持（通过 showToast 的 position 参数）：
+        top           顶部居中（默认）
+        bottom        底部居中（从下方滑入）
+        top-left      左上角
+        top-right     右上角
+        bottom-left   左下角
+        bottom-right  右下角
+
+      用法：showToast('消息', { position: 'bottom' })
+
+   ── 特色功能 ──────────────────────────────
+
+   - 模态弹窗遮罩点击关闭（JS 层面处理，CSS 只负责样式）
+   - Markdown 渲染支持：标题自动编号、表格、代码块等
+   - 折叠目录（.md-toc-*）
+   - 回到顶部按钮（.md-back-top）
+   - 手机端自适应（@media max-width: 480px）
+   - 深色模式自动跟随系统（@media prefers-color-scheme: dark）
    ============================================ */
 
 /* ----- 模态 dialog（有遮罩，居中显示） ----- */
@@ -93,7 +129,11 @@
   color: #444;
 }
 
-/* MD 内容样式 - 自动编号 */
+/* ============================================
+   MD 内容样式（自动编号 + 表格 + 代码块等）
+   ============================================ */
+
+/* h2/h3 自动编号（CSS counter） */
 .app-dialog .dialog-body {
   counter-reset: h2-counter;
 }
@@ -222,7 +262,7 @@
 }
 
 .md-toc-summary::before {
-  content: "▶";
+  content: "\25B6";
   font-size: 10px;
   color: #8ab88a;
   transition: transform 0.2s;
@@ -241,6 +281,7 @@
   display: none;
 }
 
+/* 目录列表（最大高度 240px，过长时内部滚动） */
 .md-toc-list {
   padding: 2px 6px 8px;
   max-height: 240px;
@@ -262,6 +303,7 @@
   background: #e0eee0 !important;
 }
 
+/* 目录层级：h1→6px缩进+粗体, h2→20px, h3→34px+小字 */
 .md-toc-item.toc-h1 {
   font-size: 13px;
   font-weight: 600;
@@ -315,23 +357,71 @@
   display: flex;
 }
 
-/* ----- Toast 容器（flex 堆叠，自动重排） ----- */
-#_toastContainer {
+/* ============================================
+   Toast 系统（flex 堆叠，自动重排）
+   ============================================
+   由 dialog.js 的 showToast() 自动管理 DOM。
+   showToast(msg, { position: 'top'|'bottom'|'top-left'|... })
+   不同位置使用独立容器，互不干扰。
+   容器 pointer-events: none，toast 自身 auto。
+   ============================================ */
+
+/* --- 基础容器 --- */
+._toastContainer {
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
   z-index: 9999;
   display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 8px;
   pointer-events: none;
   max-width: min(600px, calc(100vw - 32px));
   width: fit-content;
 }
+/* 顶部 */
+._toastContainer-top {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column;
+  align-items: center;
+}
+/* 底部 */
+._toastContainer-bottom {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column-reverse;
+  align-items: center;
+}
+/* 左上 */
+._toastContainer-top-left {
+  top: 20px;
+  left: 20px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+/* 右上 */
+._toastContainer-top-right {
+  top: 20px;
+  right: 20px;
+  flex-direction: column;
+  align-items: flex-end;
+}
+/* 左下 */
+._toastContainer-bottom-left {
+  bottom: 20px;
+  left: 20px;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+}
+/* 右下 */
+._toastContainer-bottom-right {
+  bottom: 20px;
+  right: 20px;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+}
 
-/* ----- Toast dialog（无遮罩，顶部弹出，内容自适应） ----- */
+/* ----- Toast 单个元素 ----- */
 .toast-dialog {
   pointer-events: auto;
   position: relative;
@@ -343,22 +433,77 @@
   max-width: 100%;
   background: #fff;
   opacity: 0;
-  transform: translateY(-16px);
   transition:
     opacity 0.25s ease,
     transform 0.25s ease;
 }
 
-.toast-dialog.open {
-  opacity: 1;
-  transform: translateY(0);
+/* ===== 不同位置的动画方向 ===== */
+/* 顶部系列：从上方滑入（.open 时显示，.closing 时隐藏） */
+.toast-top {
+  transform: translateY(-16px);
 }
-
-.toast-dialog.closing {
-  opacity: 0;
+.toast-top.open {
+  transform: translateY(0);
+  opacity: 1;
+}
+.toast-top.closing {
+  transform: translateY(-16px);
+}
+.toast-top-left {
+  transform: translateY(-16px);
+}
+.toast-top-left.open {
+  transform: translateY(0);
+  opacity: 1;
+}
+.toast-top-left.closing {
+  transform: translateY(-16px);
+}
+.toast-top-right {
+  transform: translateY(-16px);
+}
+.toast-top-right.open {
+  transform: translateY(0);
+  opacity: 1;
+}
+.toast-top-right.closing {
   transform: translateY(-16px);
 }
 
+/* 底部系列：从下方滑入 */
+.toast-bottom {
+  transform: translateY(16px);
+}
+.toast-bottom.open {
+  transform: translateY(0);
+  opacity: 1;
+}
+.toast-bottom.closing {
+  transform: translateY(16px);
+}
+.toast-bottom-left {
+  transform: translateY(16px);
+}
+.toast-bottom-left.open {
+  transform: translateY(0);
+  opacity: 1;
+}
+.toast-bottom-left.closing {
+  transform: translateY(16px);
+}
+.toast-bottom-right {
+  transform: translateY(16px);
+}
+.toast-bottom-right.open {
+  transform: translateY(0);
+  opacity: 1;
+}
+.toast-bottom-right.closing {
+  transform: translateY(16px);
+}
+
+/* Toast 内部布局 */
 .toast-dialog .toast-cnt {
   display: flex;
   align-items: center;
@@ -371,6 +516,7 @@
   line-height: 1.4;
 }
 
+/* Toast 操作按钮（如"刷新"） */
 .toast-dialog .toast-action {
   padding: 5px 12px;
   border: none;
@@ -387,7 +533,7 @@
   background: #40a9ff;
 }
 
-/* Toast 手动关闭按钮 */
+/* Toast 手动关闭按钮（✕，在不自动消失+无操作按钮时自动添加） */
 .toast-dialog .toast-close-btn {
   background: none;
   border: none;
@@ -403,7 +549,10 @@
   color: #666;
 }
 
-/* ----- 手机端微调 ----- */
+/* ============================================
+   响应式
+   ============================================ */
+
 @media (max-width: 480px) {
   .app-dialog {
     width: calc(100vw - 24px);
@@ -428,12 +577,27 @@
     font-size: 12px;
   }
 
+  /* 手机端所有 toast 容器缩窄 */
+  ._toastContainer-top,
+  ._toastContainer-bottom {
+    max-width: calc(100vw - 24px);
+  }
+  ._toastContainer-top-left,
+  ._toastContainer-top-right,
+  ._toastContainer-bottom-left,
+  ._toastContainer-bottom-right {
+    max-width: calc(50vw - 16px);
+  }
+
   .toast-dialog {
     max-width: calc(100vw - 24px);
   }
 }
 
-/* ----- 深色模式 ----- */
+/* ============================================
+   深色模式
+   ============================================ */
+
 @media (prefers-color-scheme: dark) {
   .app-dialog {
     background: #2a2a2e;

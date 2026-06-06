@@ -367,20 +367,13 @@
         if (!window.map || !window.htmlToImage) return;
         // 先关掉上一次的导出提示
         if (window._exportToast) {
-          if (window._exportToast.parentNode)
-            window._exportToast.parentNode.removeChild(window._exportToast);
+          closeToast(window._exportToast);
           window._exportToast = null;
         }
-        var toastEl = document.createElement("div");
-        toastEl.className = "toast-dialog";
-        toastEl.innerHTML =
-          '<div class="toast-cnt"><span class="toast-msg">⏳ 正在导出地图图片，图层复杂时可能较慢，请勿操作…</span></div>';
-        var c = document.getElementById("_toastContainer") || document.body;
-        c.insertBefore(toastEl, c.firstChild);
-        requestAnimationFrame(function () {
-          toastEl.classList.add("open");
-        });
-        window._exportToast = toastEl;
+        window._exportToast = showToast(
+          "⏳ 正在导出地图图片，图层复杂时可能较慢，请勿操作…",
+          { duration: 0 },
+        );
         var mapEl = document.getElementById("map");
         var panel = document.getElementById("layerPanel");
         var trigger = document.getElementById("layerTrigger");
@@ -510,10 +503,7 @@
                 a.href = dataUrl;
                 a.click();
                 if (window._exportToast) {
-                  if (window._exportToast.parentNode)
-                    window._exportToast.parentNode.removeChild(
-                      window._exportToast,
-                    );
+                  closeToast(window._exportToast);
                   window._exportToast = null;
                 }
                 showToast("✅ 导出成功", { duration: 3000 });
@@ -530,10 +520,7 @@
                 if (trigger) trigger.style.display = "";
                 map.invalidateSize();
                 if (window._exportToast) {
-                  if (window._exportToast.parentNode)
-                    window._exportToast.parentNode.removeChild(
-                      window._exportToast,
-                    );
+                  closeToast(window._exportToast);
                   window._exportToast = null;
                 }
                 showToast("❌ 导出失败", { duration: 3000 });
