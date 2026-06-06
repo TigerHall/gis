@@ -1,0 +1,324 @@
+/* ============================================
+   Dialog 样式系统
+   用法：
+     模态弹窗：<dialog class="app-dialog modal-dialog">...
+     Toast 通知：<dialog class="toast-dialog">...
+   ============================================ */
+
+/* ----- 模态 dialog（有遮罩，居中显示） ----- */
+.app-dialog {
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  margin: auto;
+  animation: dialogPop 0.2s ease;
+}
+
+.app-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes dialogPop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 标题栏 */
+.app-dialog .dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e8e8e8;
+  position: sticky;
+  top: 0;
+  background: #fafafa;
+  z-index: 1;
+  border-radius: 16px 16px 0 0;
+}
+
+.app-dialog .dialog-header h3 {
+  margin: 0;
+  font-size: 17px;
+  color: #222;
+  font-weight: 600;
+}
+
+/* 关闭按钮 */
+.app-dialog .dialog-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #999;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.app-dialog .dialog-close:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+
+/* 内容区 */
+.app-dialog .dialog-body {
+  padding: 24px;
+  max-height: min(80vh, 600px);
+  overflow-y: auto;
+  line-height: 1.7;
+  color: #444;
+}
+
+/* MD 内容样式 */
+.app-dialog .dialog-body h1 {
+  font-size: 22px;
+  color: #222;
+}
+.app-dialog .dialog-body h2 {
+  font-size: 18px;
+  color: #333;
+  margin-top: 24px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 6px;
+}
+.app-dialog .dialog-body h3 {
+  font-size: 15px;
+  color: #444;
+  margin-top: 16px;
+}
+.app-dialog .dialog-body h4 {
+  font-size: 14px;
+  color: #555;
+  margin-top: 12px;
+}
+.app-dialog .dialog-body p {
+  margin: 8px 0;
+}
+.app-dialog .dialog-body code {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: Consolas, monospace;
+}
+.app-dialog .dialog-body pre {
+  background: #f5f5f5;
+  padding: 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 13px;
+  border: 1px solid #e8e8e8;
+}
+.app-dialog .dialog-body hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 20px 0;
+}
+.app-dialog .dialog-body ul,
+.app-dialog .dialog-body ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+.app-dialog .dialog-body li {
+  margin: 4px 0;
+}
+.app-dialog .dialog-body a {
+  color: #1890ff;
+  text-decoration: none;
+}
+.app-dialog .dialog-body a:hover {
+  text-decoration: underline;
+}
+.app-dialog .dialog-body blockquote {
+  border-left: 3px solid #1890ff;
+  margin: 12px 0;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border-radius: 0 6px 6px 0;
+  color: #555;
+}
+
+/* ----- Toast dialog（无遮罩，顶部弹出，内容自适应） ----- */
+.toast-dialog {
+  position: fixed;
+  z-index: 9999;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: fit-content;
+  max-width: min(600px, calc(100vw - 32px));
+  animation: toastDown 0.25s ease;
+  transition: top 0.3s ease;
+}
+
+.toast-dialog .toast-cnt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast-dialog .toast-msg {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+}
+
+.toast-dialog .toast-action {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #1890ff;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.toast-dialog .toast-action:hover {
+  background: #40a9ff;
+}
+
+@keyframes toastDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ----- 手机端微调 ----- */
+@media (max-width: 480px) {
+  .app-dialog {
+    width: calc(100vw - 24px);
+    border-radius: 12px;
+    max-height: calc(100vh - 24px);
+  }
+  .app-dialog .dialog-header {
+    padding: 12px 16px;
+  }
+  .app-dialog .dialog-body {
+    padding: 16px;
+    max-height: min(75vh, 500px);
+  }
+  .app-dialog .dialog-body h1 {
+    font-size: 19px;
+  }
+  .app-dialog .dialog-body h2 {
+    font-size: 16px;
+  }
+  .app-dialog .dialog-body pre {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .toast-dialog {
+    top: 12px;
+    max-width: calc(100vw - 24px);
+  }
+}
+
+/* ----- 深色模式 ----- */
+@media (prefers-color-scheme: dark) {
+  .app-dialog {
+    background: #2a2a2e;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  }
+  .app-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.65);
+  }
+  .app-dialog .dialog-header {
+    background: #333337;
+    border-bottom-color: #444448;
+  }
+  .app-dialog .dialog-header h3 {
+    color: #e8e8e8;
+  }
+  .app-dialog .dialog-close {
+    color: #888;
+  }
+  .app-dialog .dialog-close:hover {
+    background: #444;
+    color: #eee;
+  }
+  .app-dialog .dialog-body {
+    color: #ccc;
+  }
+  .app-dialog .dialog-body h1 {
+    color: #eee;
+  }
+  .app-dialog .dialog-body h2 {
+    color: #ddd;
+    border-bottom-color: #444;
+  }
+  .app-dialog .dialog-body h3 {
+    color: #ccc;
+  }
+  .app-dialog .dialog-body h4 {
+    color: #bbb;
+  }
+  .app-dialog .dialog-body code {
+    background: #3a3a3e;
+    color: #e0e0e0;
+  }
+  .app-dialog .dialog-body pre {
+    background: #1e1e22;
+    border-color: #444;
+  }
+  .app-dialog .dialog-body hr {
+    border-top-color: #444;
+  }
+  .app-dialog .dialog-body a {
+    color: #5ab0ff;
+  }
+  .app-dialog .dialog-body blockquote {
+    background: #333338;
+    border-left-color: #5ab0ff;
+    color: #bbb;
+  }
+
+  .toast-dialog {
+    background: #333337;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+  .toast-dialog .toast-msg {
+    color: #ddd;
+  }
+  .toast-dialog .toast-action {
+    background: #5ab0ff;
+  }
+  .toast-dialog .toast-action:hover {
+    background: #7ac0ff;
+  }
+}
