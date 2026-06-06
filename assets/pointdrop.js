@@ -53,7 +53,7 @@
     pointDropTable = document.createElement("div");
     pointDropTable.id = "pointDropTable";
     pointDropTable.style.cssText =
-      "margin-top:6px;padding:8px;background:#fffde7;border:1px solid #cc9933;border-radius:4px;font-size:11px;color:#222;";
+      "margin:6px 0 8px;padding:8px;background:#fffde7;border:1px solid #cc9933;border-radius:4px;font-size:11px;color:#222;";
 
     // 标题栏
     var titleBar = document.createElement("div");
