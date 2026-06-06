@@ -99,6 +99,11 @@
         "</div>" +
         '<div class="dialog-body" id="_mdBody"><p>加载中…</p></div>';
       document.body.appendChild(dialog);
+
+      // 点击遮罩（backdrop）关闭弹窗
+      dialog.addEventListener("click", function (e) {
+        if (e.target === dialog) dialog.close();
+      });
     }
 
     document.getElementById("_mdTitle").textContent = title || "文档";
