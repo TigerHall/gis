@@ -1289,6 +1289,13 @@ body.sidebar-pinned .layer-trigger {
   .app-version {
     color: rgba(255, 255, 255, 0.25);
   }
+  .refresh-menu button {
+    background: #2a2a2e;
+    color: #bbb;
+  }
+  .refresh-menu button:hover {
+    background: #333337;
+  }
 
   /* 用户上传区域 */
   #userLayerGroup {

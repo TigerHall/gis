@@ -521,7 +521,7 @@
   padding: 5px 12px;
   border: none;
   border-radius: 6px;
-  background: #1890ff;
+  background: #4a8c4a;
   color: #fff;
   font-size: 13px;
   cursor: pointer;
@@ -530,7 +530,7 @@
 }
 
 .toast-dialog .toast-action:hover {
-  background: #40a9ff;
+  background: #3a7a3a;
 }
 
 /* Toast 手动关闭按钮（✕，在不自动消失+无操作按钮时自动添加） */
@@ -702,10 +702,10 @@
     color: #ddd;
   }
   .toast-dialog .toast-action {
-    background: #5ab0ff;
+    background: #5a9a5a;
   }
   .toast-dialog .toast-action:hover {
-    background: #7ac0ff;
+    background: #6aaa6a;
   }
   .toast-dialog .toast-close-btn {
     color: #777;

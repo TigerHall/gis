@@ -70,7 +70,26 @@
                   ) {
                     // 新 SW 已安装且旧 SW 仍在控制页面 → 有更新可用
                     window._swUpdateAvailable = true;
-                    if (window._showUpdateToast) window._showUpdateToast();
+                    // 尝试读取新 SW 的版本号（当前页面还是旧版本）
+                    var _newVersion = "";
+                    try {
+                      fetch("service-worker.js?" + Date.now())
+                        .then(function (r) {
+                          return r.text();
+                        })
+                        .then(function (src) {
+                          var m = src.match(
+                            /CACHE_NAME\s*=\s*["']([^"']+)["']/,
+                          );
+                          if (m) _newVersion = m[1];
+                        })
+                        .finally(function () {
+                          if (window._showUpdateToast)
+                            window._showUpdateToast(_newVersion);
+                        });
+                    } catch (e) {
+                      if (window._showUpdateToast) window._showUpdateToast();
+                    }
                   }
                 });
               });
@@ -373,9 +392,10 @@
           menu.className = "refresh-menu";
           menu.innerHTML =
             '<button data-mode="export">📷 导出图片</button>' +
-            '<button data-mode="refresh">刷新页面</button>' +
-            '<button data-mode="sw">清理网页缓存</button>' +
-            '<button data-mode="all">彻底清理</button>';
+            '<button data-mode="refresh">🔄 刷新页面</button>' +
+            '<button data-mode="sw">🧹 清理网页缓存</button>' +
+            '<button data-mode="all">🗑️ 彻底清理</button>' +
+            '<button id="changelogBtn">📝 更新记录</button>';
           menu.addEventListener("click", function (e) {
             var btn = e.target.closest("[data-mode]");
             if (!btn) return;
@@ -390,6 +410,18 @@
           });
           // 插入到 #appVersion 前面（版号上方）
           el.parentNode.insertBefore(menu, el);
+
+          // 更新记录按钮事件
+          setTimeout(function () {
+            var clogBtn = document.getElementById("changelogBtn");
+            if (clogBtn) {
+              clogBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                menu.remove();
+                showMarkdown("docs/CHANGELOG.md", "📝 更新记录");
+              });
+            }
+          }, 0);
         }
 
         el.addEventListener("click", function (e) {
@@ -574,9 +606,10 @@
       });
 
       // 更新提示 toast
-      window._showUpdateToast = function () {
-        var msg = _appVersion
-          ? "新版本 " + _appVersion + " 已就绪"
+      window._showUpdateToast = function (newVersion) {
+        var versionLabel = newVersion || _appVersion || "";
+        var msg = versionLabel
+          ? "新版本 " + versionLabel + " 已就绪"
           : "📦 新版本可用";
         showToast(msg, {
           duration: 0,
@@ -586,7 +619,7 @@
           },
         });
       };
-      if (window._swUpdateAvailable) window._showUpdateToast();
+      if (window._swUpdateAvailable) window._showUpdateToast(_appVersion);
 
       // 3. 鼠标坐标控件
       var mousePosControl = L.control
