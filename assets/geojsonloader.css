@@ -1,45 +1,13 @@
 /**
  * GeoJSON Loader - 图层管理样式
  * 提供图层面板、复选框、弹窗等样式
+ *
+ * 注意：图层组（layer-section/layer-group/layer-item）
+ * 的主样式已迁移至 main.css，本文件仅保留
+ * 复选框自定义样式等 main.css 未覆盖的细节。
  */
 
 /* ========== 全选行样式（已废弃，保留以防回滚） ========== */
-
-/* ========== 图层组面板（包裹所有图层组） ========== */
-details.layer-section {
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  background: #fafcfa;
-  margin-bottom: 6px;
-  overflow: hidden;
-}
-
-details.layer-section > summary {
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  color: #4a8c4a;
-  padding: 8px 10px;
-  user-select: none;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: background 0.15s;
-  background: #f0f7f0;
-}
-
-details.layer-section > summary::-webkit-details-marker {
-  display: none;
-}
-
-details.layer-section > summary:hover {
-  background: #e2f0e2;
-}
-
-details.layer-section > .layer-section-content {
-  padding: 4px 6px 6px;
-}
 
 #selectAllRow span {
   font-size: 12px;
@@ -118,64 +86,11 @@ details.layer-section > .layer-section-content {
   background: var(--layer-color, #4caf50);
 }
 
-/* ========== 无分组图层容器（直接显示，无折叠头）========== */
-.layer-plain {
-  margin-bottom: 4px;
-  padding: 0 5px;
-}
-
-/* ========== 图层组样式（details + summary） ========== */
-details.layer-group {
-  margin-bottom: 6px;
-}
-
-details.layer-group > summary {
-  display: flex;
-  align-items: center;
-  padding: 5px 8px;
-  cursor: pointer;
-  background: #f0f7f0;
-  border-radius: 4px;
-  user-select: none;
-  font-size: 13px;
-  font-weight: 600;
-  color: #3a7a3a;
-  transition: background 0.15s;
-  gap: 5px;
-  /* 隐藏浏览器原生三角标记 */
-  list-style: none;
-}
-
-details.layer-group > summary::-webkit-details-marker {
-  display: none;
-}
-
-details.layer-group > summary:hover {
-  background: #e2f0e2;
-}
-
-/* 箭头旋转 */
-.layer-group-arrow {
-  display: inline-block;
-  transition: transform 0.2s;
-  font-size: 10px;
-  color: #88aa88;
-  flex-shrink: 0;
-}
-
-details.layer-group[open] .layer-group-arrow,
-details.layer-section[open] .layer-group-arrow {
-  transform: rotate(90deg);
-}
-
-.layer-group-name {
-  flex: 1;
-}
+/* ========== 无分组图层容器（直接显示，无折叠头，主样式见 main.css）========== */
 
 /* 子项容器 - details[open] 时自动可见 */
 .layer-group-children {
   overflow: visible;
-  margin-top: 2px;
 }
 
 /* ========== 图层项样式 ========== */

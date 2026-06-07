@@ -209,6 +209,30 @@
               <span class="cluster-toggle-switch"></span>
             </label>
           </div>
+          <!-- 更多底图开关 -->
+          <div
+            class="toggle-bar"
+            id="moreBasemapToggleBar"
+            title="开启后显示更多底图和覆盖层选项（ArcGIS扩展、天地图标注等）"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">更多底图</span>
+              <input type="checkbox" id="moreBasemapToggle" />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+          <!-- 自动识别剪贴板开关 -->
+          <div
+            class="toggle-bar"
+            id="clipboardToggleBar"
+            title="开启后自动读取剪贴板中的坐标/CSV数据并解析为投点图层；关闭后需手动粘贴到投点编辑器"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">自动识别剪贴板</span>
+              <input type="checkbox" id="clipboardToggle" checked />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
         </div>
       </details>
       <!-- 搜索框 -->
@@ -580,12 +604,7 @@
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图影像</a>",
         },
       );
-      const tdtImgAnno = L.tileLayer(
-        `https://t0.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18, crossOrigin: "anonymous" },
-      );
-      const imgLayers = L.layerGroup([tdtImgLayer, tdtImgAnno]);
-      const tdtImgLayer2 = tdtImgLayer;
+      const imgLayers = L.layerGroup([tdtImgLayer]);
       // 2. 天地图矢量底图
       const tdtVecLayer = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
@@ -596,11 +615,7 @@
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图矢量</a>",
         },
       );
-      const tdtVecAnno = L.tileLayer(
-        `https://t0.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18, crossOrigin: "anonymous" },
-      );
-      const vecLayers = L.layerGroup([tdtVecLayer, tdtVecAnno]);
+      const vecLayers = L.layerGroup([tdtVecLayer]);
 
       // 2.1 天地图地形底图
       const tdtTerLayer = L.tileLayer(
@@ -612,11 +627,22 @@
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图地形</a>",
         },
       );
+      const terLayers = L.layerGroup([tdtTerLayer]);
+
+      // 天地图地名标注（独立叠加层，供多选图层使用）
+      const tdtAnnoOverlay = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        { maxZoom: 18, crossOrigin: "anonymous" },
+      );
+      // 天地图影像标注 / 地形标注（更多底图中可切换对比）
+      const tdtImgAnno = L.tileLayer(
+        `https://t0.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
+        { maxZoom: 18, crossOrigin: "anonymous" },
+      );
       const tdtTerAnno = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=cta_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
         { maxZoom: 18, crossOrigin: "anonymous" },
       );
-      const terLayers = L.layerGroup([tdtTerLayer, tdtTerAnno]);
 
       // 3. ArcGIS影像底图
       const ARCGIS_SERVICE_PREFIX =
@@ -672,15 +698,15 @@
        */
       const arcgisBaseLayerConfigs = [
         // 影像底图
-        { name: "ArcGIS-影像底图", serviceName: "World_Imagery", maxZoom: 19 },
+        { name: "ArcGIS-影像", serviceName: "World_Imagery", maxZoom: 19 },
         // 街道底图
         {
-          name: "ArcGIS-街道底图",
+          name: "ArcGIS-街道",
           serviceName: "World_Street_Map",
         },
         // 海洋底图
         {
-          name: "ArcGIS-海洋底图",
+          name: "ArcGIS-海洋",
           serviceName: "Ocean/World_Ocean_Base",
           labelServiceName: "Ocean/World_Ocean_Reference",
           maxZoom: 10,
@@ -698,12 +724,12 @@
         },
         // 世界地形底图
         {
-          name: "ArcGIS-世界地形基础底图",
+          name: "ArcGIS-世界地形",
           serviceName: "World_Terrain_Base",
           maxZoom: 19,
         },
         // 地形底图
-        { name: "ArcGIS-地形底图", serviceName: "World_Topo_Map", maxZoom: 19 },
+        { name: "ArcGIS-地形", serviceName: "World_Topo_Map", maxZoom: 19 },
       ];
 
       // ========== 4. 批量创建所有 ArcGIS 底图图层 ==========
@@ -713,7 +739,7 @@
         arcgisBaseLayers[result.layerName] = result.layer;
       });
 
-      // 打底的ArcGIS影像底图
+      // 打底的 ArcGIS 影像（不是可切换的底图，仅用于 ETOPO 等高线叠加）
       const arcgisLayers = L.tileLayer(
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         { maxZoom: 19, crossOrigin: "anonymous" },
@@ -788,53 +814,167 @@
       );
 
       // ========== 控件配置 ==========
-      // 所有底图统一放在 baseLayers 对象中（单一数据源，避免与 L.control 定义不同步）
+      // 所有底图统一放在 allBaseLayers 对象中（单一数据源，避免与 L.control 定义不同步）
       // 注意顺序：先天地图系列，再 ArcGIS 系列，最后 OSM（确保 OSM 在控件列表最末尾）
-      const baseLayers = Object.assign(
+      const allBaseLayers = Object.assign(
         {
           // ETOPO 2022 全球底图
           ETOPO: etopoLayer,
           ETOPO_2022: etopohighLayer,
           // 天地图系列
-          天地图纯影像: tdtImgLayer2,
-          天地图影像底图: imgLayers,
-          天地图矢量底图: vecLayers,
-          天地图地形底图: terLayers,
+          天地图影像: imgLayers,
+          天地图矢量: vecLayers,
+          天地图地形: terLayers,
         },
         arcgisBaseLayers,
       );
       // OSM 放到 ArcGIS 底图后面
-      baseLayers["OSM底图_边界有误慎用"] = osmLayers;
+      allBaseLayers["OpenStreetMap"] = osmLayers;
 
-      // 所有覆盖层统一放在 overlays 对象中（单一数据源，支持扩展）
-      const overlays = {
-        全球境界: tdtIboLayer,
-        // 以后新增覆盖层直接在这里加
+      // 所有覆盖层统一存放（永远可见的 + 更多底图模式才显示的）
+      const allOverlays = {
+        // 永远可见
+        天地图全球境界: tdtIboLayer,
+        天地图地名标注: tdtAnnoOverlay,
+      };
+      const moreOverlays = {
+        // 仅在"更多底图"开启时出现
+        天地图影像标注: tdtImgAnno,
+        天地图地形标注: tdtTerAnno,
       };
 
-      // 1. 底图切换控件
-      var layerCtrlControl = L.control
-        .layers(baseLayers, overlays, {
-          position: "bottomright",
-          collapsed: true,
-          autoZIndex: true,
-        })
-        .addTo(map);
+      // 获取当前可见覆盖层集合
+      function getVisibleOverlays() {
+        var cb = document.getElementById("moreBasemapToggle");
+        if (cb && cb.checked) {
+          var merged = {};
+          for (var k in allOverlays) merged[k] = allOverlays[k];
+          for (var k in moreOverlays) merged[k] = moreOverlays[k];
+          return merged;
+        }
+        return allOverlays;
+      }
+
+      // ========== "更多底图"开关：控制 ArcGIS 扩展底图的显示 ==========
+      // 默认显示的底图子集（关闭"更多底图"时）
+      function getDefaultBaseLayers() {
+        var layers = {};
+        var keys = [
+          "ETOPO",
+          "ETOPO_2022",
+          "天地图影像",
+          "天地图矢量",
+          "天地图地形",
+          "ArcGIS-影像",
+          "ArcGIS-海洋",
+          "OpenStreetMap",
+        ];
+        keys.forEach(function (k) {
+          if (allBaseLayers[k]) layers[k] = allBaseLayers[k];
+        });
+        return layers;
+      }
+
+      // 获取当前可见底图集合
+      function getVisibleBaseLayers() {
+        var cb = document.getElementById("moreBasemapToggle");
+        if (cb && cb.checked) return allBaseLayers;
+        return getDefaultBaseLayers();
+      }
+
+      // 当前选中的底图名称
+      var _currentBasemapName = "ArcGIS-海洋";
+
+      // 重建底图控件
+      function rebuildLayerCtrl() {
+        if (window._layerCtrlControl) {
+          map.removeControl(window._layerCtrlControl);
+        }
+        var visibleLayers = getVisibleBaseLayers();
+
+        // 确保当前底图在地图上且属于可见集合
+        var currentLayer = allBaseLayers[_currentBasemapName];
+        if (currentLayer && !map.hasLayer(currentLayer)) {
+          // 移除所有其他底图
+          for (var key in allBaseLayers) {
+            if (map.hasLayer(allBaseLayers[key])) {
+              map.removeLayer(allBaseLayers[key]);
+            }
+          }
+          map.addLayer(currentLayer);
+        } else if (!currentLayer) {
+          // 兜底
+          var fallback = allBaseLayers["ArcGIS-海洋"] || allBaseLayers["ETOPO"];
+          if (fallback) map.addLayer(fallback);
+        }
+
+        window._layerCtrlControl = L.control
+          .layers(visibleLayers, getVisibleOverlays(), {
+            position: "bottomright",
+            collapsed: true,
+            autoZIndex: true,
+          })
+          .addTo(map);
+
+        // 清理不在可见集合中的覆盖层（如切换"更多底图"关闭时）
+        var visibleOverlays = getVisibleOverlays();
+        for (var k in moreOverlays) {
+          if (!visibleOverlays[k] && map.hasLayer(moreOverlays[k])) {
+            map.removeLayer(moreOverlays[k]);
+          }
+        }
+      }
+
+      // ========== 更多底图开关初始化及事件绑定 ==========
+      (function () {
+        var cb = document.getElementById("moreBasemapToggle");
+        if (cb) {
+          var saved = localStorage.getItem("dupal_toggle_moreBasemap");
+          cb.checked = saved !== null ? saved === "true" : false;
+          cb.addEventListener("change", function () {
+            localStorage.setItem(
+              "dupal_toggle_moreBasemap",
+              String(this.checked),
+            );
+            rebuildLayerCtrl();
+          });
+        }
+      })();
+
+      // ========== 自动识别剪贴板开关初始化 ==========
+      (function () {
+        var cb = document.getElementById("clipboardToggle");
+        if (cb) {
+          var saved = localStorage.getItem("dupal_toggle_clipboard");
+          cb.checked = saved !== null ? saved === "true" : true; // 默认开启
+          cb.addEventListener("change", function () {
+            localStorage.setItem(
+              "dupal_toggle_clipboard",
+              String(this.checked),
+            );
+          });
+        }
+      })();
 
       // ========== 底图持久化：记住用户上次选择 ==========
       var BASEMAP_STORAGE_KEY = "dupal_basemap";
 
-      // 尝试恢复上次选择的底图，没有则用默认底图
+      // 尝试恢复上次选择的底图，没有则用 ArcGIS-海洋
       var savedBasemap = localStorage.getItem(BASEMAP_STORAGE_KEY);
-      var initialBaseLayer =
-        savedBasemap && baseLayers[savedBasemap]
-          ? baseLayers[savedBasemap]
-          : etopoLayer;
+      if (savedBasemap && allBaseLayers[savedBasemap]) {
+        _currentBasemapName = savedBasemap;
+      }
 
-      initialBaseLayer.addTo(map);
+      // 初始化底图控件（自动根据更多底图开关状态选择子集）
+      rebuildLayerCtrl();
 
       // ========== 覆盖层持久化：记住用户上次选择的覆盖层 ==========
       var OVERLAY_STORAGE_KEY = "dupal_overlays";
+
+      // 合并所有覆盖层到一个查找表
+      var allOverlaysLookup = {};
+      for (var k in allOverlays) allOverlaysLookup[k] = allOverlays[k];
+      for (var k in moreOverlays) allOverlaysLookup[k] = moreOverlays[k];
 
       // 尝试恢复上次选中的覆盖层
       try {
@@ -846,13 +986,14 @@
         savedOverlays = [];
       }
       savedOverlays.forEach(function (name) {
-        if (overlays[name] && !map.hasLayer(overlays[name])) {
-          map.addLayer(overlays[name]);
+        if (allOverlaysLookup[name] && !map.hasLayer(allOverlaysLookup[name])) {
+          map.addLayer(allOverlaysLookup[name]);
         }
       });
 
       // 切换底图时保存选择
       map.on("baselayerchange", function (e) {
+        _currentBasemapName = e.name;
         localStorage.setItem(BASEMAP_STORAGE_KEY, e.name);
       });
 
@@ -1009,7 +1150,15 @@
           },
           layerCtrlToggle: {
             storageKey: TOGGLE_PREFIX + "layerCtrl",
-            control: layerCtrlControl,
+            enable: function () {
+              rebuildLayerCtrl();
+            },
+            disable: function () {
+              if (window._layerCtrlControl) {
+                map.removeControl(window._layerCtrlControl);
+                window._layerCtrlControl = null;
+              }
+            },
           },
         };
 

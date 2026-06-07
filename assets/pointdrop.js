@@ -493,11 +493,19 @@
     return String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   }
 
+  // ========== 剪贴板自动识别开关 ==========
+  // 受地图设置中「自动识别剪贴板」开关控制，默认打开
+  function isClipboardAutoEnabled() {
+    var cb = document.getElementById("clipboardToggle");
+    return !cb || cb.checked; // 元素不存在时默认启用
+  }
+
   // ========== 全局粘贴监听 + 切页自动读取剪贴板 ==========
   var _lastClipText = ""; // 避免重复读取同一段内容
 
   // Ctrl+V 粘贴（焦点不在输入框时自动解析）
   document.addEventListener("paste", function (e) {
+    if (!isClipboardAutoEnabled()) return;
     var tag = ((e.target && e.target.tagName) || "").toLowerCase();
     if (tag === "input" || tag === "textarea" || e.target.isContentEditable)
       return;
@@ -515,6 +523,7 @@
 
   // 切回页面时主动读取剪贴板（visibilitychange + focus）
   function tryReadClipboard() {
+    if (!isClipboardAutoEnabled()) return;
     if (
       typeof navigator.clipboard !== "object" ||
       typeof navigator.clipboard.readText !== "function"

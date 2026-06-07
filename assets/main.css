@@ -192,6 +192,266 @@ body.resizing-panel {
   cursor: pointer;
 }
 
+/* ========== 图层组面板视觉层次 ========== */
+/* 主折叠区（"静态矢量要素"） */
+details.layer-section {
+  border: 1px solid #dde8dd;
+  border-radius: 8px;
+  background: #f8fbf8;
+  margin-bottom: 6px;
+  overflow: hidden;
+  transition: box-shadow 0.25s ease;
+}
+details.layer-section[open] {
+  box-shadow: 0 1px 4px rgba(74, 140, 74, 0.06);
+}
+details.layer-section > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 10px;
+  background: #edf3ed;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a7a3a;
+  list-style: none;
+  transition: background 0.15s;
+}
+details.layer-section > summary::-webkit-details-marker {
+  display: none;
+}
+details.layer-section > summary:hover {
+  background: #e2ece2;
+}
+details.layer-section[open] > summary {
+  border-bottom: 1px solid #dde8dd;
+}
+
+/* ========== 图层组折叠区（"全球板块构造"等） ========== */
+details.layer-group {
+  border: 1px solid #e4ece4;
+  border-radius: 7px;
+  margin: 0;
+  background: #ffffff;
+  overflow: hidden;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+details.layer-group:hover {
+  border-color: #c8dcc8;
+  box-shadow: 0 1px 4px rgba(74, 140, 74, 0.08);
+}
+details.layer-group[open] {
+  border-color: #cde0cd;
+  box-shadow: 0 1px 3px rgba(74, 140, 74, 0.06);
+}
+details.layer-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 7px 12px;
+  background: #f2f8f2;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #3a7a3a;
+  list-style: none;
+  transition: background 0.15s;
+  border-bottom: 1px solid transparent;
+}
+details.layer-group[open] > summary {
+  border-bottom-color: #e0ece0;
+}
+details.layer-group > summary::-webkit-details-marker {
+  display: none;
+}
+details.layer-group > summary:hover {
+  background: #e6f1e6;
+}
+
+/* 图层组展开箭头 */
+.layer-group-arrow {
+  display: inline-block;
+  font-size: 9px;
+  color: #7aae7a;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+}
+details.layer-group[open] > summary .layer-group-arrow,
+details.layer-section[open] > summary .layer-group-arrow {
+  transform: rotate(90deg);
+}
+
+/* 图层组名 */
+.layer-group-name {
+  flex: 1;
+  font-weight: 600;
+  color: #3a7a3a;
+}
+
+/* 图层组子项容器（缩进） */
+.layer-group-children {
+  padding: 4px 0 6px 14px;
+  background: #fafcfa;
+}
+
+/* 无分组图层的占位容器 */
+.layer-plain {
+  padding: 2px 0 4px 10px;
+  border: 1px solid #e4ece4;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+/* 图层项 */
+.layer-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  margin: 2px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+  gap: 6px;
+  position: relative;
+}
+.layer-item:hover {
+  background: #eef4ee;
+}
+.layer-item:active {
+  background: #e0ece0;
+}
+/* 图层勾选时，左侧加一条小绿条 */
+.layer-item:has(input[type="checkbox"]:checked) {
+  background: #f0f8f0;
+}
+.layer-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: #4a8c4a;
+}
+.layer-item label {
+  flex: 1;
+  font-size: 12.5px;
+  color: #555;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 图层加载状态指示器 */
+.layer-status {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.layer-status[data-status="idle"] {
+  background: #ddd;
+}
+.layer-status[data-status="loading"] {
+  background: #f0c040;
+  animation: statusPulse 0.8s ease-in-out infinite;
+}
+.layer-status[data-status="loaded"] {
+  background: #4a8c4a;
+}
+.layer-status[data-status="error"] {
+  background: #e5534b;
+}
+@keyframes statusPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* 组状态指示器 */
+.group-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  min-height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin: 0 3px;
+  line-height: 1;
+  font-size: 0;
+  transition: background 0.2s;
+}
+.group-status[data-status="idle"] {
+  background: #d0d0d0;
+}
+.group-status[data-status="loading"] {
+  background: #f0c040;
+  animation: groupStatusPulse 0.8s ease-in-out infinite;
+}
+.group-status[data-status="loaded"] {
+  background: #4a8c4a;
+}
+.group-status[data-status="partial"] {
+  background: #e8a030;
+}
+.group-status[data-status="error"] {
+  background: #e5534b;
+}
+
+@keyframes groupStatusPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* 全选复选框 */
+#selectAllLayers {
+  margin-left: auto;
+  flex-shrink: 0;
+  accent-color: #4a8c4a;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.group-select-all {
+  flex-shrink: 0;
+  accent-color: #4a8c4a;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* ========== 图层要素面板内容区 ========== */
+.layer-section-content {
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 #map {
   flex: 1; /* 保留flex布局的自适应 */
   height: 100%;
@@ -279,17 +539,19 @@ body.resizing-panel {
   font-size: 13px;
   border: 1px solid #d0d8d0;
   border-radius: 6px;
-  background: #f5f8f5;
-  box-shadow: none;
+  background: #fafcfa;
+  color: #333;
   outline: none;
-  color: #555;
-  user-select: text;
-  -webkit-user-select: text;
   transition:
     border-color 0.2s,
     background 0.2s;
-  appearance: none;
-  -webkit-appearance: none;
+}
+.search-bar input[type="text"]:disabled {
+  background: #f0f2f0;
+  border-color: #d8dcd8;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.8;
 }
 
 .search-clear {
@@ -904,11 +1166,20 @@ body.sidebar-pinned .layer-trigger {
     border-color: #5a9a5a;
     background: #222226;
   }
+  .search-bar input[type="text"]:disabled {
+    background: #222226;
+    border-color: #2e3e2e;
+    color: #666;
+    opacity: 0.7;
+  }
 
   /* 图层要素面板 */
   details.layer-section {
     border-color: #3a4a3a;
-    background: #28282c;
+    background: #222226;
+  }
+  details.layer-section[open] {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   }
   details.layer-section > summary {
     background: #2a2a2e;
@@ -917,32 +1188,101 @@ body.sidebar-pinned .layer-trigger {
   details.layer-section > summary:hover {
     background: #333337;
   }
+  details.layer-section[open] > summary {
+    border-bottom-color: #3a4a3a;
+  }
+
+  /* 图层要素面板内容区 */
+  .layer-section-content {
+    background: #1e1e22;
+  }
 
   /* 图层组 */
+  details.layer-group {
+    border-color: #2e3e2e;
+    background: #252529;
+  }
+  details.layer-group:hover {
+    border-color: #3a5a3a;
+    box-shadow: 0 1px 5px rgba(90, 154, 90, 0.1);
+  }
+  details.layer-group[open] {
+    border-color: #3a5a3a;
+    box-shadow: 0 1px 4px rgba(90, 154, 90, 0.08);
+  }
   details.layer-group > summary {
-    background: #2a2a2e;
+    background: #2a2e2a;
     color: #7aca7a;
+    border-bottom-color: transparent;
+  }
+  details.layer-group[open] > summary {
+    border-bottom-color: #2e3e2e;
   }
   details.layer-group > summary:hover {
-    background: #333337;
+    background: #323632;
   }
   .layer-group-name {
     color: #7aca7a;
+  }
+  .layer-group-children {
+    background: #1e2022;
+  }
+
+  /* 无分组图层容器 */
+  .layer-plain {
+    border-color: #2e3e2e;
+    background: #252529;
+  }
+
+  /* 图层组箭头 */
+  .layer-group-arrow {
+    color: #5a8a5a;
   }
 
   /* 图层项 */
   .layer-item:hover {
     background: #2a2a2e;
   }
+  .layer-item:active {
+    background: #222226;
+  }
+  .layer-item:has(input[type="checkbox"]:checked) {
+    background: #282e28;
+  }
   .layer-item label {
     color: #bbb;
+  }
+  .layer-item input[type="checkbox"] {
+    accent-color: #5a9a5a;
+  }
+
+  /* 状态指示器 */
+  .layer-status[data-status="idle"] {
+    background: #444;
+  }
+  .layer-status[data-status="loaded"] {
+    background: #5a9a5a;
+  }
+  .group-status[data-status="idle"] {
+    background: #3a3a3a;
+  }
+  .group-status[data-status="loading"] {
+    background: #c8a030;
+  }
+  .group-status[data-status="loaded"] {
+    background: #5a9a5a;
+  }
+  .group-status[data-status="partial"] {
+    background: #c89030;
+  }
+  .group-status[data-status="error"] {
+    background: #c9433b;
   }
 
   /* 全选框 */
   #selectAllLayers,
   .group-select-all {
-    background: #333;
-    border-color: #555;
+    accent-color: #5a9a5a;
   }
 
   /* 版本号 */

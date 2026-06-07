@@ -9,10 +9,10 @@
   const geoJsonCosPath =
     "https://dupal-1258052757.cos.ap-shanghai.myqcloud.com/assets/geojson/";
 
-  // 根据域名决定加载优先级：dupal.cn 优先走 COS（快），其他优先走本地（省流量）
-  var isDuPalDomain = window.location.hostname === "dupal.cn";
-  var geoJsonPrimaryPath = isDuPalDomain ? geoJsonCosPath : geoJsonBasePath;
-  var geoJsonFallbackPath = isDuPalDomain ? geoJsonBasePath : geoJsonCosPath;
+  // dupal.cn 本身就是 COS 静态域名，相对路径即 COS 路径且走 CDN 加速
+  // 因此始终优先使用相对路径，加载失败时回退到 COS 直连 URL
+  var geoJsonPrimaryPath = geoJsonBasePath;
+  var geoJsonFallbackPath = geoJsonCosPath;
 
   // ========== GeoJSON 分组配置（路径之后，方便引用 basePath）==========
   const geoJsonGroups = [
@@ -362,10 +362,12 @@
     // 高亮状态
     const highlightState = {};
     const layerBoundsCache = {};
+    const _loadedCallbacks = {}; // 图层加载完成回调，用于搜索要素时异步等待
     // Canvas 图层要素缓存（用于颜色模式快速切换）
     const canvasFeaturesCache = {};
     const canvasFieldValuesCache = {};
     const searchIndexMap = {}; // 倒排索引：{ checkboxId: { tokens: { tok: [idx, ...] }, features: [...] } }
+    const featureCache = {}; // 要素数据缓存：{ checkboxId: features[] }，独立于索引，保证要素搜索始终可用
     let searchIndexingCount = 0; // 正在构建索引的图层数
 
     // 搜索辅助函数（提取 feature 所有属性为可搜索字符串）
@@ -425,54 +427,66 @@
         return;
       }
       // 先尝试从 IDB 恢复缓存的 tokens
-      L.GzIdbLoader.getSearchIndex(cacheKey).then(function (cached) {
-        // 缓存命中时校验格式：tokens 必须是对象，且 featureCount 匹配
-        if (
-          cached &&
-          cached.tokens &&
-          typeof cached.tokens === "object" &&
-          !Array.isArray(cached.tokens)
-        ) {
+      L.GzIdbLoader.getSearchIndex(cacheKey)
+        .then(function (cached) {
+          // 缓存命中时校验格式：tokens 必须是对象，且 featureCount 匹配
           if (
-            cached.featureCount !== undefined &&
-            cached.featureCount !== features.length
+            cached &&
+            cached.tokens &&
+            typeof cached.tokens === "object" &&
+            !Array.isArray(cached.tokens)
           ) {
+            if (
+              cached.featureCount !== undefined &&
+              cached.featureCount !== features.length
+            ) {
+              console.log(
+                "[GeoJSONLoader] 搜索索引版本不匹配（feature数量变化），重建:",
+                checkboxId,
+              );
+            } else {
+              // 缓存命中：直接使用
+              searchIndexMap[checkboxId] = {
+                tokens: cached.tokens,
+                features: features,
+              };
+              console.log(
+                "[GeoJSONLoader] 搜索索引缓存恢复:",
+                checkboxId,
+                "tokens数量:",
+                Object.keys(cached.tokens).length,
+              );
+              if (callback) callback(true);
+              return;
+            }
+          }
+          // 缓存未命中或版本不匹配：异步分批重建
+          tokenizeFeaturesAsync(features, function (tokens) {
+            L.GzIdbLoader.setSearchIndex(cacheKey, {
+              tokens: tokens,
+              featureCount: features.length,
+            });
+            searchIndexMap[checkboxId] = { tokens: tokens, features: features };
             console.log(
-              "[GeoJSONLoader] 搜索索引版本不匹配（feature数量变化），重建:",
-              checkboxId,
-            );
-          } else {
-            // 缓存命中：直接使用
-            searchIndexMap[checkboxId] = {
-              tokens: cached.tokens,
-              features: features,
-            };
-            console.log(
-              "[GeoJSONLoader] 搜索索引缓存恢复:",
+              "[GeoJSONLoader] 搜索索引重新构建:",
               checkboxId,
               "tokens数量:",
-              Object.keys(cached.tokens).length,
+              Object.keys(tokens).length,
             );
-            if (callback) callback(true);
-            return;
-          }
-        }
-        // 缓存未命中或版本不匹配：异步分批重建
-        tokenizeFeaturesAsync(features, function (tokens) {
-          L.GzIdbLoader.setSearchIndex(cacheKey, {
-            tokens: tokens,
-            featureCount: features.length,
+            if (callback) callback(false);
           });
-          searchIndexMap[checkboxId] = { tokens: tokens, features: features };
-          console.log(
-            "[GeoJSONLoader] 搜索索引重新构建:",
-            checkboxId,
-            "tokens数量:",
-            Object.keys(tokens).length,
+        })
+        .catch(function (err) {
+          console.warn(
+            "[GeoJSONLoader] 搜索索引IDB缓存异常，降级为内存索引:",
+            err,
           );
-          if (callback) callback(false);
+          // IDB 降级：直接构建内存索引
+          tokenizeFeaturesAsync(features, function (tokens) {
+            searchIndexMap[checkboxId] = { tokens: tokens, features: features };
+            if (callback) callback(false);
+          });
         });
-      });
     }
     // 标签配置（委托给 GeoUtils，这里保留引用以便快速判断）
     const STATION_LABEL_CONFIG = window.GeoUtils.STATION_LABEL_CONFIG;
@@ -1033,6 +1047,7 @@
               optimizedFitBounds(b, { padding: [30, 30], animate: true });
           } catch (e) {}
         }
+        fireLoadedCallback(checkboxId);
         return;
       }
 
@@ -1095,23 +1110,42 @@
         }
         updateLayerItemStatus(checkboxId, "loaded");
 
-        if (!searchRegistry.find((e) => e.checkboxId === checkboxId)) {
+        if (!searchIndexMap[checkboxId]) {
           const cb = document.getElementById(checkboxId);
           const layerLabel = cb ? cb.dataset.layerName || fileName : fileName;
-          searchRegistry.push({
-            layerLabel: layerLabel,
-            checkboxId: checkboxId,
-            fileName: fileName,
-          });
+          // 确保 registry 有这条记录（UI 初始化时不一定注册了所有图层）
+          if (!searchRegistry.find((e) => e.checkboxId === checkboxId)) {
+            searchRegistry.push({
+              layerLabel: layerLabel,
+              groupName: cb ? cb.dataset.groupName || "" : "",
+              checkboxId: checkboxId,
+              fileName: fileName,
+            });
+          }
           if (data_.features) {
+            // 无论索引是否构建成功，始终缓存原始 features 供要素搜索兜底
+            featureCache[checkboxId] = data_.features;
             searchIndexingCount++;
             updateSearchInputState();
             // 内置图层：用 fileName 作为 cacheKey，支持 IDB 缓存恢复
             buildSearchIndex(checkboxId, data_.features, fileName, function () {
               searchIndexingCount--;
               updateSearchInputState();
+              // 搜索索引构建完成后触发回调
+              fireLoadedCallback(checkboxId);
             });
+          } else {
+            fireLoadedCallback(checkboxId);
           }
+        } else {
+          fireLoadedCallback(checkboxId);
+        }
+      }
+
+      function fireLoadedCallback(checkboxId) {
+        if (_loadedCallbacks[checkboxId]) {
+          _loadedCallbacks[checkboxId]();
+          delete _loadedCallbacks[checkboxId];
         }
       }
 
@@ -1480,20 +1514,11 @@
         {
           idle: "",
           loading: "加载中...",
-          loaded: "✓",
+          loaded: "全部已加载",
           partial: "部分加载",
-          error: "×",
+          error: "加载出错",
         }[status] || status;
-      gs.textContent =
-        status === "loading"
-          ? "⏳"
-          : status === "loaded"
-            ? "✓"
-            : status === "partial"
-              ? "◐"
-              : status === "error"
-                ? "✕"
-                : "";
+      // 纯色圆点，无需 textContent
     }
 
     function syncGroupLoadingStatus(groupDiv) {
@@ -1855,7 +1880,7 @@
       arrow.textContent = "▶";
 
       var sectionTitle = document.createElement("span");
-      sectionTitle.textContent = "📑 图层要素";
+      sectionTitle.textContent = "📑 静态矢量要素";
       sectionTitle.style.cssText = "flex:1;";
 
       layerSummary.appendChild(arrow);
@@ -1969,7 +1994,22 @@
           checkbox.id = checkboxId;
           checkbox.value = fullPath;
           checkbox.dataset.layerName = layerConfig.name;
+          checkbox.dataset.groupName = group.groupName || "";
           checkbox.style.setProperty("--layer-color", fixedColor);
+
+          // 注册到搜索列表（即使图层尚未加载）
+          if (
+            !searchRegistry.find(function (e) {
+              return e.checkboxId === checkboxId;
+            })
+          ) {
+            searchRegistry.push({
+              layerLabel: layerConfig.name,
+              groupName: group.groupName || "",
+              checkboxId: checkboxId,
+              fileName: fileName,
+            });
+          }
           checkbox.addEventListener("change", function () {
             this.style.background = this.checked ? fixedColor : "#fff";
             syncAllGroupStatus();
@@ -2359,9 +2399,65 @@
 
     let userLayerIndex = 0;
     const userLayerGeoJson = {};
+    const USER_LAYER_STORAGE_KEY = "dupal_user_layers";
 
-    function addUserLayer(geojsonData, fileName, autoShow) {
+    // 保存用户图层信息到 localStorage（持久化列表）
+    function saveUserLayerMeta(id, fileName) {
+      var list = [];
+      try {
+        list = JSON.parse(localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]");
+      } catch (e) {}
+      if (
+        !list.find(function (e) {
+          return e.id === id;
+        })
+      ) {
+        list.push({ id: id, fileName: fileName });
+        localStorage.setItem(USER_LAYER_STORAGE_KEY, JSON.stringify(list));
+      }
+    }
+
+    // 从 localStorage 删除用户图层记录
+    function removeUserLayerMeta(id) {
+      var list = [];
+      try {
+        list = JSON.parse(localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]");
+      } catch (e) {}
+      list = list.filter(function (e) {
+        return e.id !== id;
+      });
+      localStorage.setItem(USER_LAYER_STORAGE_KEY, JSON.stringify(list));
+    }
+
+    // 页面初始化时从 IDB 恢复用户已上传的图层
+    function restoreUserLayers() {
+      var list = [];
+      try {
+        list = JSON.parse(localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]");
+      } catch (e) {}
+      list.forEach(function (meta) {
+        L.GzIdbLoader.getCache("user_geo_" + meta.id).then(function (data) {
+          if (!data) {
+            // 缓存已丢失（如用户清除了浏览器数据），移除无效记录
+            removeUserLayerMeta(meta.id);
+            return;
+          }
+          addUserLayer(data, meta.fileName, true, meta.id);
+        });
+      });
+    }
+
+    function addUserLayer(
+      geojsonData,
+      fileName,
+      autoShow,
+      existingPersistentId,
+    ) {
       var uid = "user_layer_" + userLayerIndex++;
+      // 恢复已有图层时使用原有的 persistentId，新上传时生成
+      var persistentId =
+        existingPersistentId ||
+        Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
       var fixedColor = window.GeoUtils.getFixedColor(globalLayerIndex++);
       layerColorMap[uid] = fixedColor;
 
@@ -2526,7 +2622,20 @@
         delete layerCache[uid];
         delete layerBoundsCache[uid];
         delete highlightState[uid];
+        delete searchIndexMap[uid];
+        delete featureCache[uid];
+        // 从 searchRegistry 移除
+        for (var ri = 0; ri < searchRegistry.length; ri++) {
+          if (searchRegistry[ri].checkboxId === uid) {
+            searchRegistry.splice(ri, 1);
+            break;
+          }
+        }
         layerItem.remove();
+        // 从 IDB 删除缓存
+        L.GzIdbLoader.delCache("user_geo_" + persistentId);
+        L.GzIdbLoader.deleteSearchIndex("user_" + persistentId);
+        removeUserLayerMeta(persistentId);
         // 如果删光了，恢复空状态提示
         var ug = document.getElementById("userLayerGroup");
         var ht = document.getElementById("userLayerHint");
@@ -2547,6 +2656,7 @@
       if (hint) hint.style.display = "none";
 
       if (!searchRegistry.find((e) => e.checkboxId === uid)) {
+        featureCache[uid] = data_.features || [];
         searchRegistry.push({
           layerLabel: fileName,
           checkboxId: uid,
@@ -2554,9 +2664,16 @@
           features: data_.features || [],
         });
       }
-      // 用户上传图层：建立搜索索引，但不缓存到 IDB（cacheKey=null）
+      // 用户上传图层：持久化到 IDB（GeoJSON 数据 + 搜索索引）
       if (data_.features && data_.features.length) {
-        buildSearchIndex(uid, data_.features, null);
+        var cacheKey = "user_" + persistentId;
+        if (!existingPersistentId) {
+          // 新上传：保存到 IDB 和 localStorage
+          L.GzIdbLoader.setCache("user_geo_" + persistentId, geojsonData);
+          saveUserLayerMeta(persistentId, fileName);
+        }
+        // 建立搜索索引并缓存到 IDB
+        buildSearchIndex(uid, data_.features, cacheKey);
       }
     }
 
@@ -2594,7 +2711,7 @@
         inp.placeholder = "建立搜索索引中...";
       } else {
         inp.disabled = false;
-        inp.placeholder = "🔍 索引已就绪，输入关键词搜索";
+        inp.placeholder = "🔍 搜索图层名 / 要素属性";
       }
     }
 
@@ -2602,6 +2719,9 @@
       var input = document.getElementById("searchInput");
       var resultsBox = document.getElementById("searchResults");
       if (!input || !resultsBox) return;
+
+      // 初始化搜索输入框状态（显示是否有索引正在构建）
+      updateSearchInputState();
 
       function buildSummary(props) {
         if (!props) return "";
@@ -2666,55 +2786,120 @@
         var q = query.toLowerCase().trim();
         var results = [];
         var totalCount = 0;
+
+        // ===== 第一阶段：搜索图层名和图层组名 =====
+        var seenLayer = {};
         searchRegistry.forEach(function (entry) {
+          var match = false;
+          var matchedField = "";
+          // 图层名匹配
+          if (
+            entry.layerLabel &&
+            entry.layerLabel.toLowerCase().indexOf(q) !== -1
+          ) {
+            match = true;
+            matchedField = entry.layerLabel;
+          }
+          // 图层组名匹配
+          if (
+            !match &&
+            entry.groupName &&
+            entry.groupName.toLowerCase().indexOf(q) !== -1
+          ) {
+            match = true;
+            matchedField = entry.groupName;
+          }
+          // 图层名 + 组名复合匹配（如搜索 "板块" 同时搜图层名和组名）
+          if (!match && entry.groupName && entry.layerLabel) {
+            var combined = entry.groupName + " " + entry.layerLabel;
+            if (combined.toLowerCase().indexOf(q) !== -1) {
+              match = true;
+              matchedField = entry.layerLabel;
+            }
+          }
+          if (match && !seenLayer[entry.checkboxId]) {
+            seenLayer[entry.checkboxId] = true;
+            totalCount++;
+            results.push({
+              type: "layer",
+              label: entry.groupName || "",
+              summary: entry.layerLabel,
+              tooltipHtml: null,
+              feature: null,
+              checkboxId: entry.checkboxId,
+            });
+          }
+        });
+
+        // ===== 第二阶段：搜索要素属性（仅搜索已勾选的图层，使用倒排索引） =====
+        searchRegistry.forEach(function (entry) {
+          // 只搜索当前已勾选的图层（含内置图层和用户上传图层）
           var cb = document.getElementById(entry.checkboxId);
           if (!cb || !cb.checked) return;
 
-          // 统一走倒排索引（所有数据集加载时均已构建）
           var si = searchIndexMap[entry.checkboxId];
-          if (!si) return; // 索引尚未构建完成
-          var tokens = q.split(/[^a-z0-9\u4e00-\u9fff]+/);
-          var candidateSets = [];
-          for (var ti = 0; ti < tokens.length; ti++) {
-            var tok = tokens[ti];
-            if (!tok) continue;
-            var idxList = si.tokens[tok];
-            if (idxList && idxList.length > 0) {
-              // 精确 token 匹配
-              candidateSets.push(idxList);
-            } else {
-              // 模糊搜索：遍历索引 keys 做子串匹配
-              var merged = {};
-              var keys = Object.keys(si.tokens);
-              for (var ki = 0; ki < keys.length; ki++) {
-                if (keys[ki].indexOf(tok) !== -1) {
-                  var arr = si.tokens[keys[ki]];
-                  for (var ai = 0; ai < arr.length; ai++) {
-                    merged[arr[ai]] = true;
+          // 优先用 searchIndexMap，无索引时尝试 featureCache（降级）
+          var features =
+            si && si.features && si.features.length
+              ? si.features
+              : featureCache[entry.checkboxId] || null;
+
+          if (!features || !features.length) return;
+
+          var qLower = q;
+          var matchedIndices = [];
+
+          // 有倒排索引时走索引匹配
+          if (si && si.tokens && typeof si.tokens === "object") {
+            var tokens = qLower
+              .split(/[^a-z0-9\u4e00-\u9fff]+/)
+              .filter(Boolean);
+            if (tokens.length) {
+              var candidateSets = [];
+              for (var ti = 0; ti < tokens.length; ti++) {
+                var tok = tokens[ti];
+                var idxList = si.tokens[tok];
+                if (idxList && idxList.length > 0) {
+                  candidateSets.push(idxList);
+                } else {
+                  // 模糊搜索
+                  var merged = {};
+                  var keys = Object.keys(si.tokens);
+                  for (var ki = 0; ki < keys.length; ki++) {
+                    if (keys[ki].indexOf(tok) !== -1) {
+                      var arr = si.tokens[keys[ki]];
+                      for (var ai = 0; ai < arr.length; ai++) {
+                        merged[arr[ai]] = true;
+                      }
+                    }
                   }
+                  var fuzzy = Object.keys(merged).map(Number);
+                  if (fuzzy.length > 0) candidateSets.push(fuzzy);
                 }
               }
-              candidateSets.push(Object.keys(merged).map(Number));
+              if (candidateSets.length >= tokens.length) {
+                matchedIndices = candidateSets[0];
+                for (var ci = 1; ci < candidateSets.length; ci++) {
+                  var set = candidateSets[ci];
+                  var next = [];
+                  for (var si2 = 0; si2 < matchedIndices.length; si2++) {
+                    if (set.indexOf(matchedIndices[si2]) !== -1)
+                      next.push(matchedIndices[si2]);
+                  }
+                  matchedIndices = next;
+                  if (!matchedIndices.length) break;
+                }
+              }
             }
           }
-          if (candidateSets.length === 0) return;
-          // 多词取交集
-          var intersect = candidateSets[0];
-          for (var ci = 1; ci < candidateSets.length; ci++) {
-            var set = candidateSets[ci];
-            var next = [];
-            for (var si2 = 0; si2 < intersect.length; si2++) {
-              if (set.indexOf(intersect[si2]) !== -1) next.push(intersect[si2]);
-            }
-            intersect = next;
-            if (intersect.length === 0) return;
-          }
-          totalCount += intersect.length;
-          // 限制结果数量
-          var limit = Math.min(intersect.length, 30);
+
+          if (!matchedIndices || !matchedIndices.length) return;
+          totalCount += matchedIndices.length;
+          var limit = Math.min(matchedIndices.length, 30);
           for (var k = 0; k < limit; k++) {
-            var f = si.features[intersect[k]];
+            var f = features[matchedIndices[k]];
             results.push({
+              type: "feature",
               label: entry.layerLabel,
               summary: buildSummary(f.properties),
               tooltipHtml: buildTooltipHtml(f.properties),
@@ -2841,7 +3026,8 @@
 
           var tag = document.createElement("span");
           tag.className = "search-result-tag";
-          tag.textContent = r.label;
+          var tagEmoji = r.type === "layer" ? "📁" : "📍";
+          tag.textContent = r.label ? tagEmoji + " " + r.label : tagEmoji;
           var text = document.createElement("span");
           text.className = "search-result-text";
           var raw = r.summary || "(无属性)";
@@ -2873,80 +3059,59 @@
           item.addEventListener("click", function () {
             var feat = r.feature;
             var cbId = r.checkboxId;
-            var state = highlightState[cbId];
-            // 判断是否为 Canvas 图层（有 setFeatures 则为 Canvas）
-            var isCanvasLayer =
-              state &&
-              state.geoLayers &&
-              state.geoLayers.some(function (gl) {
-                return typeof gl.setFeatures === "function";
-              });
-            if (state && state.geoLayers && !isCanvasLayer) {
-              state.geoLayers.forEach(function (gl) {
-                gl.eachLayer(function (layer) {
-                  if (
-                    layer.feature &&
-                    layer.feature._featureIndex === feat._featureIndex
-                  ) {
-                    var center;
-                    try {
-                      if (layer.getBounds) {
-                        var b = layer.getBounds();
-                        if (b.isValid()) center = b.getCenter();
-                      }
-                    } catch (e) {}
-                    if (!center && layer.getLatLng) center = layer.getLatLng();
-                    if (!center && feat.geometry && feat.geometry.coordinates) {
-                      var coords = feat.geometry.coordinates;
-                      if (feat.geometry.type === "Point")
-                        center = L.latLng(coords[1], coords[0]);
-                    }
-                    var dblclickEvent = {
-                      latlng: center || map.getCenter(),
-                      layer: layer,
-                      originalEvent: null,
-                    };
-                    layer.fire("dblclick", dblclickEvent, true);
-                  }
-                });
-              });
-            } else {
-              // Canvas 大数据集：直接从 geometry 坐标定位
-              if (feat.geometry && feat.geometry.coordinates) {
-                var coords = feat.geometry.coordinates;
-                var gtype = feat.geometry.type;
-                if (gtype === "Point") {
-                  // 点：平移过去，不改变缩放级别
-                  map.panTo(L.latLng(coords[1], coords[0]), {
-                    duration: 0.6,
+
+            // 图层/组名匹配：勾选复选框并加载图层
+            if (r.type === "layer") {
+              var cb = document.getElementById(cbId);
+              if (cb && !cb.checked) {
+                cb.checked = true;
+                cb.style.background = layerColorMap[cbId] || "#fff";
+                loadGeoJSONLayer(cb.value, cbId, true);
+              } else if (cb && cb.checked) {
+                // 已加载则直接缩放到图层
+                var bnds = layerBoundsCache[cbId];
+                if (bnds && bnds.isValid && bnds.isValid()) {
+                  map.fitBounds(bnds, {
+                    padding: [30, 30],
+                    maxZoom: 14,
+                    animate: true,
                   });
-                } else {
-                  // 线/面：提取边界框，flyToBounds 缩放至
-                  var corners = [];
-                  (function collect(arr) {
-                    if (!Array.isArray(arr)) return;
-                    if (typeof arr[0] === "number") {
-                      corners.push([arr[1], arr[0]]);
-                    } else {
-                      for (var i = 0; i < arr.length; i++) collect(arr[i]);
-                    }
-                  })(coords);
-                  if (corners.length >= 2) {
-                    var bounds = L.latLngBounds(corners);
-                    if (bounds.isValid()) {
-                      map.flyToBounds(bounds, {
-                        padding: [40, 40],
-                        duration: 0.8,
-                      });
-                    }
-                  } else if (corners.length === 1) {
-                    map.panTo(corners[0], { duration: 0.6 });
-                  }
                 }
               }
+              // 勾选时展开对应组
+              if (cb) {
+                var groupDetails = cb.closest("details.layer-group");
+                if (groupDetails) groupDetails.open = true;
+              }
+              resultsBox.classList.remove("open");
+              return;
             }
-            resultsBox.classList.remove("open");
-            input.blur();
+
+            // ===== 要素匹配：先确保图层已加载，再高亮该要素 =====
+            var cb = document.getElementById(cbId);
+            if (cb && !cb.checked) {
+              // 图层未加载 → 先勾选加载，加载后再高亮
+              cb.checked = true;
+              cb.style.background = layerColorMap[cbId] || "#fff";
+              loadGeoJSONLayer(cb.value, cbId, true);
+              // 展开对应组
+              var groupDetails = cb.closest("details.layer-group");
+              if (groupDetails) groupDetails.open = true;
+              resultsBox.classList.remove("open");
+
+              // 注册加载完成后的回调：定位到该要素
+              var origCallback = _loadedCallbacks[cbId];
+              _loadedCallbacks[cbId] = function () {
+                if (origCallback) origCallback();
+                setTimeout(function () {
+                  highlightAndLocateFeature(cbId, feat);
+                }, 300);
+              };
+              return;
+            }
+
+            // 已加载 → 直接高亮定位
+            highlightAndLocateFeature(cbId, feat);
           });
           resultsBox.appendChild(item);
         });
@@ -2958,6 +3123,84 @@
           resultsBox.appendChild(more);
         }
         resultsBox.classList.add("open");
+      }
+
+      // ----------------------------------------------
+      // 高亮并定位到指定的要素（独立函数，供搜索结果点击使用）
+      // ----------------------------------------------
+      function highlightAndLocateFeature(cbId, feat) {
+        var state = highlightState[cbId];
+        // 判断是否为 Canvas 图层（有 setFeatures 则为 Canvas）
+        var isCanvasLayer =
+          state &&
+          state.geoLayers &&
+          state.geoLayers.some(function (gl) {
+            return typeof gl.setFeatures === "function";
+          });
+        if (state && state.geoLayers && !isCanvasLayer) {
+          state.geoLayers.forEach(function (gl) {
+            gl.eachLayer(function (layer) {
+              if (
+                layer.feature &&
+                layer.feature._featureIndex === feat._featureIndex
+              ) {
+                var center;
+                try {
+                  if (layer.getBounds) {
+                    var b = layer.getBounds();
+                    if (b.isValid()) center = b.getCenter();
+                  }
+                } catch (e) {}
+                if (!center && layer.getLatLng) center = layer.getLatLng();
+                if (!center && feat.geometry && feat.geometry.coordinates) {
+                  var coords = feat.geometry.coordinates;
+                  if (feat.geometry.type === "Point")
+                    center = L.latLng(coords[1], coords[0]);
+                }
+                var dblclickEvent = {
+                  latlng: center || map.getCenter(),
+                  layer: layer,
+                  originalEvent: null,
+                };
+                layer.fire("dblclick", dblclickEvent, true);
+              }
+            });
+          });
+        } else {
+          // Canvas 大数据集：直接从 geometry 坐标定位
+          if (feat.geometry && feat.geometry.coordinates) {
+            var coords = feat.geometry.coordinates;
+            var gtype = feat.geometry.type;
+            if (gtype === "Point") {
+              map.panTo(L.latLng(coords[1], coords[0]), {
+                duration: 0.6,
+              });
+            } else {
+              var corners = [];
+              (function collect(arr) {
+                if (!Array.isArray(arr)) return;
+                if (typeof arr[0] === "number") {
+                  corners.push([arr[1], arr[0]]);
+                } else {
+                  for (var i = 0; i < arr.length; i++) collect(arr[i]);
+                }
+              })(coords);
+              if (corners.length >= 2) {
+                var bounds = L.latLngBounds(corners);
+                if (bounds.isValid()) {
+                  map.flyToBounds(bounds, {
+                    padding: [40, 40],
+                    duration: 0.8,
+                  });
+                }
+              } else if (corners.length === 1) {
+                map.panTo(corners[0], { duration: 0.6 });
+              }
+            }
+          }
+        }
+        resultsBox.classList.remove("open");
+        input.blur();
       }
 
       function escapeHtml(str) {
@@ -3011,6 +3254,19 @@
         if (e.key === "Escape") {
           resultsBox.classList.remove("open");
           this.blur();
+        }
+      });
+
+      // Ctrl+F 聚焦搜索框，并确保侧边栏展开
+      document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+          e.preventDefault();
+          var panel = document.getElementById("layerPanel");
+          if (panel && !panel.classList.contains("active")) {
+            panel.classList.add("active");
+          }
+          input.focus();
+          input.select();
         }
       });
     }
@@ -3137,6 +3393,8 @@
     function initGeoJsonLayer() {
       generateLayerItems();
       initSearch();
+      // 恢复用户已上传的图层
+      restoreUserLayers();
       initClusterToggle();
       initLabelToggle();
     }

@@ -1,5 +1,84 @@
 # 更新记录
 
+## 2026-06-07
+
+### 底图控件重构
+
+- 新增「更多底图」开关（地图设置内），默认关闭，控制 ArcGIS 扩展底图的显示
+- 新增「天地图地名标注」多选叠加层，标注独立于底图控制
+- 重构底图控件为动态重建机制（`rebuildLayerCtrl`），开关底图时不用刷新
+- 默认底图改为 `ArcGIS-海洋`
+- 默认状态下单选图层精简为 9 个底图
+- 天地图影像/矢量/地形移除内置标注层，改为纯底图
+- 删除冗余的「天地图纯影像」条目
+- 删除废弃的 `tdtImgAnno`/`tdtImgLayer2`/`tdtVecAnno`/`tdtTerAnno` 变量
+
+### 底图名称精简
+
+- 图层控件所有带「底图」后缀的名称均移除冗余字眼：
+  - `ArcGIS-影像底图` → `ArcGIS-影像`
+  - `ArcGIS-街道底图` → `ArcGIS-街道`
+  - `ArcGIS-海洋底图` → `ArcGIS-海洋`
+  - `ArcGIS-世界地形基础底图` → `ArcGIS-世界地形`
+  - `ArcGIS-地形底图` → `ArcGIS-地形`
+  - `天地图影像底图` → `天地图影像`
+  - `天地图矢量底图` → `天地图矢量`
+  - `天地图地形底图` → `天地图地形`
+- 多选图层「全球境界」→「天地图全球境界」，风格统一
+- 备注「OSM底图_边界有误慎用」→「OpenStreetMap」
+
+### 侧边栏视觉美化
+
+- 重写 `.layer-section-content`：flex 布局 + gap 间距替代默认块级显示
+- `details.layer-group` 卡片化设计：圆角、边框、hover/展开时阴影过渡
+- 图层组 summary 浅绿背景 + 展开时分割线
+- `.layer-plain` 无分组容器添加卡片边框
+- 清理 `geojsonloader.css` 中与 `main.css` 冲突的冗余样式（`details.layer-section`、`.layer-plain` 等）
+- 移除 `.layer-group-children::before` 左侧装饰竖线、`.layer-item:has(:checked)` 的 `box-shadow` 绿条、`.layer-group-arrow` 透明度过渡
+- 深色模式全线适配
+
+### 组状态指示器
+
+- 从 8px 到 16px 圆形徽章再到 10px 纯色圆点，最终定稿为简洁风格
+- `display: inline-flex` + `min-width/min-height` 确保正圆
+- 仅用颜色区分状态，移除 border/shadow/文字（✓/◐/⏳/✕）
+- 组圆点与图层要素状态联动：`updateLayerItemStatus` 自动触发 `syncGroupLoadingStatus`
+
+### 搜索功能重写
+
+- 修复搜索索引永不重建的根因：UI 初始化时 `searchRegistry.push` 提前占位所有 checkboxId，`onDataLoaded` 中 `if (!searchRegistry.find(...))` 永远为 false
+- 修复为判断 `if (!searchIndexMap[checkboxId])`，仅当真正有索引数据时才跳过
+- `buildSearchIndex` 增加 `.catch()` 处理 IDB 缓存异常降级
+- 搜索输入框增加 `:disabled` CSS 样式，索引构建时视觉可辨识
+- 搜索结果添加 emoji 前缀：📁 图层名 / 📍 要素属性
+- 搜索结果点击要素时，若图层未加载自动先加载再高亮定位
+- 新增 `_loadedCallbacks` 回调队列和 `fireLoadedCallback` 触发机制
+- 提取 `highlightAndLocateFeature` 为独立函数
+- 搜索第二阶段改为双源策略：优先 `searchIndexMap`，兜底 `featureCache`
+- 搜索第二阶段只搜索当前已勾选的图层（还原 `cb.checked` 检查）
+- 全局 `Ctrl+F` 聚焦搜索框并自动弹出侧边栏
+
+### 用户上传图层持久化
+
+- `Leaflet.GzIdbLoader.js` 新增 `delCache(key)` 和 `deleteSearchIndex(cacheKey)` 方法
+- 上传图层时保存 GeoJSON 数据到 IDB（key: `user_geo_<persistentId>`）
+- 搜索索引改用 `user_<persistentId>` 作为 cacheKey 写入 IDB
+- localStorage 维护持久化图层列表 `dupal_user_layers`
+- 页面初始化时 `restoreUserLayers()` 自动恢复所有用户上传图层
+- 删除图层时清理内存 + IDB 缓存 + localStorage 记录
+
+### 剪贴板自动识别开关
+
+- 地图设置新增「自动识别剪贴板」开关（默认开启）
+- 关闭后全局粘贴监听和切页自动读取均跳过
+- 状态持久化到 localStorage `dupal_toggle_clipboard`
+
+### GeoJSON 路径优化
+
+- 去除域名分支判断逻辑，统一优先走相对路径，失败回退 COS 直连
+
+---
+
 ## 2026-06-06
 
 ### 侧边栏全面重构

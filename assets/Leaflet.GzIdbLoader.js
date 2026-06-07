@@ -179,6 +179,50 @@
     });
   }
 
+  /** 按 key 删除缓存的 GeoJSON 数据 */
+  function delCache(key) {
+    return new Promise(function (resolve) {
+      openDB()
+        .then(function (db) {
+          const tx = db.transaction(STORE_NAME, "readwrite");
+          const store = tx.objectStore(STORE_NAME);
+          store.delete(key);
+          tx.oncomplete = function () {
+            console.log("[GzIdbLoader] 已删除 GeoJSON 缓存:", key);
+            resolve();
+          };
+          tx.onerror = function () {
+            resolve();
+          };
+        })
+        .catch(function () {
+          resolve();
+        });
+    });
+  }
+
+  /** 按 cacheKey 删除搜索索引 */
+  function deleteSearchIndex(cacheKey) {
+    return new Promise(function (resolve) {
+      openDB()
+        .then(function (db) {
+          const tx = db.transaction(INDEX_STORE, "readwrite");
+          const store = tx.objectStore(INDEX_STORE);
+          store.delete(cacheKey);
+          tx.oncomplete = function () {
+            console.log("[GzIdbLoader] 已删除搜索索引:", cacheKey);
+            resolve();
+          };
+          tx.onerror = function () {
+            resolve();
+          };
+        })
+        .catch(function () {
+          resolve();
+        });
+    });
+  }
+
   function clearCache() {
     return new Promise(function (resolve, reject) {
       const request = indexedDB.deleteDatabase(DB_NAME);
@@ -329,6 +373,20 @@
      * @returns {Promise}
      */
     setSearchIndex: setSearchIndex,
+
+    /**
+     * 删除搜索索引缓存
+     * @param {string} cacheKey
+     * @returns {Promise}
+     */
+    deleteSearchIndex: deleteSearchIndex,
+
+    /**
+     * 删除缓存的 GeoJSON 数据（用于用户上传图层清理）
+     * @param {string} key
+     * @returns {Promise}
+     */
+    delCache: delCache,
   };
 
   return L.GzIdbLoader;
