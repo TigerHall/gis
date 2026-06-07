@@ -96,6 +96,28 @@ body {
   background: rgba(106, 170, 106, 0.45);
 }
 
+/* 面板滚动容器：地图设置 + 搜索栏 + 图层列表统一滚动 */
+.panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
+}
+.panel-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.panel-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.panel-scroll::-webkit-scrollbar-thumb {
+  background: rgba(106, 170, 106, 0.25);
+  border-radius: 3px;
+}
+.panel-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(106, 170, 106, 0.45);
+}
+
 /* 【修复】提升active类优先级，明确覆盖默认transform */
 .layer-panel.active {
   transform: translateX(0) !important;
@@ -728,10 +750,6 @@ details.layer-section[open] > summary .layer-group-arrow {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  max-height: 300px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
 }
 
 /* 开关折叠区内部的 toggle bar */
@@ -802,6 +820,25 @@ details.layer-section[open] > summary .layer-group-arrow {
   input[type="checkbox"]:checked
   + .cluster-toggle-switch::after {
   transform: translateX(16px);
+}
+
+/* 分类标题行 */
+.toggle-category {
+  width: 100%;
+  flex: 0 0 100%;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6aaa6a;
+  padding: 5px 2px 2px;
+  margin-top: 2px;
+  border-top: 1px solid #e8ece8;
+  letter-spacing: 0.3px;
+  user-select: none;
+}
+.toggle-category:first-of-type {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .leaflet-popup.hover-popup {
@@ -1155,6 +1192,10 @@ body.sidebar-pinned .layer-trigger {
   .toggle-section .toggle-bar .cluster-toggle-text {
     color: #ccc;
   }
+  .toggle-section .toggle-category {
+    color: #5aaa5a;
+    border-top-color: #3a4a3a;
+  }
 
   /* 搜索框 */
   .search-bar input[type="text"] {
@@ -1346,5 +1387,16 @@ body.sidebar-pinned .layer-trigger {
   /* 本地图层查看提示 */
   .layer-section-content > div[style*="color:#888"] {
     color: #999 !important;
+  }
+
+  /* 面板滚动容器暗色滚动条 */
+  .panel-scroll {
+    scrollbar-color: rgba(106, 170, 106, 0.2) transparent;
+  }
+  .panel-scroll::-webkit-scrollbar-thumb {
+    background: rgba(106, 170, 106, 0.2);
+  }
+  .panel-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(106, 170, 106, 0.35);
   }
 }

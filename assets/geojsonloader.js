@@ -4,122 +4,6 @@
  * 依赖：geo-utils.js（纯函数）、Leaflet.GeoMarker.js（图标与 marker 工厂）
  */
 (function () {
-  // ========== 路径配置（放在最前面）==========
-  const geoJsonBasePath = "./assets/geojson/";
-  const geoJsonCosPath =
-    "https://dupal-1258052757.cos.ap-shanghai.myqcloud.com/assets/geojson/";
-
-  // dupal.cn 本身就是 COS 静态域名，相对路径即 COS 路径且走 CDN 加速
-  // 因此始终优先使用相对路径，加载失败时回退到 COS 直连 URL
-  var geoJsonPrimaryPath = geoJsonBasePath;
-  var geoJsonFallbackPath = geoJsonCosPath;
-
-  // ========== GeoJSON 分组配置（路径之后，方便引用 basePath）==========
-  const geoJsonGroups = [
-    {
-      groupName: "全球板块构造",
-      layers: [
-        { name: "全球16大板块 plate16", file: "plate16.geojson" },
-        {
-          name: "全球280个板块 (Hasterok2022)",
-          file: "plates_Hasterok2022.geojson",
-        },
-        { name: "大陆板块 plate_cont", file: "plate_cont.json" },
-        { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
-        { name: "洋中脊和转换断层 MOR&TF", file: "ridgenew.json" },
-        { name: "海沟 Trench", file: "Pb_trench.json" },
-        { name: "其他板块边界 Other boundries", file: "Pb_transformall.json" },
-        { name: "大西洋断裂带 Atlantic_FZ", file: "Atlantic_FZ.json" },
-        { name: "印度洋断裂带 Indian_FZ", file: "Indian_FZ.json" },
-        { name: "太平洋断裂带 Pacific_FZ", file: "Pacific_FZ.json" },
-      ],
-    },
-    {
-      groupName: "洋中脊作用域",
-      layers: [
-        {
-          name: "1全球洋壳 GlobalOceanicCrust",
-          file: "1GlobalOceanicCrust.json",
-        },
-        { name: "2大洋域 OceanDomian", file: "2OceanDomian.json" },
-        { name: "3次大洋域 SubOceanDomain", file: "3SubOceanDomain.json" },
-        { name: "4洋中脊作用域 RidgeDomain", file: "4RidgeDomain.json" },
-
-        {
-          name: "全球陆壳 GlobalContinentalCrust",
-          file: "global_continental_crust.json",
-        },
-        { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.json" },
-      ],
-    },
-    {
-      groupName: "海底基础信息",
-      layers: [
-        { name: "火山 volcanos", file: "volcanos.json" },
-        { name: "热点 hotspots", file: "hotspots.json" },
-        { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
-        { name: "洋壳年龄30Ma间隔", file: "seafloor_age_30.geojson" },
-
-        {
-          name: "盆地 (Evenick2021)",
-          file: "global_basins_Evenick2021.geojson",
-        },
-        {
-          name: "盆地 (CGG)",
-          file: "Sedimentary_CGG.geojson",
-        },
-      ],
-    },
-    {
-      groupName: "大型异常区",
-      layers: [
-        { name: "LLSVP", file: "LLSVP.json" },
-        { name: "Dupal异常洋 DupalOcean", file: "DupalOcean.json" },
-      ],
-    },
-    {
-      groupName: "海底矿产资源",
-      layers: [
-        {
-          name: "热液喷口 HydrothermalVents(ISA)",
-          file: "hydrothermal_vents.geojson",
-        },
-        { name: "多金属结核 Fe-MnNodule(NOAA)", file: "Fe_MnNodule.geojson" },
-        { name: "富钴结壳 Co-richCrust(NOAA)", file: "Co-richCrust.geojson" },
-      ],
-    },
-    {
-      groupName: "地质站位",
-      layers: [
-        { name: "DSDP", file: "DSDP.geojson" },
-        { name: "ODP", file: "ODP.geojson" },
-        { name: "IODP03-13", file: "IODP03-13.geojson" },
-        { name: "IODP13-26", file: "IODP13-26.geojson" },
-        { name: "NWIR_rock", file: "NWIR_ridge.geojson" },
-        { name: "SWIR_rock", file: "SWIR_ridge.geojson" },
-        { name: "SEIR_rock", file: "SEIR_ridge.geojson" },
-        { name: "SEIR_offaxis_rock", file: "SEIR_offaxis.geojson" },
-        { name: "RedSea_rock", file: "RedSea_rift.geojson" },
-        {
-          name: "古生物学 PBDB",
-          file: "PBDB.geojson",
-        },
-        {
-          name: "气候岩性指标 PBDB",
-          file: "Boucot.geojson",
-        },
-      ],
-    },
-    {
-      groupName: "测试数据",
-      layers: [{ name: "PIC 45万点", file: "pic.geojson" }],
-    },
-    {
-      groupName: null,
-      layers: [{ name: "Dupal异常区", file: "DupalOcean.json" }],
-    },
-  ];
-
   // 检查 map 和 L 是否存在（延迟检查）
   function waitForMap(callback, attempts) {
     if (attempts === undefined) attempts = 50;
@@ -1025,10 +909,10 @@
       var localFallback = null;
       if (filePath.startsWith("http")) {
         // 主路径是 COS → 回退到本地
-        localFallback = geoJsonBasePath + filePath.split("/").pop();
+        localFallback = window.geoJsonBasePath + filePath.split("/").pop();
       } else {
         // 主路径是本地 → 回退到 COS
-        localFallback = geoJsonCosPath + filePath.split("/").pop();
+        localFallback = window.geoJsonCosPath + filePath.split("/").pop();
       }
       if (layerCache[checkboxId]) {
         layerCache[checkboxId].addTo(map);
@@ -1128,9 +1012,17 @@
             searchIndexingCount++;
             updateSearchInputState();
             // 内置图层：用 fileName 作为 cacheKey，支持 IDB 缓存恢复
+            var _idxToast = showToast(
+              "⏳ " + layerLabel + " 正在建立搜索索引…",
+              { duration: 0 },
+            );
             buildSearchIndex(checkboxId, data_.features, fileName, function () {
               searchIndexingCount--;
               updateSearchInputState();
+              if (_idxToast) closeToast(_idxToast);
+              showToast("✅ " + layerLabel + " 搜索索引就绪", {
+                duration: 3000,
+              });
               // 搜索索引构建完成后触发回调
               fireLoadedCallback(checkboxId);
             });
@@ -1430,6 +1322,8 @@
           if (!cb.checked) {
             cb.checked = true;
             cb.style.background = layerColorMap[cb.id] || "#fff";
+            // 持久化勾选状态
+            persistLayerCheckState(cb, true);
             // 用户上传图层无需加载，直接显示即可（已有 layerCache）
             if (!cb.dataset.userLayer) {
               loadGeoJSONLayer(cb.value, cb.id, false);
@@ -1448,6 +1342,8 @@
           if (cb.checked) {
             cb.checked = false;
             cb.style.background = "#fff";
+            // 持久化勾选状态
+            persistLayerCheckState(cb, false);
             if (cb.dataset.userLayer) {
               if (layerCache[cb.id]) {
                 try {
@@ -1461,6 +1357,16 @@
           }
         });
       syncAllGroupStatus();
+    }
+
+    /** 保存单个图层 checkbox 的勾选状态到 localStorage */
+    function persistLayerCheckState(cb, checked) {
+      try {
+        var key = cb.dataset.userLayer
+          ? "dupal_user_layer_" + (cb.dataset.persistentId || cb.id)
+          : "dupal_layer_" + cb.id;
+        localStorage.setItem(key, String(checked));
+      } catch (e) {}
     }
 
     // ========== 状态同步 ==========
@@ -1747,7 +1653,7 @@
               showColorModalContent(checkboxId, fileName, filePath, fields);
             })
             .catch(function () {
-              doFetch(geoJsonBasePath + fileName);
+              doFetch(window.geoJsonBasePath + fileName);
             });
         } else {
           doFetch(filePath);
@@ -1891,7 +1797,7 @@
       layerContent.className = "layer-section-content";
       layerSection.appendChild(layerContent);
 
-      geoJsonGroups.forEach(function (group) {
+      window.geoJsonGroups.forEach(function (group) {
         const isPlain = !group.groupName; // 无分组名 = 直接显示图层
         var groupDetails = null;
         var children;
@@ -1931,10 +1837,12 @@
               if (isChecked && !cb.checked) {
                 cb.checked = true;
                 cb.style.background = layerColorMap[cb.id] || "#fff";
+                persistLayerCheckState(cb, true);
                 loadGeoJSONLayer(cb.value, cb.id, false);
               } else if (!isChecked && cb.checked) {
                 cb.checked = false;
                 cb.style.background = "#fff";
+                persistLayerCheckState(cb, false);
                 removeGeoJSONLayer(cb.id);
               }
             });
@@ -1975,7 +1883,7 @@
         group.layers.forEach(function (layerConfig) {
           var idx = globalLayerIndex++;
           var checkboxId = "layer_" + idx;
-          var fullPath = geoJsonPrimaryPath + layerConfig.file;
+          var fullPath = window.geoJsonPrimaryPath + layerConfig.file;
           var fileName = layerConfig.file;
           var fixedColor =
             fileName === "hotspots.json" ||
@@ -2106,10 +2014,12 @@
             cb.checked = true;
             var lc = layerCache[cb.id];
             cb.style.background = cb.style.getPropertyValue("--layer-color");
+            persistLayerCheckState(cb, true);
             if (lc) lc.addTo(map);
           } else if (!isChecked && cb.checked) {
             cb.checked = false;
             cb.style.background = "#fff";
+            persistLayerCheckState(cb, false);
             if (layerCache[cb.id]) map.removeLayer(layerCache[cb.id]);
           }
         });
@@ -2566,6 +2476,7 @@
       checkbox.id = uid;
       checkbox.checked = autoShow !== false;
       checkbox.dataset.userLayer = "true";
+      checkbox.dataset.persistentId = persistentId;
       checkbox.style.setProperty("--layer-color", fixedColor);
       checkbox.style.background = autoShow !== false ? fixedColor : "#fff";
       checkbox.addEventListener("change", function () {
@@ -2703,7 +2614,13 @@
           saveUserLayerMeta(persistentId, fileName);
         }
         // 建立搜索索引并缓存到 IDB
-        buildSearchIndex(uid, data_.features, cacheKey);
+        var _idxToast2 = showToast("⏳ " + fileName + " 正在建立搜索索引…", {
+          duration: 0,
+        });
+        buildSearchIndex(uid, data_.features, cacheKey, function () {
+          if (_idxToast2) closeToast(_idxToast2);
+          showToast("✅ " + fileName + " 搜索索引就绪", { duration: 3000 });
+        });
       }
     }
 

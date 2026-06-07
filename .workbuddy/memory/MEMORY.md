@@ -21,7 +21,7 @@
 ## File Upload Loading Animation
 
 - 三种上传方式（按钮选中、拖入、PWA 文件链接）统一调用 `window.loadFileAsUserLayer(file)`
-- `window.loadFileAsUserLayer` 在 `index.html` 中定义并挂到 `window`，内含 `showLoading`/`hideLoading`
+- `window.loadFileAsUserLayer` 现由 `assets/file-handler.js` 定义（原在 `index.html` 主脚本中，已拆出）
 - `geojsonloader.js` 中 `handleFileUpload` 直接调用 `window.loadFileAsUserLayer(file)`，不再重复 new FileReader
 
 ## GeoJSON Loading & Caching
@@ -42,6 +42,36 @@
 - `reloadLayerWithNewMode` now uses **incremental color update** for Canvas layers (all modes: single/sequential/field)
   - Uses `canvasFeaturesCache` properties + `getFeatureFillColor()` to recolor in-place
   - Calls `canvasLayer.updateColors()` (new API) which only redraws without rebuilding RBush
+
+## File Architecture (2026-06-07 重构后)
+
+```text
+assets/
+├── geo-utils.js        (405行)  纯函数工具库（颜色/坐标/样式/弹窗）
+├── geo-config.js       (97行)   图层路径与分组配置（通过 window.* 全局暴露）
+├── geojsonloader.js    (3366行) 核心：图层加载/样式/高亮/交互/搜索/文件上传
+├── file-handler.js     (463行)  外部文件导入（loadFileAsUserLayer/drag-drop/PWA launch）
+├── app.js              (705行)  应用管理（版本号/导出/SW/剪贴板/记住图层/toggle 渲染 + toggleConfig）
+├── dialog.js           (401行)  全局弹窗组件（showToast/closeToast/showMarkdown）
+├── pointdrop.js        (599行)  投点编辑器
+│
+加载顺序:
+  <head>: dialog.js → geo-config.js
+  <body>: 主脚本 → app.js → geojsonloader.js → file-handler.js → pointdrop.js
+```
+
+## Toggle 开关系统（数据驱动）
+
+- 所有开关定义在 `app.js` 的 `TOGGLE_GROUPS` 数组中（文件头部），新增开关只需加一项
+- `toggleConfig` 统一管理持久化 + 懒加载（scale/mousePos/Geoman 用时才创建）
+- 控件初始化顺序：鼠标坐标 → 编辑测量
+- `persistLayerCheckState(cb, checked)` 处理全选/全不选操作的持久化
+- `dataset.persistentId` 用于用户图层 checkbox 的 localStorage key 查找
+
+## 面板布局
+
+- `layer-panel`：flex column，标题 + 拖拽手柄（顶部固定）、panel-scroll（中部滚动）、#appVersion（底部固定）
+- `panel-scroll` 统一滚动地图设置 + 搜索栏 + 图层列表
   - Falls back to full rebuild only if `cachedFeatures` is missing
 
 ## Large Dataset Search (Inverted Index)

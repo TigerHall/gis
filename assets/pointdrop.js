@@ -576,30 +576,8 @@
       onPasteInput();
     }
 
-    // 成功提示
-    showToast("已识别剪贴板坐标数据，投点编辑器已打开");
-  }
-
-  // ========== 轻量 Toast 提示 ==========
-  function showToast(msg, duration) {
-    duration = duration || 2500;
-    var el = document.createElement("div");
-    el.textContent = msg;
-    el.style.cssText =
-      "position:fixed;bottom:48px;left:50%;transform:translateX(-50%);" +
-      "background:rgba(30,30,30,0.88);color:#fff;padding:8px 18px;border-radius:6px;" +
-      "font-size:13px;z-index:10000;pointer-events:none;" +
-      "opacity:0;transition:opacity 0.3s;";
-    document.body.appendChild(el);
-    requestAnimationFrame(function () {
-      el.style.opacity = "1";
-    });
-    setTimeout(function () {
-      el.style.opacity = "0";
-      setTimeout(function () {
-        el.remove();
-      }, 350);
-    }, duration);
+    // 成功提示（使用 dialog.js 的全局 showToast）
+    window.showToast("已识别剪贴板坐标数据，投点编辑器已打开");
   }
 
   // ========== 初始化：等 DOM Ready 后找锚点 ==========

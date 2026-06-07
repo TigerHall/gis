@@ -77,7 +77,58 @@
 
 - 去除域名分支判断逻辑，统一优先走相对路径，失败回退 COS 直连
 
----
+### 地图设置开关 - 数据驱动重构
+
+- 10 个重复的 toggle-bar HTML 块抽象为 `TOGGLE_GROUPS` 数据数组（显示/控件/数据三分类）
+- 新增分类标题 `.toggle-category` 标签，开关按组显示
+- 浅色/暗色模式同步适配分类标题样式
+
+### 创建 assets/app.js 应用管理模块
+
+- 从主脚本中拆出 ~290 行非地图核心逻辑：
+  - 版本号读取（fetch service-worker.js → CACHE_NAME）
+  - 版号点击 → 清理菜单（clearSWCache / clearIDB / doRefresh）
+  - 导出地图图片（`exportMapImage` + Ctrl+E 快捷键）
+  - SW 更新弹窗（`_showUpdateToast`）
+  - Service Worker 注册
+- 新增「自动识别剪贴板」和「记住图层」开关初始化
+- `dialog.js` 移入 `<head>` 最早加载，确保 `showToast` 全局可用
+
+### 控件懒加载重构
+
+- scale / mousePos / Geoman 不再页面启动时提前创建控件实例，改为用户打开 toggle 时才 `addTo(map)`
+- `toggleConfig + initToggle` 移入 `app.js`，与应用设置主题一致
+- `rebuildLayerCtrl` 暴露为 `window.rebuildLayerCtrl`
+- 控件初始化顺序：鼠标坐标 → 编辑测量（优先加载鼠标坐标）
+- 修复：`initToggle` 初始同步增加 `if (checked) cfg.enable()` 分支，解决懒加载控件默认不显示
+- 修复：`map.hasControl` 不存在导致报错，改用 `cfg.control.addTo(map)` 直接添加
+
+### 文件结构拆分
+
+- `geojsonloader.js` 从 3944 行降至 3366 行：
+  - 图层路径和分组配置 → `assets/geo-config.js`（97 行，通过 `window.*` 暴露）
+  - 外部文件导入（loadFileAsUserLayer / drag-drop / PWA launch）→ `assets/file-handler.js`（463 行）
+- 对应 `index.html` 新增 `<script>` 标签，`service-worker.js` 缓存列表同步更新
+- 保留待拆分（内部耦合度高）：文件/文件夹上传（~200行）、搜索功能（~729行）
+
+### Bug 修复
+
+- 全选/全不选操作不持久化 → 新增 `persistLayerCheckState(cb, checked)`，覆盖 4 条全选路径
+- 用户图层 checkbox 增加 `dataset.persistentId` 属性
+- app.js 中 toggle 渲染在 toggleConfig 之后执行 → 调整到之前（`getElementById` 拿到 null）
+
+### 点投 Toast 统一
+
+- 删除 `pointdrop.js` 自建轻量 `showToast`（~20 行 inline 样式）
+- 改用全局 `window.showToast`（来自 `dialog.js`），样式统一
+- 搜索索引构建时增加 toast：`⏳ XX 正在建立搜索索引…` → `✅ XX 搜索索引就绪`
+
+### 面板滚动重构
+
+- 新增 `.panel-scroll` 容器，包裹地图设置 + 搜索栏 + 图层列表，统一滚动
+- 版号 `#appVersion` 固定在面板底部（flex-shrink: 0）
+- 移除 `.toggle-body` 的独立 `max-height: 300px` 和 `overflow-y: auto`
+- 暗色模式同步适配滚动条
 
 ## 2026-06-06
 
