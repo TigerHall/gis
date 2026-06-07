@@ -225,11 +225,23 @@
           <div
             class="toggle-bar"
             id="clipboardToggleBar"
-            title="开启后自动读取剪贴板中的坐标/CSV数据并解析为投点图层；关闭后需手动粘贴到投点编辑器"
+            title="开启后自动读取剪贴板中的坐标/CSV数据并解析为投点图层；关闭后需手动粘贴"
           >
             <label class="cluster-toggle-label">
-              <span class="cluster-toggle-text">自动识别剪贴板</span>
+              <span class="cluster-toggle-text">识别粘贴</span>
               <input type="checkbox" id="clipboardToggle" checked />
+              <span class="cluster-toggle-switch"></span>
+            </label>
+          </div>
+          <!-- 记住图层开关 -->
+          <div
+            class="toggle-bar"
+            id="rememberLayerToggleBar"
+            title="开启后记住用户上传的图层和勾选状态，刷新页面自动恢复"
+          >
+            <label class="cluster-toggle-label">
+              <span class="cluster-toggle-text">记住图层</span>
+              <input type="checkbox" id="rememberLayerToggle" checked />
               <span class="cluster-toggle-switch"></span>
             </label>
           </div>
@@ -952,6 +964,78 @@
               "dupal_toggle_clipboard",
               String(this.checked),
             );
+          });
+        }
+      })();
+
+      // ========== 记住图层开关初始化 ==========
+      (function () {
+        var cb = document.getElementById("rememberLayerToggle");
+        if (cb) {
+          var saved = localStorage.getItem("dupal_toggle_rememberLayer");
+          cb.checked = saved !== null ? saved === "true" : true; // 默认开启
+          cb.addEventListener("change", function () {
+            localStorage.setItem(
+              "dupal_toggle_rememberLayer",
+              String(this.checked),
+            );
+            if (!this.checked) {
+              // 关闭 → 清除所有已保存的记录
+              // 1. 清除用户图层 GeoJSON 和索引
+              var list = [];
+              try {
+                list = JSON.parse(
+                  localStorage.getItem("dupal_user_layers") || "[]",
+                );
+              } catch (e) {}
+              list.forEach(function (meta) {
+                L.GzIdbLoader.delCache("user_geo_" + meta.id);
+                L.GzIdbLoader.deleteSearchIndex("user_" + meta.id);
+              });
+              localStorage.removeItem("dupal_user_layers");
+              // 2. 清除所有图层的勾选状态（内置 + 用户上传）
+              var keysToRemove = [];
+              for (var i = 0; i < localStorage.length; i++) {
+                var key = localStorage.key(i);
+                if (
+                  key &&
+                  (key.indexOf("dupal_layer_") === 0 ||
+                    key.indexOf("dupal_user_layer_") === 0)
+                ) {
+                  keysToRemove.push(key);
+                }
+              }
+              keysToRemove.forEach(function (k) {
+                localStorage.removeItem(k);
+              });
+            } else {
+              // 打开 → 保存当前所有用户图层
+              var userLayerGeoJson = window._userLayerGeoJson || {};
+              Object.keys(userLayerGeoJson).forEach(function (uid) {
+                var info = userLayerGeoJson[uid];
+                if (info && info.persistentId) {
+                  var pid = info.persistentId;
+                  L.GzIdbLoader.setCache("user_geo_" + pid, info.geoJsonData);
+                  var list2 = [];
+                  try {
+                    list2 = JSON.parse(
+                      localStorage.getItem("dupal_user_layers") || "[]",
+                    );
+                  } catch (e) {}
+                  if (
+                    !list2.find(function (e) {
+                      return e.id === pid;
+                    })
+                  ) {
+                    list2.push({ id: pid, fileName: info.fileName });
+                    localStorage.setItem(
+                      "dupal_user_layers",
+                      JSON.stringify(list2),
+                    );
+                  }
+                }
+              });
+            }
           });
         }
       })();

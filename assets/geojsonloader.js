@@ -2012,6 +2012,13 @@
           }
           checkbox.addEventListener("change", function () {
             this.style.background = this.checked ? fixedColor : "#fff";
+            // 持久化内置图层的勾选状态
+            try {
+              localStorage.setItem(
+                "dupal_layer_" + checkboxId,
+                String(this.checked),
+              );
+            } catch (e) {}
             syncAllGroupStatus();
             if (this.checked) loadGeoJSONLayer(fullPath, checkboxId, false);
             else removeGeoJSONLayer(checkboxId);
@@ -2399,7 +2406,14 @@
 
     let userLayerIndex = 0;
     const userLayerGeoJson = {};
+    window._userLayerGeoJson = userLayerGeoJson; // 暴露给 index.html 的开关事件使用
     const USER_LAYER_STORAGE_KEY = "dupal_user_layers";
+
+    // 检查「记住图层」开关状态
+    function isRememberLayerEnabled() {
+      var saved = localStorage.getItem("dupal_toggle_rememberLayer");
+      return saved !== null ? saved === "true" : true; // 默认开启
+    }
 
     // 保存用户图层信息到 localStorage（持久化列表）
     function saveUserLayerMeta(id, fileName) {
@@ -2442,7 +2456,13 @@
             removeUserLayerMeta(meta.id);
             return;
           }
-          addUserLayer(data, meta.fileName, true, meta.id);
+          // 恢复时检查该图层之前的勾选状态
+          var wasChecked = true;
+          try {
+            var saved = localStorage.getItem("dupal_user_layer_" + meta.id);
+            wasChecked = saved !== null ? saved === "true" : true;
+          } catch (e) {}
+          addUserLayer(data, meta.fileName, wasChecked, meta.id);
         });
       });
     }
@@ -2481,7 +2501,11 @@
         worldCopyGroup.addTo(map);
       }
       layerCache[uid] = worldCopyGroup;
-      userLayerGeoJson[uid] = { geoJsonData: data_, fileName: fileName };
+      userLayerGeoJson[uid] = {
+        geoJsonData: data_,
+        fileName: fileName,
+        persistentId: persistentId,
+      };
 
       // 直接从坐标数组计算 bounds，避免为45万点创建 L.geoJSON（会生成大量 DOM Marker 对象）
       try {
@@ -2528,7 +2552,6 @@
                 return b;
               },
             };
-            map.fitBounds(b, { padding: [20, 20], animate: true, maxZoom: 12 });
           }
         }
       } catch (e) {}
@@ -2552,6 +2575,13 @@
         } else {
           if (layerCache[uid]) map.removeLayer(layerCache[uid]);
         }
+        // 持久化用户图层的勾选状态
+        try {
+          localStorage.setItem(
+            "dupal_user_layer_" + persistentId,
+            String(this.checked),
+          );
+        } catch (e) {}
         // 同步本地图层面板全选状态
         var localCb = document.querySelector(
           ".layer-section > summary > .group-select-all",
@@ -2667,8 +2697,8 @@
       // 用户上传图层：持久化到 IDB（GeoJSON 数据 + 搜索索引）
       if (data_.features && data_.features.length) {
         var cacheKey = "user_" + persistentId;
-        if (!existingPersistentId) {
-          // 新上传：保存到 IDB 和 localStorage
+        if (!existingPersistentId && isRememberLayerEnabled()) {
+          // 新上传且开关打开：保存到 IDB 和 localStorage
           L.GzIdbLoader.setCache("user_geo_" + persistentId, geojsonData);
           saveUserLayerMeta(persistentId, fileName);
         }
@@ -3389,12 +3419,39 @@
         });
     }
 
+    // 恢复内置图层的勾选状态
+    function restoreLayerCheckStates() {
+      document
+        .querySelectorAll('.layer-item input[type="checkbox"]')
+        .forEach(function (cb) {
+          var saved = localStorage.getItem("dupal_layer_" + cb.id);
+          if (saved === "true" && !cb.checked) {
+            cb.checked = true;
+            cb.style.background = layerColorMap[cb.id] || "#fff";
+            // 触发加载
+            if (cb.dataset.userLayer) {
+              if (layerCache[cb.id]) layerCache[cb.id].addTo(map);
+            } else {
+              loadGeoJSONLayer(cb.value, cb.id, false);
+            }
+          }
+        });
+      syncAllGroupStatus();
+      syncSelectAllStatus();
+    }
+
     // ========== 初始化 ==========
     function initGeoJsonLayer() {
       generateLayerItems();
       initSearch();
+      // 恢复内置图层的勾选状态（跟随「记住图层」开关）
+      if (isRememberLayerEnabled()) {
+        restoreLayerCheckStates();
+      }
       // 恢复用户已上传的图层
-      restoreUserLayers();
+      if (isRememberLayerEnabled()) {
+        restoreUserLayers();
+      }
       initClusterToggle();
       initLabelToggle();
     }
