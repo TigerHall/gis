@@ -1400,3 +1400,70 @@ body.sidebar-pinned .layer-trigger {
     background: rgba(106, 170, 106, 0.35);
   }
 }
+
+/* ===== DEM 高程渲染控制 ===== */
+.dem-controls {
+  padding: 8px 12px;
+}
+.dem-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.dem-upload-btn {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #1a73e8;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.dem-upload-btn:hover {
+  background: #1557b0;
+}
+.dem-remove-btn {
+  background: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.dem-remove-btn:hover {
+  background: #b71c1c;
+}
+.dem-opacity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.dem-opacity-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+}
+.dem-status {
+  font-size: 12px;
+  min-height: 1.4em;
+  word-break: break-all;
+}
+.dem-colormode-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.dem-colormode-row select {
+  flex: 1;
+  padding: 3px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fff;
+}

@@ -40,6 +40,10 @@
     <!-- 弹窗组件（尽早加载，供全局使用） -->
     <link rel="stylesheet" href="./assets/dialog.css" />
     <script src="./assets/dialog.js"></script>
+    <!-- DEM 高程渲染 -->
+    <script src="./assets/georaster.min.js"></script>
+    <script src="./assets/geoblaze.min.js"></script>
+    <script src="./assets/georaster-layer-for-leaflet.min.js"></script>
     <!-- 图层配置数据（需在 geojsonloader 之前加载） -->
     <script src="./assets/geo-config.js"></script>
     <!-- 自定义css -->
@@ -115,6 +119,60 @@
           <div class="search-results" id="searchResults"></div>
         </div>
         <div id="layerItemsContainer"></div>
+        <!-- DEM 高程图层控制 -->
+        <details class="toggle-section" id="demSection">
+          <summary>🏔️ DEM高程渲染（实验中）</summary>
+          <div class="dem-controls">
+            <div class="dem-upload-row">
+              <label class="dem-upload-btn" for="demFileInput"
+                >📂 加载 GeoTIFF</label
+              >
+              <input
+                type="file"
+                id="demFileInput"
+                accept=".tif,.tiff"
+                style="display: none"
+              />
+              <button
+                class="dem-remove-btn"
+                id="demRemoveBtn"
+                title="移除DEM图层"
+                style="display: none"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              class="dem-colormode-row"
+              id="demColorModeRow"
+              style="display: none"
+            >
+              <label>色带</label>
+              <select id="demColorMode">
+                <option value="bathymetry">海底地形</option>
+                <option value="stretch">自适应拉伸</option>
+                <option value="equalize">直方图均衡</option>
+                <option value="grayscale">灰度</option>
+              </select>
+            </div>
+            <div
+              class="dem-opacity-row"
+              id="demOpacityRow"
+              style="display: none"
+            >
+              <label>透明度</label>
+              <input
+                type="range"
+                id="demOpacitySlider"
+                min="0"
+                max="100"
+                value="80"
+              />
+              <span id="demOpacityValue">80%</span>
+            </div>
+            <div class="dem-status" id="demStatus"></div>
+          </div>
+        </details>
       </div>
       <div id="appVersion" class="app-version"></div>
     </div>
@@ -651,7 +709,67 @@
     <script src="./assets/geojsonloader.js"></script>
     <!-- 外部文件导入（依赖 geojsonloader 的 addUserLayer） -->
     <script src="./assets/file-handler.js"></script>
+    <!-- DEM 高程渲染模块 -->
+    <script src="./assets/Leaflet.DemRenderer.js"></script>
     <script src="./assets/marked.min.js"></script>
+    <script>
+      // DEM 高程图层交互绑定
+      (function () {
+        var fileInput = document.getElementById("demFileInput");
+        var removeBtn = document.getElementById("demRemoveBtn");
+        var opacityRow = document.getElementById("demOpacityRow");
+        var opacitySlider = document.getElementById("demOpacitySlider");
+        var opacityValue = document.getElementById("demOpacityValue");
+        var statusEl = document.getElementById("demStatus");
+        var colorModeSelect = document.getElementById("demColorMode");
+        var colorModeRow = document.getElementById("demColorModeRow");
+
+        function showControls(show) {
+          removeBtn.style.display = show ? "inline-block" : "none";
+          opacityRow.style.display = show ? "flex" : "none";
+          colorModeRow.style.display = show ? "flex" : "none";
+        }
+
+        fileInput.addEventListener("change", function (e) {
+          var file = e.target.files[0];
+          if (!file) return;
+          DemRenderer.loadFromFile(file, map, {
+            opacity: 0.8,
+            onLoading: function (msg) {
+              statusEl.textContent = msg;
+              statusEl.style.color = "#666";
+            },
+            onLoaded: function (georaster) {
+              statusEl.textContent = "✓ 已加载（" + file.name + "）";
+              statusEl.style.color = "#090";
+              showControls(true);
+            },
+            onError: function (err) {
+              statusEl.textContent = "✗ " + err.message;
+              statusEl.style.color = "#c00";
+              showControls(false);
+            },
+          });
+          fileInput.value = "";
+        });
+
+        removeBtn.addEventListener("click", function () {
+          DemRenderer.remove();
+          statusEl.textContent = "";
+          showControls(false);
+        });
+
+        opacitySlider.addEventListener("input", function () {
+          var val = parseInt(this.value);
+          opacityValue.textContent = val + "%";
+          DemRenderer.setOpacity(val / 100);
+        });
+
+        colorModeSelect.addEventListener("change", function () {
+          DemRenderer.setColorMode(this.value);
+        });
+      })();
+    </script>
     <!-- 投点功能（独立模块） -->
     <script src="./assets/pointdrop.js"></script>
     <script>

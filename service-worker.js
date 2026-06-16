@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.7.4";
+const CACHE_NAME = "v1.8.0";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -33,6 +33,10 @@ const STATIC_ASSETS = [
   "./assets/geojsonloader.js",
   "./assets/geo-config.js",
   "./assets/file-handler.js",
+  "./assets/Leaflet.DemRenderer.js",
+  "./assets/georaster.min.js",
+  "./assets/geoblaze.min.js",
+  "./assets/georaster-layer-for-leaflet.min.js",
   "./assets/app.js",
   "./assets/html-to-image.min.js",
   // Dialog 弹窗
