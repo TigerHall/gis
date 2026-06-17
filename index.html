@@ -438,9 +438,61 @@
         },
       );
 
+      // ========== 6. GEBCO 全球水深 WMS ==========
+      const gebcoShadedLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/mapserv?",
+        {
+          layers: "GEBCO_LATEST",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+        },
+      );
+      const gebcoFlatLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
+        layers: "GEBCO_LATEST_2",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+      });
+
+      // ========== 7. EMODnet 水深 WMS ==========
+      const emodnetLayer = L.tileLayer.wms(
+        "https://ows.emodnet-bathymetry.eu/wms",
+        {
+          layers: "emodnet:mean_multicolour",
+          format: "image/png",
+          transparent: false,
+          version: "1.3.0",
+          maxZoom: 16,
+          crossOrigin: "anonymous",
+          uppercase: true,
+          attribution:
+            '<a href="https://www.emodnet-bathymetry.eu/" target="_blank">EMODnet Bathymetry</a>',
+        },
+      );
+
+      // ========== 8. Macrostrat 全球地质 ==========
+      const macrostratLayer = L.tileLayer(
+        "https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png",
+        {
+          maxZoom: 16,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://macrostrat.org/" target="_blank">Macrostrat</a>',
+        },
+      );
+
       // ========== 控件配置 ==========
       // 所有底图统一放在 allBaseLayers 对象中（单一数据源，避免与 L.control 定义不同步）
-      // 注意顺序：先天地图系列，再 ArcGIS 系列，最后 OSM（确保 OSM 在控件列表最末尾）
+      // 注意顺序：先天地图系列，再 ArcGIS 系列，再水深/地质系列，最后 OSM
       const allBaseLayers = Object.assign(
         {
           // ETOPO 2022 全球底图
@@ -453,7 +505,12 @@
         },
         arcgisBaseLayers,
       );
-      // OSM 放到 ArcGIS 底图后面
+      // 水深/地质底图
+      allBaseLayers["GEBCO-水深地形"] = gebcoShadedLayer;
+      allBaseLayers["GEBCO-水深平面"] = gebcoFlatLayer;
+      allBaseLayers["EMODnet-多色水深"] = emodnetLayer;
+      allBaseLayers["Macrostrat-全球地质"] = macrostratLayer;
+      // OSM 放到最后
       allBaseLayers["OpenStreetMap"] = osmLayers;
 
       // 所有覆盖层统一存放（永远可见的 + 更多底图模式才显示的）
@@ -492,6 +549,7 @@
           "天地图地形",
           "ArcGIS-影像",
           "ArcGIS-海洋",
+          "GEBCO-水深地形",
           "OpenStreetMap",
         ];
         keys.forEach(function (k) {

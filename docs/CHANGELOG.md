@@ -1,6 +1,28 @@
 # 更新记录
 
-## 2026-06-07
+## 2026-06-17 — v1.8.1
+
+### 新增网络底图图层
+
+- 新增 **GEBCO-水深地形**（WMS，`GEBCO_LATEST`）：全球权威水深标准，阴影浮雕渲染，默认底图可见
+- 新增 **GEBCO-水深平面**（WMS，`GEBCO_LATEST_2`）：高程着色平面版，更多底图模式可见
+- 新增 **EMODnet-多色水深**（WMS，`emodnet:mean_multicolour`）：欧洲海洋数据网络，更多底图模式可见
+- 新增 **Macrostrat-全球地质**（XYZ，`tiles.macrostrat.org`）：全球统一地质图，更多底图模式可见
+- 首次引入 `L.tileLayer.wms()` WMS 图层类型（GEBCO 使用 1.1.1，EMODnet 使用 1.3.0）
+
+### 底图排序调整
+
+- 图层列表顺序：ETOPO → 天地图 → ArcGIS → GEBCO/EMODnet/Macrostrat → OSM
+- GEBCO-水深地形 加入默认底图（关闭「更多底图」时仍可见）
+
+### 版本号
+
+- Service Worker 缓存名称升至 `v1.8.1`
+- README 底图服务表格同步新增 GEBCO、EMODnet、Macrostrat 三行
+
+---
+
+## 2026-06-07 — v1.8.0
 
 ### 底图控件重构
 
@@ -25,7 +47,7 @@
   - `天地图矢量底图` → `天地图矢量`
   - `天地图地形底图` → `天地图地形`
 - 多选图层「全球境界」→「天地图全球境界」，风格统一
-- 备注「OSM底图_边界有误慎用」→「OpenStreetMap」
+- 备注「OSM底图\_边界有误慎用」→「OpenStreetMap」
 
 ### 侧边栏视觉美化
 
