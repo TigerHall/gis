@@ -78,6 +78,21 @@
  *     - 右下角回到顶部按钮（滚动超过 300px 显示）
  *     - 弹窗 DOM 为单例，首次创建后复用
  *
+ * ── showConfirm(message, opts?) ────────
+ *   message : string  - 弹窗正文（支持 HTML）
+ *   opts    : object  - 可选参数：
+ *     title      : string - 标题，默认 '确认'
+ *     confirmText: string - 确认按钮文字，默认 '确认'
+ *     cancelText : string - 取消按钮文字，默认 '取消'
+ *   返回 Promise<boolean>：点击确认 resolve(true)，取消/关闭 resolve(false)
+ *
+ *   行为说明：
+ *     - 使用原生 <dialog> 模态弹窗，有遮罩
+ *     - 每次调用创建新 dialog，关闭后自动销毁 DOM
+ *     - 点击遮罩区域关闭 → resolve(false)
+ *     - 自动聚焦确认按钮（可回车确认）
+ *     - ESC 关闭 → resolve(false)
+ *
  * ========================================
  *  技术细节
  * ========================================
@@ -385,6 +400,90 @@
     });
   }
 
+  // ==================== 确认弹窗 ====================
+
+  /**
+   * showConfirm(message, opts?)
+   *   message : string - 弹窗正文（支持 HTML）
+   *   opts    : object - 可选参数：
+   *     title      : string - 标题，默认 '确认'
+   *     confirmText: string - 确认按钮文字，默认 '确认'
+   *     cancelText : string - 取消按钮文字，默认 '取消'
+   *   返回 Promise<boolean>：点击确认 resolve(true)，点击取消/关闭 resolve(false)
+   */
+  function showConfirm(message, opts) {
+    opts = opts || {};
+    var title = opts.title || "确认";
+    var confirmText = opts.confirmText || "确认";
+    var cancelText = opts.cancelText || "取消";
+
+    return new Promise(function (resolve) {
+      var dialog = document.createElement("dialog");
+      dialog.className = "app-dialog confirm-dialog";
+      dialog.innerHTML =
+        '<div class="dialog-header">' +
+        "<h3>" +
+        _esc(title) +
+        "</h3>" +
+        '<button class="dialog-close">×</button>' +
+        "</div>" +
+        '<div class="dialog-body">' +
+        '<p class="confirm-msg">' +
+        message +
+        "</p>" +
+        '<div class="confirm-btns">' +
+        '<button class="confirm-cancel">' +
+        _esc(cancelText) +
+        "</button>" +
+        '<button class="confirm-ok">' +
+        _esc(confirmText) +
+        "</button>" +
+        "</div>" +
+        "</div>";
+      document.body.appendChild(dialog);
+
+      // 点击遮罩关闭 → 取消
+      dialog.addEventListener("click", function (e) {
+        if (e.target === dialog) {
+          dialog.close();
+        }
+      });
+
+      // 关闭按钮
+      dialog
+        .querySelector(".dialog-close")
+        .addEventListener("click", function () {
+          dialog.close();
+        });
+
+      // 取消按钮
+      dialog
+        .querySelector(".confirm-cancel")
+        .addEventListener("click", function () {
+          dialog.close();
+        });
+
+      // 确认按钮
+      var confirmed = false;
+      dialog
+        .querySelector(".confirm-ok")
+        .addEventListener("click", function () {
+          confirmed = true;
+          dialog.close();
+        });
+
+      // close 事件统一处理：根据 confirmed 标志 resolve 并清理 DOM
+      dialog.addEventListener("close", function () {
+        resolve(confirmed);
+        dialog.remove();
+      });
+
+      dialog.showModal();
+      // 自动聚焦确认按钮（方便回车确认）
+      dialog.querySelector(".confirm-ok").focus();
+    });
+  }
+
   // ==================== 工具 ====================
 
   function _esc(str) {
@@ -398,4 +497,5 @@
   global.showToast = showToast;
   global.closeToast = closeToast;
   global.showMarkdown = showMarkdown;
+  global.showConfirm = showConfirm;
 })(window);

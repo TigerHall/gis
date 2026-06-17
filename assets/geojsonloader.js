@@ -3336,6 +3336,60 @@
         });
     }
 
+    // 检查 localStorage 中是否存在已保存的图层状态
+    function hasSavedLayerState() {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (
+          key &&
+          (key.indexOf("dupal_layer_") === 0 ||
+            key.indexOf("dupal_user_layer_") === 0)
+        ) {
+          return true;
+        }
+      }
+      try {
+        var list = JSON.parse(
+          localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]",
+        );
+        if (list.length > 0) return true;
+      } catch (e) {}
+      return false;
+    }
+
+    // 清除所有已保存的图层状态（用户选择不恢复时调用）
+    function clearAllLayerStates() {
+      var keysToRemove = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (
+          key &&
+          (key.indexOf("dupal_layer_") === 0 ||
+            key.indexOf("dupal_user_layer_") === 0)
+        ) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(function (k) {
+        localStorage.removeItem(k);
+      });
+      // 清除用户图层元数据列表
+      try {
+        var list = JSON.parse(
+          localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]",
+        );
+        list.forEach(function (meta) {
+          if (L.GzIdbLoader && L.GzIdbLoader.delCache) {
+            L.GzIdbLoader.delCache("user_geo_" + meta.id);
+          }
+          if (L.GzIdbLoader && L.GzIdbLoader.deleteSearchIndex) {
+            L.GzIdbLoader.deleteSearchIndex("user_" + meta.id);
+          }
+        });
+      } catch (e) {}
+      localStorage.removeItem(USER_LAYER_STORAGE_KEY);
+    }
+
     // 恢复内置图层的勾选状态
     function restoreLayerCheckStates() {
       document
@@ -3361,14 +3415,25 @@
     function initGeoJsonLayer() {
       generateLayerItems();
       initSearch();
-      // 恢复内置图层的勾选状态（跟随「记住图层」开关）
-      if (isRememberLayerEnabled()) {
-        restoreLayerCheckStates();
+
+      // 图层恢复：检测到已保存的图层状态时，弹窗询问用户是否恢复
+      if (isRememberLayerEnabled() && hasSavedLayerState()) {
+        showConfirm("检测到上次访问时打开的图层，是否恢复？", {
+          title: "恢复图层",
+          confirmText: "恢复",
+          cancelText: "不恢复",
+        }).then(function (restore) {
+          if (restore) {
+            restoreLayerCheckStates();
+            restoreUserLayers();
+          } else {
+            clearAllLayerStates();
+          }
+          syncAllGroupStatus();
+          syncSelectAllStatus();
+        });
       }
-      // 恢复用户已上传的图层
-      if (isRememberLayerEnabled()) {
-        restoreUserLayers();
-      }
+
       initClusterToggle();
       initLabelToggle();
     }

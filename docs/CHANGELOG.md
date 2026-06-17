@@ -20,6 +20,15 @@
 - Service Worker 缓存名称升至 `v1.8.1`
 - README 底图服务表格同步新增 GEBCO、EMODnet、Macrostrat 三行
 
+### 图层恢复弹窗确认
+
+- 图层记忆功能由「自动恢复」改为「弹窗询问」：重新访问时检测到已保存的图层状态，弹出确认弹窗询问用户是否恢复
+- `dialog.js` 新增 `showConfirm(message, opts)` 全局函数，返回 `Promise<boolean>`，复用现有 `.app-dialog` 样式体系
+- `dialog.css` 新增确认弹窗样式（`.confirm-dialog`、`.confirm-btns`、`.confirm-ok/cancel`），含深色模式适配
+- `geojsonloader.js` 新增 `hasSavedLayerState()` 和 `clearAllLayerStates()` 辅助函数
+- 用户点「不恢复」时清除所有 localStorage 图层状态 + IDB 缓存，保持干净状态
+- 保存机制不变，仅修改恢复逻辑为弹窗确认
+
 ---
 
 ## 2026-06-07 — v1.8.0
