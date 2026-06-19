@@ -1,82 +1,79 @@
 :root {
-  --panel-bg: #fff;
-  --panel-border: #99cc99;
-  --panel-shadow: rgba(0, 0, 0, 0.05);
-  --section-bg: #f8fbf8;
-  --section-header-bg: #edf3ed;
-  --section-header-hover: #e2ece2;
-  --section-border: #dde8dd;
-  --section-text: #3a7a3a;
-  --section-shadow: rgba(74, 140, 74, 0.06);
-  --group-bg: #fff;
-  --group-header-bg: #f2f8f2;
-  --group-header-hover: #e6f1e6;
-  --group-border: #e4ece4;
-  --group-shadow: rgba(74, 140, 74, 0.08);
-  --content-bg: #fafcfa;
-  --content-hover-bg: #eef4ee;
-  --content-active-bg: #e0ece0;
-  --content-checked-bg: #f0f8f0;
-  --accent: #4a8c4a;
-  --accent-hover: #3a7a3a;
-  --accent-light: #5a9a5a;
-  --accent-lighter: #6aaa6a;
-  --text-primary: #333;
-  --text-secondary: #555;
-  --text-muted: #666;
-  --text-dim: #888;
-  --text-faint: #999;
-  --border-light: #e0e0e0;
-  --border-toggle: #d0d8d0;
-  --input-bg: #fafcfa;
-  --input-border: #d0d8d0;
-  --input-color: #333;
-  --link-color: #1890ff;
-  --status-idle: #ddd;
-  --status-loading: #f0c040;
-  --status-loaded: #4a8c4a;
-  --status-error: #e5534b;
+  /* ===== 基色定义（日间）===== */
+  --c-bg: #fff;
+  --c-bg-alt: #f5f5f5;
+  --c-bg-hover: #eee;
+  --c-bg-checked: #fafafa;
+  --c-text: #333;
+  --c-text-alt: #666;
+  --c-text-dim: #999;
+  --c-border: #e0e0e0;
+  --c-border-str: #ccc;
+  --c-green: #99cc99;
+  --c-green-hover: #80b380;
+  --c-green-text: #4a8c4a;
+  --c-gray: #ddd;
+  --c-yellow: #f0c040;
+  --c-blue: #1890ff;
+  --c-red: #e53935;
+
+  /* ===== 语义别名 ===== */
+  --panel-bg: var(--c-bg);
+  --panel-border: var(--c-green);
+  --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --section-bg: var(--c-bg-alt);
+  --section-header-bg: var(--c-bg-alt);
+  --section-header-hover: var(--c-bg-hover);
+  --section-border: var(--c-border);
+  --section-text: var(--c-green-text);
+  --section-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  --group-bg: var(--c-bg);
+  --group-header-bg: var(--c-bg-alt);
+  --group-header-hover: var(--c-bg-hover);
+  --group-border: var(--c-border);
+  --group-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  --content-bg: var(--c-bg);
+  --content-hover-bg: var(--c-bg-alt);
+  --content-active-bg: var(--c-bg-hover);
+  --content-checked-bg: var(--c-bg-checked);
+  --accent: var(--c-green);
+  --accent-hover: var(--c-green-hover);
+  --accent-lighter: var(--c-green);
+  --text-primary: var(--c-text);
+  --text-secondary: var(--c-text-alt);
+  --text-muted: var(--c-text-dim);
+  --text-dim: var(--c-text-dim);
+  --text-faint: var(--c-text-dim);
+  --border-light: var(--c-border);
+  --border-toggle: var(--c-border-str);
+  --input-bg: var(--c-bg);
+  --input-border: var(--c-border-str);
+  --input-color: var(--c-text);
+  --link-color: var(--c-blue);
+  --status-idle: var(--c-gray);
+  --status-loading: var(--c-yellow);
+  --status-loaded: var(--c-green);
+  --status-error: var(--c-red);
 }
 
-/* 深色模式 */
+/* 深色模式：只需重定义基色 */
 [data-theme="dark"] {
-  --panel-bg: #111;
-  --panel-border: #2a2a2a;
-  --panel-shadow: rgba(0, 0, 0, 0.6);
-  --section-bg: #181818;
-  --section-header-bg: #1e1e1e;
-  --section-header-hover: #242424;
-  --section-border: #2a2a2a;
-  --section-text: #4caf50;
-  --section-shadow: rgba(0, 0, 0, 0.3);
-  --group-bg: #111;
-  --group-header-bg: #181818;
-  --group-header-hover: #222;
-  --group-border: #2a2a2a;
-  --group-shadow: rgba(0, 0, 0, 0.3);
-  --content-bg: #111;
-  --content-hover-bg: #1e1e1e;
-  --content-active-bg: #242424;
-  --content-checked-bg: #181818;
-  --accent: #4caf50;
-  --accent-hover: #5cb85c;
-  --accent-light: #6abf6a;
-  --accent-lighter: #8fd88f;
-  --text-primary: #eee;
-  --text-secondary: #ccc;
-  --text-muted: #aaa;
-  --text-dim: #888;
-  --text-faint: #666;
-  --border-light: #2a2a2a;
-  --border-toggle: #2a2a2a;
-  --input-bg: #111;
-  --input-border: #333;
-  --input-color: #eee;
-  --link-color: #64b5f6;
-  --status-idle: #555;
-  --status-loading: #c89428;
-  --status-loaded: #4caf50;
-  --status-error: #d44c44;
+  --c-bg: #111;
+  --c-bg-alt: #181818;
+  --c-bg-hover: #252525;
+  --c-bg-checked: #181818;
+  --c-text: #eee;
+  --c-text-alt: #aaa;
+  --c-text-dim: #777;
+  --c-border: #333;
+  --c-border-str: #3a3a3a;
+  --c-green: #88cc88;
+  --c-green-hover: #99cc99;
+  --c-green-text: #88cc88;
+  --c-gray: #555;
+  --c-yellow: #c89428;
+  --c-blue: #5ab0ff;
+  --c-red: #d44c44;
 }
 
 /* 备案号悬浮条（固定右下角，合规要求） */
@@ -210,15 +207,23 @@ body.resizing-panel {
   border-left: none;
   border-radius: 0 8px 8px 0;
   box-shadow: 2px 0 5px var(--panel-shadow);
+  opacity: 0.85;
   z-index: 1000;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   writing-mode: vertical-rl;
-  color: var(--text-muted);
+  color: var(--text-primary);
   font-size: 14px;
-  transition: background 0.2s;
+  transition:
+    opacity 0.2s,
+    background 0.2s;
+}
+
+.layer-trigger:hover,
+.layer-trigger:active {
+  opacity: 1;
 }
 
 .layer-trigger:active {
@@ -767,7 +772,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--section-text);
   padding: 8px 10px;
   user-select: none;
   list-style: none;
