@@ -83,15 +83,18 @@
         var aboutLink = document.createElement("a");
         aboutLink.className = "about-link";
         aboutLink.title = "关于本站";
-        aboutLink.textContent = "ⓘ";
+        aboutLink.textContent = "?";
         aboutLink.href = "#";
         aboutLink.style.cssText =
-          "color:#999;font-size:15px;text-decoration:none;line-height:1;transition:color 0.2s;cursor:pointer;flex-shrink:0;";
+          "display:inline-flex;align-items:center;justify-content:center;" +
+          "width:20px;height:20px;border-radius:50%;background:#4a8c4a;color:#fff;" +
+          "font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;flex-shrink:0;" +
+          "transition:background 0.15s;user-select:none;";
         aboutLink.addEventListener("mouseenter", function () {
-          this.style.color = "#1976d2";
+          this.style.background = "#3a7a3a";
         });
         aboutLink.addEventListener("mouseleave", function () {
-          this.style.color = "#999";
+          this.style.background = "#4a8c4a";
         });
         aboutLink.addEventListener("click", function (e) {
           e.preventDefault();
@@ -1791,7 +1794,32 @@
 
       layerSummary.appendChild(arrow);
       layerSummary.appendChild(sectionTitle);
+
+      // 帮助图标
+      var dataHelpIcon = document.createElement("span");
+      dataHelpIcon.textContent = "?";
+      dataHelpIcon.title = "查看使用说明及数据来源";
+      dataHelpIcon.style.cssText =
+        "display:inline-flex;align-items:center;justify-content:center;" +
+        "width:18px;height:18px;border-radius:50%;background:#4a8c4a;color:#fff;" +
+        "font-size:12px;font-weight:700;cursor:pointer;margin:0 4px;flex-shrink:0;" +
+        "transition:background 0.15s;user-select:none;";
+      dataHelpIcon.onmouseover = function () {
+        dataHelpIcon.style.background = "#3a7a3a";
+      };
+      dataHelpIcon.onmouseout = function () {
+        dataHelpIcon.style.background = "#4a8c4a";
+      };
+      dataHelpIcon.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (typeof showMarkdown === "function") {
+          showMarkdown("docs/static-vector-help.md", "📑 静态矢量要素 — 帮助");
+        }
+      });
+      layerSummary.appendChild(dataHelpIcon);
+
       layerSummary.appendChild(selectAllCheckbox);
+
       layerSection.appendChild(layerSummary);
       var layerContent = document.createElement("div");
       layerContent.className = "layer-section-content";
@@ -1996,6 +2024,29 @@
       localSummary.appendChild(localArrow);
       localSummary.appendChild(localTitle);
 
+      // 帮助图标
+      var localHelpIcon = document.createElement("span");
+      localHelpIcon.textContent = "?";
+      localHelpIcon.title = "查看本地图层使用说明";
+      localHelpIcon.style.cssText =
+        "display:inline-flex;align-items:center;justify-content:center;" +
+        "width:18px;height:18px;border-radius:50%;background:#4a8c4a;color:#fff;" +
+        "font-size:12px;font-weight:700;cursor:pointer;margin:0 4px;flex-shrink:0;" +
+        "transition:background 0.15s;user-select:none;";
+      localHelpIcon.onmouseover = function () {
+        localHelpIcon.style.background = "#3a7a3a";
+      };
+      localHelpIcon.onmouseout = function () {
+        localHelpIcon.style.background = "#4a8c4a";
+      };
+      localHelpIcon.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (typeof showMarkdown === "function") {
+          showMarkdown("docs/local-layer-help.md", "🗺️ 本地图层查看 — 帮助");
+        }
+      });
+      localSummary.appendChild(localHelpIcon);
+
       // 本地图层全选/全不选
       var localSelectAll = document.createElement("input");
       localSelectAll.type = "checkbox";
@@ -2025,6 +2076,7 @@
         });
       });
       localSummary.appendChild(localSelectAll);
+
       localSection.appendChild(localSummary);
       var localContent = document.createElement("div");
       localContent.className = "layer-section-content";

@@ -125,8 +125,11 @@
   padding: 24px;
   max-height: min(80vh, 600px);
   overflow-y: auto;
+  overflow-x: hidden;
   line-height: 1.7;
   color: #444;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* ============================================
@@ -170,6 +173,7 @@
 }
 .app-dialog .dialog-body p {
   margin: 8px 0;
+  text-indent: 2em;
 }
 .app-dialog .dialog-body code {
   background: #f0f0f0;
@@ -185,6 +189,9 @@
   overflow-x: auto;
   font-size: 13px;
   border: 1px solid #e8e8e8;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 .app-dialog .dialog-body hr {
   border: none;
@@ -198,6 +205,8 @@
 }
 .app-dialog .dialog-body li {
   margin: 4px 0;
+  text-indent: 1em;
+  list-style-position: inside;
 }
 .app-dialog .dialog-body a {
   color: #1890ff;
@@ -217,6 +226,8 @@
   border: 1px solid #d4d8d4;
   padding: 6px 10px;
   text-align: left;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .app-dialog .dialog-body th {
   background: #f0f7f0;

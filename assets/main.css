@@ -138,6 +138,7 @@ body.resizing-panel {
   width: 40px;
   height: 80px;
   background: #fff;
+  user-select: none;
   border: 1px solid #e5e5e5;
   border-left: none;
   border-radius: 0 8px 8px 0;
