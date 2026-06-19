@@ -720,6 +720,23 @@ details.layer-section[open] > summary .layer-group-arrow {
   text-align: center;
 }
 
+/* 天地图地名搜索按钮 */
+.search-empty .tdt-search-btn {
+  margin-top: 8px;
+  display: inline-block;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  background: var(--content-bg);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  transition: background 0.12s;
+}
+.search-empty .tdt-search-btn:hover {
+  background: var(--content-hover-bg);
+}
+
 /* 侧边栏右侧拖拽手柄（透明，hover 微绿） */
 .panel-resize-handle {
   position: absolute;
@@ -992,38 +1009,6 @@ details.layer-section[open] > summary .layer-group-arrow {
   transform: scale(1.1);
 }
 
-/* ========== 搜索结果自定义 hover 提示卡片 ==========*/
-#searchTooltip {
-  display: none;
-  position: fixed;
-  z-index: 9999;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  padding: 8px 12px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-primary);
-  max-width: 360px;
-  max-height: 280px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-  pointer-events: auto;
-}
-#searchTooltip.visible {
-  display: block;
-}
-#searchTooltip .tt-key {
-  color: var(--accent-lighter);
-  font-weight: 600;
-}
-#searchTooltip .tt-val {
-  color: var(--text-primary);
-}
-
 /* ========== 帮助图标（绿色问号） ========== */
 .help-icon {
   display: inline-flex;
@@ -1172,14 +1157,6 @@ body.sidebar-pinned .layer-trigger {
   #layerPanel,
   #layerTrigger,
   .leaflet-control-container,
-  #searchTooltip,
-  .pm-draw,
-  .pm-toolbar,
-  .pm-actions-container,
-  .search-container,
-  .search-input,
-  .search-dropdown,
-  #pointDropEditor,
   .color-picker-popup,
   .hover-tooltip,
   .leaflet-tooltip,

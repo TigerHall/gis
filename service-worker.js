@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.8.3";
+const CACHE_NAME = "v1.8.4";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -42,6 +42,7 @@ const STATIC_ASSETS = [
   // Dialog 弹窗
   "./assets/dialog.js",
   "./assets/dialog.css",
+  "./assets/pointdrop.css",
   "./assets/marked.min.js",
   // 文档
   "./docs/CHANGELOG.md",

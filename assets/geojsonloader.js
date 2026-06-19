@@ -2573,7 +2573,7 @@
       }
 
       // 构建所有字段信息的 tooltip HTML（用于自定义 hover 卡片）
-      function buildTooltipHtml(props) {
+      function buildTooltipText(props) {
         if (!props) return "";
         var keys = Object.keys(props);
         var INTERNAL_SKIP = new Set(["_featureindex"]);
@@ -2583,21 +2583,7 @@
           if (INTERNAL_SKIP.has(k.toLowerCase())) continue;
           var v = props[k];
           if (v === null || v === undefined || v === "") continue;
-          var safeK = k
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-          var safeV = String(v)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-          rows.push(
-            '<span class="tt-key">' +
-              safeK +
-              '</span>: <span class="tt-val">' +
-              safeV +
-              "</span>",
-          );
+          rows.push(k + ": " + String(v));
         }
         return rows.join("\n");
       }
@@ -2644,7 +2630,9 @@
               type: "layer",
               label: entry.groupName || "",
               summary: entry.layerLabel,
-              tooltipHtml: null,
+              tooltipText:
+                entry.layerLabel +
+                (entry.groupName ? "\n所属分组: " + entry.groupName : ""),
               feature: null,
               checkboxId: entry.checkboxId,
             });
@@ -2722,7 +2710,7 @@
               type: "feature",
               label: entry.layerLabel,
               summary: buildSummary(f.properties),
-              tooltipHtml: buildTooltipHtml(f.properties),
+              tooltipText: buildTooltipText(f.properties),
               feature: f,
               checkboxId: entry.checkboxId,
             });
@@ -2784,65 +2772,146 @@
         } catch (e) {}
       }
 
+      // ---------- 天地图地名搜索 ----------
+      var _tdtTimer = null;
+      var _tdtCache = {}; // { query: [poi, ...] } 简单缓存，避免重复请求
+
+      function tiandituSearch(query, callback) {
+        if (_tdtCache[query]) {
+          callback(_tdtCache[query]);
+          return;
+        }
+        var tk = window.TDT_TK || "";
+        if (!tk) {
+          callback([]);
+          return;
+        }
+        // 地名搜索需要 mapBound 和 level，全局范围让服务器自己找
+        var postStr = JSON.stringify({
+          keyWord: query,
+          queryType: 7,
+          mapBound: "-180,-90,180,90",
+          level: 12,
+          start: 0,
+          count: 20,
+        });
+        var url =
+          "https://api.tianditu.gov.cn/v2/search?postStr=" +
+          encodeURIComponent(postStr) +
+          "&type=query&tk=" +
+          tk;
+
+        fetch(url)
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            var pois = [];
+            if (
+              data &&
+              data.status &&
+              data.status.infocode === 1000 &&
+              data.pois
+            ) {
+              pois = data.pois;
+            }
+            _tdtCache[query] = pois;
+            callback(pois);
+          })
+          .catch(function () {
+            callback([]);
+          });
+      }
+
+      // 全局暴露天地图搜索入口，给 onclick 调用
+      window.__tiandituSearch = function (query) {
+        var inp = document.getElementById("searchInput");
+        if (inp) {
+          inp.value = query;
+        }
+        tiandituSearch(query, function (pois) {
+          renderTdtResults(pois, query);
+        });
+      };
+
+      function renderTdtResults(pois, query) {
+        resultsBox.innerHTML = "";
+        if (!pois || pois.length === 0) {
+          resultsBox.innerHTML =
+            '<div class="search-empty">天地图未找到该地名</div>';
+          resultsBox.classList.add("open");
+          return;
+        }
+        var title = document.createElement("div");
+        title.className = "search-empty";
+        title.style.cssText =
+          "font-size:11px;color:var(--text-dim);padding-bottom:4px;";
+        title.textContent = "🗺️ 天地图地名结果";
+        resultsBox.appendChild(title);
+
+        pois.forEach(function (poi) {
+          var item = document.createElement("div");
+          item.className = "search-result-item";
+          var tag = document.createElement("span");
+          tag.className = "search-result-tag";
+          tag.textContent = "🗺️ 地名";
+          var text = document.createElement("span");
+          text.className = "search-result-text";
+          text.textContent = poi.name + (poi.address ? "  " + poi.address : "");
+          item.appendChild(tag);
+          item.appendChild(text);
+
+          // 原生 title 显示详细地址+分类
+          var tipParts = [poi.name];
+          if (poi.address) tipParts.push("地址: " + poi.address);
+          if (poi.typeName) tipParts.push("分类: " + poi.typeName);
+          item.title = tipParts.join("\n");
+
+          if (poi.lonlat) {
+            var parts = poi.lonlat.split(",");
+            if (parts.length >= 2) {
+              var lng = parseFloat(parts[0]);
+              var lat = parseFloat(parts[1]);
+              (function (lat_, lng_) {
+                item.addEventListener("click", function () {
+                  map.setView([lat_, lng_], Math.max(map.getZoom(), 10), {
+                    animate: true,
+                  });
+                  resultsBox.classList.remove("open");
+                });
+              })(lat, lng);
+            }
+          }
+          resultsBox.appendChild(item);
+        });
+        resultsBox.classList.add("open");
+      }
+
       function renderResults(results, query, totalCount) {
         resultsBox.innerHTML = "";
         if (results.length === 0) {
-          resultsBox.innerHTML = '<div class="search-empty">无匹配结果</div>';
+          resultsBox.innerHTML =
+            '<div class="search-empty"><div>无匹配结果</div>' +
+            '<div class="tdt-search-btn" onclick="window.__tiandituSearch(\'' +
+            query.replace(/\\/g, "\\\\").replace(/'/g, "\\'") +
+            "')\">🔍 搜索地名「" +
+            query.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+            "」</div></div>";
           resultsBox.classList.add("open");
           return;
         }
         var MAX = 30;
         var shown = results.slice(0, MAX);
-        // 确保全局只有一个 tooltip 元素
-        var tip = document.getElementById("searchTooltip");
-        if (!tip) {
-          tip = document.createElement("div");
-          tip.id = "searchTooltip";
-          document.body.appendChild(tip);
-        }
-        // tip 自己的 mouseenter/leave：防止鼠标移到 tip 上时 item 的 mouseleave 隐藏它
-        tip.addEventListener("mouseenter", function () {
-          clearTimeout(tip._hideTimer);
-        });
-        tip.addEventListener("mouseleave", function () {
-          clearTimeout(tip._hideTimer);
-          tip._hideTimer = setTimeout(function () {
-            tip.classList.remove("visible");
-          }, 120);
-        });
+        // 移除旧的自定义 tooltip DOM（如有）
+        var oldTip = document.getElementById("searchTooltip");
+        if (oldTip && oldTip.parentNode) oldTip.parentNode.removeChild(oldTip);
 
         shown.forEach(function (r) {
           var item = document.createElement("div");
           item.className = "search-result-item";
-
-          // 自定义 hover 提示卡片
-          item.addEventListener("mouseenter", function (e) {
-            if (!r.tooltipHtml) return;
-            clearTimeout(tip._hideTimer);
-            tip.innerHTML = r.tooltipHtml;
-            tip.classList.add("visible");
-            // 此时 tip 已有内容，可测量尺寸
-            var rect = item.getBoundingClientRect();
-            var tipW = tip.offsetWidth || 280;
-            var tipH = tip.offsetHeight || 200;
-            var left = rect.right + 8;
-            var top = rect.top;
-            if (left + tipW > window.innerWidth - 8) {
-              left = rect.left - tipW - 8;
-            }
-            if (top + tipH > window.innerHeight - 8) {
-              top = window.innerHeight - tipH - 8;
-            }
-            if (top < 8) top = 8;
-            tip.style.left = left + "px";
-            tip.style.top = top + "px";
-          });
-          item.addEventListener("mouseleave", function () {
-            clearTimeout(tip._hideTimer);
-            tip._hideTimer = setTimeout(function () {
-              tip.classList.remove("visible");
-            }, 120);
-          });
+          if (r.tooltipText) {
+            item.title = r.tooltipText;
+          }
 
           var tag = document.createElement("span");
           tag.className = "search-result-tag";

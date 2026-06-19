@@ -1,6 +1,52 @@
 # 更新记录
 
-## 2026-06-19 — 侧边栏全面重构与交互优化
+## 2026-06-19 v1.8.4 — 深色模式重构 + 天地图地名搜索
+
+### CSS 变量体系与深色模式
+
+- **全面引入 CSS 变量体系**：`main.css` / `dialog.css` 约 70 个 `--xxx` 变量，日间/深色模式只靠 `:root` / `[data-theme="dark"]` 切换
+- **深色模式重新配色**：面板背景 `#111`、模块背景 `#181818`、文字 `#eee`，简约黑白风格
+- **移除 `@media (prefers-color-scheme)`**：主题由 JS 开关 `data-theme` 属性唯一控制，`color-scheme` 随开关同步
+- **清理 50+ 处硬编码颜色**：状态灯、Tooltip、版本号、按钮、搜索框、折叠区等全部改用 `var(--xxx)`
+
+### pointdrop 样式分离
+
+- **新建 `assets/pointdrop.css`**：提取 `pointdrop.js` 中 20+ 处 `style.cssText` 内联样式为 `.pd-*` 类
+- **移除琥珀色系**：投点编辑器从黄/棕色改为中性黑白色（跟随 `--xxx` 变量）
+- **删除 `geojsonloader.css` 中约 50 行旧投点样式**
+
+### 弹窗样式归集
+
+- **dialog.css 统一管理所有弹窗**：从 `main.css` 移入 Leaflet Popup/Tooltip 样式，从 `geojsonloader.css` 移入 `.feature-popup`
+- **dialog.css 无硬编码色**：弹窗标题、边框、确认框按钮、代码块、表格、引用块等全部使用 `--dlg-*` 变量
+- **移除自定义 tooltip**：搜索结果悬浮卡片改用浏览器原生 `title` 属性，删除 60 行 JS + 30 行 CSS
+
+### 侧边栏按钮布局
+
+- **上传/文件夹按钮 flex**：新增 `.upload-btn-row`，`flex-wrap: wrap; flex: 1 1 140px`，宽时并排窄时折行
+- **投点编辑器按钮 flex**：`.pd-action-btn` / `.pd-clear-btn` / `.pd-gen-btn` 同样 `flex: 1 1 80px`
+- **上传/文件夹/投点按钮统一风格**：删除 `--upload-*` 和 `--folder-*` 变量，三按钮共用中性样式
+
+### 天地图地名搜索
+
+- **新增 `tiandituSearch()`**：调用天地图 API V2 地名搜索（`queryType=7`），通过 `window.__tiandituSearch` 全局暴露
+- **无结果时显示搜索按钮**：点击 `🔍 搜索地名「...」` 触发 API 请求
+- **结果显示**：`🗺️ 地名` 标签 + 名称地址 + `title` 完整信息，点击飞至该位置（`map.setView`）
+
+### 文件变更
+
+| 文件                                                | 变更                                              |
+| --------------------------------------------------- | ------------------------------------------------- |
+| `service-worker.js`                                 | ➕ `pointdrop.css` 缓存，版本 v1.8.4               |
+| `index.html`                                        | `window.TDT_TK` 暴露 key；`upload-btn-row` 包装器 |
+| `assets/main.css`                                   | 🔄 深色模式简化、变量体系、按钮 flex               |
+| `assets/dialog.css`                                 | 🔄 弹窗样式归集、变量化                            |
+| `assets/pointdrop.css`                              | 🆕 新建                                            |
+| `assets/geojsonloader.js`                           | 🆕 天地图搜索、原生 title                          |
+| `assets/pointdrop.js`                               | 🔄 移除 inline styles                              |
+| `assets/geo-utils.js`                               | 🔄 feature-popup 标题内联样式改为 class            |
+| `docs/overview.md`                                  | 🗂️ 从根目录移至 docs/                              |
+| `assets/bk/Leaflet.VectorGrid-master/docs/main.css` | ℹ️ 第三方 demo 文件，无需修改                      |
 
 ### 新增文档
 
