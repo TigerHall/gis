@@ -47,6 +47,25 @@
   - `yugis_panel_width` → `dupal_panel_width`
   - `clusterEnabled` → `dupal_cluster_enabled`
   - `labelEnabled` → `dupal_label_enabled`
+
+## 2026-06-19 v3 — CSS 变量体系 + 深色模式重设计 + pointdrop 样式分离
+
+### CSS 架构重构
+
+- **main.css / dialog.css**: 全面引入 CSS 变量体系（`--panel-bg`、`--section-*`、`--text-*`、`--dlg-*` 等共约 70 个变量）
+  - 日间/深色模式只靠修改变量值，无需重复写选择器
+  - 新增 `[data-theme="light"]` 和 `[data-theme="dark"]` 属性选择器，用户手动开关双向可控
+  - 深色模式重新配色：`#1c1c20` 面板背景、`#e0e0e0` 高对比文字，更柔和专业
+- 修复约 35 处硬编码颜色改用 `var(--xxx)`（状态灯、搜索框、折叠区、按钮、版本号、Tooltip、Popup 等）
+- 新增 `--panel-shadow` 变量
+
+### pointdrop 内联样式分离
+
+- **新建 `assets/pointdrop.css`**: 提取 pointdrop.js 中约 20 处 `style.cssText` 内联样式，统一为 `.pd-*` 类
+  - 继承 main.css 的 `--xxx` 变量体系，自动适配深色模式
+- **pointdrop.js**: 完全移除所有 `style.cssText` 和内联样式，改用 `className`
+- **geojsonloader.css**: 删除约 50 行旧投点样式，迁移至 pointdrop.css
+- **index.html**: 引入 pointdrop.css
 - **删除死代码**: `__yugis_justResized` 变量及相关逻辑
 - **dialog.js 文档**: 完善描述说明，新增 `data-dialog` 声明式绑定文档和 ES Module 迁移注释
 

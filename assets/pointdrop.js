@@ -1,6 +1,7 @@
 /**
  * pointdrop.js — 投点功能（独立模块）
  * 依赖：window.addUserLayer（由 geojsonloader.js 挂载）
+ *       pointdrop.css（样式）
  * 在 geojsonloader.js 之后加载
  */
 (function () {
@@ -21,15 +22,7 @@
     btn.id = "pointDropBtn";
     btn.textContent = "📍 投点";
     btn.title = "手动输入经纬度生成点位图层，支持粘贴 CSV / TXT / Excel 数据";
-    btn.style.cssText =
-      "width:100%;padding:8px 12px;background:#fff8e1;border:1px solid #cc9933;border-radius:4px;cursor:pointer;font-size:12px;color:#6b530f;transition:background 0.15s;margin-bottom:6px;";
-    btn.onmouseover = function () {
-      btn.style.background = "#fff1c1";
-    };
-    btn.onmouseout = function () {
-      btn.style.background = "#fff8e1";
-    };
-    btn.style.color = "#6b530f";
+    btn.className = "pd-btn";
     btn.onclick = togglePointDropTable;
 
     uploadDiv.parentNode.insertBefore(btn, uploadDiv);
@@ -52,16 +45,14 @@
 
     pointDropTable = document.createElement("div");
     pointDropTable.id = "pointDropTable";
-    pointDropTable.style.cssText =
-      "margin:6px 0 8px;padding:8px;background:#fffde7;border:1px solid #cc9933;border-radius:4px;font-size:11px;color:#222;";
+    pointDropTable.className = "pd-table-container";
 
     // 标题栏
     var titleBar = document.createElement("div");
-    titleBar.style.cssText =
-      "display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;";
+    titleBar.className = "pd-title-bar";
     titleBar.innerHTML =
-      '<span style="font-weight:bold;color:#6b530f;">📍 投点编辑器</span>' +
-      '<span id="pdClose" style="cursor:pointer;color:#666;font-size:14px;" title="关闭">✕</span>';
+      '<span class="pd-title-text">📍 投点编辑器</span>' +
+      '<span class="pd-close-btn" id="pdClose" title="关闭">✕</span>';
     titleBar.querySelector("#pdClose").onclick = function () {
       pointDropTable.style.display = "none";
     };
@@ -69,7 +60,7 @@
 
     // 粘贴区
     var pasteLabel = document.createElement("div");
-    pasteLabel.style.cssText = "color:#333;margin-bottom:2px;";
+    pasteLabel.className = "pd-paste-label";
     pasteLabel.textContent = "粘贴数据（CSV / TSV / Excel 列）：";
     pointDropTable.appendChild(pasteLabel);
 
@@ -77,38 +68,32 @@
     pasteArea.id = "pdPasteArea";
     pasteArea.placeholder =
       "纬度\t经度\t名称\n32.1\t118.5\t南京\n39.9\t116.4\t北京\n\n也可直接粘贴 Excel 或 CSV 内容";
-    pasteArea.style.cssText =
-      "width:100%;min-height:76px;box-sizing:border-box;font-size:11px;margin-bottom:4px;border:1px solid #ccc;border-radius:3px;padding:4px;background:#fff;color:#222;resize: vertical;";
+    pasteArea.className = "pd-paste-area";
     pasteArea.oninput = onPasteInput;
     pointDropTable.appendChild(pasteArea);
 
     // 操作按钮栏
     var btnBar = document.createElement("div");
-    btnBar.style.cssText =
-      "display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;";
+    btnBar.className = "pd-btn-bar";
 
     var addRowBtn = document.createElement("button");
     addRowBtn.textContent = "+ 添加一行";
-    addRowBtn.style.cssText =
-      "padding:3px 8px;font-size:11px;cursor:pointer;border:1px solid #cc9933;background:#fff;color:#6b530f;border-radius:3px;";
+    addRowBtn.className = "pd-action-btn";
     addRowBtn.onclick = addTableRow;
 
     var addColBtn = document.createElement("button");
     addColBtn.textContent = "+ 字段";
-    addColBtn.style.cssText =
-      "padding:3px 8px;font-size:11px;cursor:pointer;border:1px solid #cc9933;background:#fff;color:#6b530f;border-radius:3px;";
+    addColBtn.className = "pd-action-btn";
     addColBtn.onclick = addTableColumn;
 
     var clearBtn = document.createElement("button");
     clearBtn.textContent = "清空";
-    clearBtn.style.cssText =
-      "padding:3px 8px;font-size:11px;cursor:pointer;border:1px solid #ccc;background:#fff;color:#666;border-radius:3px;";
+    clearBtn.className = "pd-clear-btn";
     clearBtn.onclick = clearTable;
 
     var genBtn = document.createElement("button");
     genBtn.textContent = "📍 生成图层";
-    genBtn.style.cssText =
-      "padding:3px 8px;font-size:11px;cursor:pointer;border:1px solid #99cc99;background:#f0f7f0;color:#2d5a2d;border-radius:3px;font-weight:bold;";
+    genBtn.className = "pd-gen-btn";
     genBtn.onclick = generateLayer;
 
     btnBar.appendChild(addRowBtn);
@@ -120,8 +105,7 @@
     // 表格容器
     var tableWrap = document.createElement("div");
     tableWrap.id = "pdTableWrap";
-    tableWrap.style.cssText =
-      "max-height:220px;overflow:auto;border:1px solid #ddd;border-radius:3px;";
+    tableWrap.className = "pd-table-wrap";
     pointDropTable.appendChild(tableWrap);
 
     // 插入到面板
@@ -154,42 +138,29 @@
       colWidths.push("min(60px," + len + "ch)");
     }
 
-    var html =
-      '<table style="width:max-content;min-width:100%;font-size:11px;border-collapse:collapse;table-layout:fixed;">';
+    var html = '<table class="pd-table">';
 
     // 表头
-    html += "<thead><tr style='background:#f9f0d4;color:#333;'>";
-    html +=
-      '<th style="width:' +
-      colWidths[0] +
-      ';text-align:center;padding:3px;border:1px solid #ddd;color:#333;">#</th>';
-    html +=
-      '<th style="width:' +
-      colWidths[1] +
-      ';padding:3px 6px;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">纬度 *</th>';
-    html +=
-      '<th style="width:' +
-      colWidths[2] +
-      ';padding:3px 6px;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">经度 *</th>';
-    html +=
-      '<th style="width:' +
-      colWidths[3] +
-      ';padding:3px 6px;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">Name</th>';
+    html += "<thead><tr>";
+    html += '<th class="pd-col-num" style="width:' + colWidths[0] + ';">#</th>';
+    html += '<th style="width:' + colWidths[1] + ';">纬度 *</th>';
+    html += '<th style="width:' + colWidths[2] + ';">经度 *</th>';
+    html += '<th style="width:' + colWidths[3] + ';">Name</th>';
     // 表头——额外字段名用 contenteditable 实现可编辑
     for (var ci2 = 0; ci2 < pointDropCols.length; ci2++) {
       var cw = colWidths[4 + ci2];
       html +=
         '<th style="width:' +
         cw +
-        ';padding:3px 6px;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">' +
-        '<span contenteditable="true" style="outline:none;display:inline-block;min-width:24px;border-bottom:1px dashed #cc9933;" ' +
+        ';">' +
+        '<span contenteditable="true" ' +
         'onblur="window.__pdRenameCol(' +
         ci2 +
         ',this.textContent)" ' +
         "onkeydown=\"if(event.key==='Enter'){event.preventDefault();this.blur();}\">" +
         escapeHtml(pointDropCols[ci2]) +
         "</span>" +
-        ' <span style="cursor:pointer;color:#c00;font-size:10px;" onclick="window.__pdDelCol(' +
+        ' <span class="pd-del-col-btn" onclick="window.__pdDelCol(' +
         ci2 +
         ')">✕</span></th>';
     }
@@ -200,16 +171,13 @@
     for (var ri = 0; ri < pointDropData.length; ri++) {
       var row = pointDropData[ri];
       html += "<tr>";
-      html +=
-        '<td style="text-align:center;padding:3px;border:1px solid #ddd;color:#666;">' +
-        (ri + 1) +
-        "</td>";
+      html += '<td class="pd-col-num">' + (ri + 1) + "</td>";
       html +=
         '<td style="width:' +
         colWidths[1] +
-        ';padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
+        ';"><input class="pd-cell-input" type="text" value="' +
         escapeAttr(row.lat) +
-        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;" title="' +
+        '" title="' +
         escapeAttr(row.lat) +
         '" oninput="window.__pdChange(' +
         ri +
@@ -217,9 +185,9 @@
       html +=
         '<td style="width:' +
         colWidths[2] +
-        ';padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
+        ';"><input class="pd-cell-input" type="text" value="' +
         escapeAttr(row.lng) +
-        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;" title="' +
+        '" title="' +
         escapeAttr(row.lng) +
         '" oninput="window.__pdChange(' +
         ri +
@@ -227,9 +195,9 @@
       html +=
         '<td style="width:' +
         colWidths[3] +
-        ';padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
+        ';"><input class="pd-cell-input" type="text" value="' +
         escapeAttr(row.Name) +
-        '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;" title="' +
+        '" title="' +
         escapeAttr(row.Name) +
         '" oninput="window.__pdChange(' +
         ri +
@@ -241,9 +209,9 @@
         html +=
           '<td style="width:' +
           cw2 +
-          ';padding:2px 3px;border:1px solid #ddd;"><input type="text" value="' +
+          ';"><input class="pd-cell-input" type="text" value="' +
           escapeAttr(val) +
-          '" style="width:100%;border:none;font-size:11px;outline:none;background:#fff;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;" title="' +
+          '" title="' +
           escapeAttr(val) +
           '" oninput="window.__pdChange(' +
           ri +

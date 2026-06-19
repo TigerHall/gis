@@ -1,0 +1,255 @@
+/**
+ * pointdrop.css — 投点编辑器专用样式
+ * 依赖：main.css（继承 --xxx 变量体系）
+ * 配合：pointdrop.js
+ *
+ * 简约黑白风格，颜色由 main.css 的 :root / [data-theme="dark"] 控制。
+ *
+ * 引入顺序（index.html）：
+ *   main.css → dialog.css → pointdrop.css
+ */
+
+/* ========== 投点按钮（"📍 投点"） ========== */
+.pd-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--content-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary);
+  transition: background 0.15s;
+}
+.pd-btn:hover {
+  background: var(--content-hover-bg);
+}
+
+/* ========== 投点表格容器 ========== */
+.pd-table-container {
+  margin: 6px 0 8px;
+  padding: 8px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+/* ========== 标题栏 ========== */
+.pd-title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.pd-title-text {
+  font-weight: bold;
+  color: var(--text-primary);
+}
+.pd-close-btn {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.pd-close-btn:hover {
+  background: var(--content-hover-bg);
+  color: var(--text-primary);
+}
+
+/* ========== 粘贴标签 ========== */
+.pd-paste-label {
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+/* ========== 粘贴区域 ========== */
+.pd-paste-area {
+  width: 100%;
+  min-height: 76px;
+  box-sizing: border-box;
+  font-size: 11px;
+  margin-bottom: 4px;
+  border: 1px solid var(--input-border);
+  border-radius: 3px;
+  padding: 4px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  resize: vertical;
+}
+.pd-paste-area:focus {
+  outline: 1px solid var(--accent-lighter);
+  border-color: var(--accent-lighter);
+}
+
+/* ========== 操作按钮栏 ========== */
+.pd-btn-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+/* ========== 通用操作按钮 ========== */
+.pd-action-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--input-border);
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  border-radius: 3px;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+  flex: 1 1 80px;
+  min-width: 0;
+}
+.pd-action-btn:hover {
+  background: var(--content-hover-bg);
+  border-color: var(--text-muted);
+}
+
+/* ========== 清空按钮 ========== */
+.pd-clear-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--input-border);
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  border-radius: 3px;
+  transition:
+    background 0.12s,
+    color 0.12s;
+  flex: 1 1 60px;
+  min-width: 0;
+}
+.pd-clear-btn:hover {
+  background: var(--content-hover-bg);
+  color: var(--text-primary);
+}
+
+/* ========== 生成按钮 ========== */
+.pd-gen-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: var(--content-bg);
+  color: var(--accent);
+  border-radius: 3px;
+  font-weight: bold;
+  transition: background 0.12s;
+  flex: 1 1 100px;
+  min-width: 0;
+}
+.pd-gen-btn:hover {
+  background: var(--content-hover-bg);
+}
+
+/* ========== 表格包裹容器 ========== */
+.pd-table-wrap {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+}
+
+/* ========== 投点表格 ========== */
+.pd-table {
+  width: max-content;
+  min-width: 100%;
+  font-size: 11px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* 表头 */
+.pd-table thead tr {
+  background: var(--section-header-bg);
+}
+.pd-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--border-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.pd-table th.pd-col-num {
+  width: 28px;
+  text-align: center;
+  padding: 3px;
+}
+
+/* 表头中的可编辑字段名 */
+.pd-table th [contenteditable] {
+  cursor: text;
+  padding: 0 2px;
+  min-width: 28px;
+  outline: none;
+  display: inline-block;
+  border-bottom: 1px dashed var(--text-dim);
+  transition: background 0.15s;
+}
+.pd-table th [contenteditable]:hover {
+  background: var(--content-hover-bg);
+}
+.pd-table th [contenteditable]:focus {
+  background: var(--panel-bg);
+  outline: 1px solid var(--accent-lighter);
+  border-radius: 2px;
+}
+
+/* 删除字段按钮 */
+.pd-del-col-btn {
+  cursor: pointer;
+  color: var(--status-error);
+  font-size: 10px;
+  margin-left: 2px;
+}
+
+/* 表体 */
+.pd-table td {
+  padding: 2px 3px;
+  border: 1px solid var(--border-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+.pd-table td.pd-col-num {
+  text-align: center;
+  padding: 3px;
+  color: var(--text-dim);
+}
+
+/* 表体内的输入框 */
+.pd-cell-input {
+  width: 100%;
+  border: none;
+  font-size: 11px;
+  outline: none;
+  background: var(--panel-bg);
+  color: var(--input-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+.pd-cell-input:focus {
+  outline: 1px solid var(--accent-lighter);
+  background: var(--content-checked-bg);
+}

@@ -41,12 +41,115 @@
    - 深色模式自动跟随系统（@media prefers-color-scheme: dark）
    ============================================ */
 
-/* ----- 模态 dialog（有遮罩，居中显示） ----- */
+:root {
+  --dlg-bg: #fff;
+  --dlg-header-bg: #fafafa;
+  --dlg-header-border: #e8e8e8;
+  --dlg-header-text: #222;
+  --dlg-body-text: #444;
+  --dlg-close-color: var(--dlg-close-color);
+  --dlg-close-hover-bg: #e8e8e8;
+  --dlg-close-hover-text: #333;
+  --dlg-h1-color: #222;
+  --dlg-h2-color: #333;
+  --dlg-h2-border: #eee;
+  --dlg-h3-color: #444;
+  --dlg-h4-color: #555;
+  --dlg-code-bg: #f0f0f0;
+  --dlg-pre-bg: #f5f5f5;
+  --dlg-pre-border: #e8e8e8;
+  --dlg-hr-border: #ddd;
+  --dlg-link-color: #1890ff;
+  --dlg-th-bg: #f0f7f0;
+  --dlg-th-text: #3a7a3a;
+  --dlg-tr-even: #fafcfa;
+  --dlg-th-border: #d4d8d4;
+  --dlg-blockquote-bg: #f8f9fa;
+  --dlg-blockquote-border: #1890ff;
+  --dlg-blockquote-text: #555;
+  --dlg-shadow: rgba(0, 0, 0, 0.25);
+  --dlg-backdrop: rgba(0, 0, 0, 0.45);
+  --dlg-toc-bg: #f6faf6;
+  --dlg-toc-border: #dde8dd;
+  --dlg-toc-text: #4a8c4a;
+  --dlg-toc-hover: #e0eee0;
+  --dlg-toc-h1: #3a7a3a;
+  --dlg-toc-h2: #4a8c4a;
+  --dlg-toc-h3: #7aaa7a;
+  --dlg-backtop-bg: rgba(74, 140, 74, 0.85);
+  --dlg-backtop-hover: #3a7a3a;
+  --dlg-confirm-text: #444;
+  --dlg-cancel-bg: #f0f0f0;
+  --dlg-cancel-text: #666;
+  --dlg-cancel-hover-bg: #e0e0e0;
+  --dlg-cancel-hover-text: #333;
+  --dlg-ok-bg: #4a8c4a;
+  --dlg-ok-hover: #3a7a3a;
+  --dlg-toast-bg: #fff;
+  --dlg-toast-shadow: rgba(0, 0, 0, 0.15);
+  --dlg-toast-text: #333;
+  --dlg-toc-arrow: #8ab88a;
+}
+
+[data-theme="dark"] {
+  --dlg-bg: #131313;
+  --dlg-header-bg: #1a1a1a;
+  --dlg-header-border: #2a2a2a;
+  --dlg-header-text: #eee;
+  --dlg-body-text: #ccc;
+  --dlg-close-color: #888;
+  --dlg-close-hover-bg: #333;
+  --dlg-close-hover-text: #eee;
+  --dlg-h1-color: #eee;
+  --dlg-h2-color: #ddd;
+  --dlg-h2-border: #2a2a2a;
+  --dlg-h3-color: #ccc;
+  --dlg-h4-color: #bbb;
+  --dlg-code-bg: #222;
+  --dlg-pre-bg: #0d0d0d;
+  --dlg-pre-border: #2a2a2a;
+  --dlg-hr-border: #2a2a2a;
+  --dlg-link-color: #64b5f6;
+  --dlg-th-bg: #1a2a1a;
+  --dlg-th-text: #4caf50;
+  --dlg-tr-even: #181818;
+  --dlg-th-border: #2a2a2a;
+  --dlg-blockquote-bg: #1a1a1a;
+  --dlg-blockquote-border: #64b5f6;
+  --dlg-blockquote-text: #ccc;
+  --dlg-shadow: rgba(0, 0, 0, 0.6);
+  --dlg-backdrop: rgba(0, 0, 0, 0.65);
+  --dlg-toc-bg: #181818;
+  --dlg-toc-border: #2a2a2a;
+  --dlg-toc-text: #4caf50;
+  --dlg-toc-hover: #222;
+  --dlg-toc-h1: #4caf50;
+  --dlg-toc-h2: #5cb85c;
+  --dlg-toc-h3: #6abf6a;
+  --dlg-backtop-bg: rgba(76, 175, 80, 0.7);
+  --dlg-backtop-hover: #4caf50;
+  --dlg-confirm-text: #ccc;
+  --dlg-cancel-bg: #222;
+  --dlg-cancel-text: #bbb;
+  --dlg-cancel-hover-bg: #333;
+  --dlg-cancel-hover-text: #eee;
+  --dlg-ok-bg: #4caf50;
+  --dlg-ok-hover: #5cb85c;
+  --dlg-toast-bg: #1a1a1a;
+  --dlg-toast-shadow: rgba(0, 0, 0, 0.5);
+  --dlg-toast-text: #ddd;
+  --dlg-toc-arrow: #5cb85c;
+}
+
+/* ============================================
+   手机端响应式
+   ============================================ */
 .app-dialog {
   border: none;
   border-radius: 16px;
   padding: 0;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+  background: var(--dlg-bg);
+  box-shadow: 0 12px 48px var(--dlg-shadow);
   width: min(680px, calc(100vw - 32px));
   max-height: calc(100vh - 40px);
   margin: auto;
@@ -54,7 +157,7 @@
 }
 
 .app-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--dlg-backdrop);
   animation: fadeIn 0.2s ease;
 }
 
@@ -84,10 +187,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--dlg-header-border);
   position: sticky;
   top: 0;
-  background: #fafafa;
+  background: var(--dlg-header-bg);
   z-index: 1;
   border-radius: 16px 16px 0 0;
 }
@@ -95,7 +198,7 @@
 .app-dialog .dialog-header h3 {
   margin: 0;
   font-size: 17px;
-  color: #222;
+  color: var(--dlg-header-text);
   font-weight: 600;
 }
 
@@ -105,7 +208,7 @@
   border: none;
   font-size: 22px;
   cursor: pointer;
-  color: #999;
+  color: var(--dlg-close-color);
   width: 32px;
   height: 32px;
   display: flex;
@@ -116,8 +219,8 @@
 }
 
 .app-dialog .dialog-close:hover {
-  background: #e8e8e8;
-  color: #333;
+  background: var(--dlg-close-hover-bg);
+  color: var(--dlg-close-hover-text);
 }
 
 /* 内容区 */
@@ -127,7 +230,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   line-height: 1.7;
-  color: #444;
+  color: var(--dlg-body-text);
   word-break: break-word;
   overflow-wrap: break-word;
 }
@@ -143,13 +246,13 @@
 
 .app-dialog .dialog-body h1 {
   font-size: 22px;
-  color: #222;
+  color: var(--dlg-h1-color);
 }
 .app-dialog .dialog-body h2 {
   font-size: 18px;
-  color: #333;
+  color: var(--dlg-h2-color);
   margin-top: 24px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--dlg-h2-border);
   padding-bottom: 6px;
   counter-increment: h2-counter;
   counter-reset: h3-counter;
@@ -159,7 +262,7 @@
 }
 .app-dialog .dialog-body h3 {
   font-size: 15px;
-  color: #444;
+  color: var(--dlg-body-text);
   margin-top: 16px;
   counter-increment: h3-counter;
 }
@@ -168,7 +271,7 @@
 }
 .app-dialog .dialog-body h4 {
   font-size: 14px;
-  color: #555;
+  color: var(--dlg-h4-color);
   margin-top: 12px;
 }
 .app-dialog .dialog-body p {
@@ -176,19 +279,19 @@
   text-indent: 2em;
 }
 .app-dialog .dialog-body code {
-  background: #f0f0f0;
+  background: var(--dlg-code-bg);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;
   font-family: Consolas, monospace;
 }
 .app-dialog .dialog-body pre {
-  background: #f5f5f5;
+  background: var(--dlg-pre-bg);
   padding: 14px;
   border-radius: 8px;
   overflow-x: auto;
   font-size: 13px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--dlg-pre-border);
   word-break: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
@@ -209,7 +312,7 @@
   list-style-position: inside;
 }
 .app-dialog .dialog-body a {
-  color: #1890ff;
+  color: var(--dlg-link-color);
   text-decoration: none;
 }
 .app-dialog .dialog-body a:hover {
@@ -223,27 +326,27 @@
 }
 .app-dialog .dialog-body th,
 .app-dialog .dialog-body td {
-  border: 1px solid #d4d8d4;
+  border: 1px solid var(--dlg-th-border);
   padding: 6px 10px;
   text-align: left;
   word-break: break-word;
   overflow-wrap: break-word;
 }
 .app-dialog .dialog-body th {
-  background: #f0f7f0;
+  background: var(--dlg-th-bg);
   font-weight: 600;
-  color: #3a7a3a;
+  color: var(--dlg-th-text);
 }
 .app-dialog .dialog-body tr:nth-child(even) {
-  background: #fafcfa;
+  background: var(--dlg-tr-even);
 }
 .app-dialog .dialog-body blockquote {
-  border-left: 3px solid #1890ff;
+  border-left: 3px solid var(--dlg-blockquote-border);
   margin: 12px 0;
   padding: 8px 16px;
-  background: #f8f9fa;
+  background: var(--dlg-blockquote-bg);
   border-radius: 0 6px 6px 0;
-  color: #555;
+  color: var(--dlg-blockquote-text);
 }
 
 /* ----- Markdown 折叠目录 ----- */
@@ -252,9 +355,9 @@
 }
 
 .md-toc-details {
-  border: 1px solid #dde8dd;
+  border: 1px solid var(--dlg-toc-border);
   border-radius: 8px;
-  background: #f6faf6;
+  background: var(--dlg-toc-bg);
   overflow: hidden;
 }
 
@@ -262,7 +365,7 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: #4a8c4a;
+  color: var(--dlg-toc-text);
   padding: 8px 12px;
   user-select: none;
   list-style: none;
@@ -275,7 +378,7 @@
 .md-toc-summary::before {
   content: "\25B6";
   font-size: 10px;
-  color: #8ab88a;
+  color: var(--dlg-toc-arrow);
   transition: transform 0.2s;
   display: inline-block;
 }
@@ -285,7 +388,7 @@
 }
 
 .md-toc-summary:hover {
-  background: #eaf3ea;
+  background: var(--dlg-toc-hover);
 }
 
 .md-toc-summary::-webkit-details-marker {
@@ -307,11 +410,11 @@
   text-decoration: none;
   border-radius: 3px;
   transition: background 0.1s;
-  color: #4a8c4a;
+  color: var(--dlg-toc-text);
 }
 
 .md-toc-item:hover {
-  background: #e0eee0 !important;
+  background: var(--dlg-toc-hover) !important;
 }
 
 /* 目录层级：h1→6px缩进+粗体, h2→20px, h3→34px+小字 */
@@ -319,21 +422,21 @@
   font-size: 13px;
   font-weight: 600;
   padding-left: 6px;
-  color: #3a7a3a;
+  color: var(--dlg-toc-h1);
 }
 
 .md-toc-item.toc-h2 {
   font-size: 12px;
   font-weight: 500;
   padding-left: 20px;
-  color: #4a8c4a;
+  color: var(--dlg-toc-text);
 }
 
 .md-toc-item.toc-h3 {
   font-size: 11px;
   font-weight: 400;
   padding-left: 34px;
-  color: #7aaa7a;
+  color: var(--dlg-toc-h3);
 }
 
 /* ========== 回到顶部按钮 ========== */
@@ -361,7 +464,7 @@
   line-height: 1;
 }
 .md-back-top:hover {
-  background: #3a7a3a;
+  background: var(--dlg-backtop-hover);
   transform: scale(1.08);
 }
 .md-back-top.visible {
@@ -384,7 +487,7 @@
 .confirm-msg {
   margin: 0 0 20px;
   line-height: 1.6;
-  color: #444;
+  color: var(--dlg-body-text);
 }
 
 .confirm-btns {
@@ -405,22 +508,22 @@
 }
 
 .confirm-cancel {
-  background: #f0f0f0;
-  color: #666;
+  background: var(--dlg-cancel-bg);
+  color: var(--dlg-cancel-text);
 }
 
 .confirm-cancel:hover {
-  background: #e0e0e0;
-  color: #333;
+  background: var(--dlg-cancel-hover-bg);
+  color: var(--dlg-cancel-hover-text);
 }
 
 .confirm-ok {
-  background: #4a8c4a;
+  background: var(--dlg-ok-bg);
   color: #fff;
 }
 
 .confirm-ok:hover {
-  background: #3a7a3a;
+  background: var(--dlg-ok-hover);
 }
 
 /* ============================================
@@ -494,10 +597,10 @@
   border: none;
   border-radius: 10px;
   padding: 10px 18px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px var(--dlg-toast-shadow);
   width: fit-content;
   max-width: 100%;
-  background: #fff;
+  background: var(--dlg-toast-bg);
   opacity: 0;
   transition:
     opacity 0.25s ease,
@@ -515,26 +618,7 @@
 }
 .toast-top.closing {
   transform: translateY(-16px);
-}
-.toast-top-left {
-  transform: translateY(-16px);
-}
-.toast-top-left.open {
-  transform: translateY(0);
-  opacity: 1;
-}
-.toast-top-left.closing {
-  transform: translateY(-16px);
-}
-.toast-top-right {
-  transform: translateY(-16px);
-}
-.toast-top-right.open {
-  transform: translateY(0);
-  opacity: 1;
-}
-.toast-top-right.closing {
-  transform: translateY(-16px);
+  opacity: 0;
 }
 
 /* 底部系列：从下方滑入 */
@@ -547,84 +631,63 @@
 }
 .toast-bottom.closing {
   transform: translateY(16px);
+  opacity: 0;
 }
+
+/* 左上系列：向左上方向 */
+.toast-top-left {
+  transform: translate(-8px, -16px);
+}
+.toast-top-left.open {
+  transform: translate(0, 0);
+  opacity: 1;
+}
+.toast-top-left.closing {
+  transform: translate(-8px, -16px);
+  opacity: 0;
+}
+
+/* 右上系列：向右上方向 */
+.toast-top-right {
+  transform: translate(8px, -16px);
+}
+.toast-top-right.open {
+  transform: translate(0, 0);
+  opacity: 1;
+}
+.toast-top-right.closing {
+  transform: translate(8px, -16px);
+  opacity: 0;
+}
+
+/* 左下系列：向左下方向 */
 .toast-bottom-left {
-  transform: translateY(16px);
+  transform: translate(-8px, 16px);
 }
 .toast-bottom-left.open {
-  transform: translateY(0);
+  transform: translate(0, 0);
   opacity: 1;
 }
 .toast-bottom-left.closing {
-  transform: translateY(16px);
+  transform: translate(-8px, 16px);
+  opacity: 0;
 }
+
+/* 右下系列：向右下方向 */
 .toast-bottom-right {
-  transform: translateY(16px);
+  transform: translate(8px, 16px);
 }
 .toast-bottom-right.open {
-  transform: translateY(0);
+  transform: translate(0, 0);
   opacity: 1;
 }
 .toast-bottom-right.closing {
-  transform: translateY(16px);
+  transform: translate(8px, 16px);
+  opacity: 0;
 }
 
-/* Toast 内部布局 */
-.toast-dialog .toast-cnt {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.toast-dialog .toast-msg {
-  font-size: 14px;
-  color: #333;
-  line-height: 1.4;
-}
-
-/* Toast 操作按钮（如"刷新"） */
-.toast-dialog .toast-action {
-  padding: 5px 12px;
-  border: none;
-  border-radius: 6px;
-  background: #4a8c4a;
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-
-.toast-dialog .toast-action:hover {
-  background: #3a7a3a;
-}
-
-/* Toast 手动关闭按钮（✕，在不自动消失+无操作按钮时自动添加） */
-.toast-dialog .toast-close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #aaa;
-  padding: 0 2px;
-  line-height: 1;
-  flex-shrink: 0;
-  transition: color 0.15s;
-}
-.toast-dialog .toast-close-btn:hover {
-  color: #666;
-}
-
-/* ============================================
-   响应式
-   ============================================ */
-
+/* 手机端响应式 */
 @media (max-width: 480px) {
-  .app-dialog {
-    width: calc(100vw - 24px);
-    border-radius: 12px;
-    max-height: calc(100vh - 24px);
-  }
   .app-dialog .dialog-header {
     padding: 12px 16px;
   }
@@ -661,140 +724,147 @@
 }
 
 /* ============================================
-   深色模式
+   Leaflet 弹窗 & 提示样式
    ============================================ */
 
-@media (prefers-color-scheme: dark) {
-  .app-dialog {
-    background: #2a2a2e;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
-  }
-  .app-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.65);
-  }
-  .app-dialog .dialog-header {
-    background: #333337;
-    border-bottom-color: #444448;
-  }
-  .app-dialog .dialog-header h3 {
-    color: #e8e8e8;
-  }
-  .app-dialog .dialog-close {
-    color: #888;
-  }
-  .app-dialog .dialog-close:hover {
-    background: #444;
-    color: #eee;
-  }
-  .app-dialog .dialog-body {
-    color: #ccc;
-  }
-  .app-dialog .dialog-body h1 {
-    color: #eee;
-  }
-  .app-dialog .dialog-body h2 {
-    color: #ddd;
-    border-bottom-color: #444;
-  }
-  .app-dialog .dialog-body h3 {
-    color: #ccc;
-  }
-  .app-dialog .dialog-body h4 {
-    color: #bbb;
-  }
-  .app-dialog .dialog-body code {
-    background: #3a3a3e;
-    color: #e0e0e0;
-  }
-  .app-dialog .dialog-body pre {
-    background: #1e1e22;
-    border-color: #444;
-  }
-  .app-dialog .dialog-body hr {
-    border-top-color: #444;
-  }
-  .app-dialog .dialog-body a {
-    color: #5ab0ff;
-  }
-  .app-dialog .dialog-body th,
-  .app-dialog .dialog-body td {
-    border-color: #444448;
-  }
-  .app-dialog .dialog-body th {
-    background: #2a3a2a;
-    color: #8aca8a;
-  }
-  .app-dialog .dialog-body tr:nth-child(even) {
-    background: #2a2a2e;
-  }
-  .app-dialog .dialog-body blockquote {
-    background: #333338;
-    border-left-color: #5ab0ff;
-    color: #bbb;
-  }
+/* ========== 要素点击 Popup 样式（适配深色模式） ========== */
 
-  .md-back-top {
-    background: rgba(90, 170, 90, 0.7);
-  }
-  .md-back-top:hover {
-    background: #5aaa5a;
-  }
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  box-shadow: 0 3px 14px var(--panel-shadow);
+}
 
-  .md-toc-details {
-    border-color: #444448;
-    background: #2a2a2e;
-  }
-  .md-toc-summary {
-    color: #7aca7a;
-  }
-  .md-toc-summary::before {
-    color: #6aaa6a;
-  }
-  .md-toc-summary:hover {
-    background: #333337;
-  }
-  .md-toc-item {
-    color: #7aca7a !important;
-  }
-  .md-toc-item:hover {
-    background: #3a3a3e !important;
-  }
+.leaflet-popup-content {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin: 8px 10px;
+}
 
-  .confirm-msg {
-    color: #ccc;
-  }
-  .confirm-cancel {
-    background: #3a3a3e;
-    color: #bbb;
-  }
-  .confirm-cancel:hover {
-    background: #4a4a4e;
-    color: #eee;
-  }
-  .confirm-ok {
-    background: #5a9a5a;
-  }
-  .confirm-ok:hover {
-    background: #6aaa6a;
-  }
+.leaflet-popup-close-button {
+  color: var(--text-dim) !important;
+  transition: color 0.15s;
+}
+.leaflet-popup-close-button:hover {
+  color: var(--text-primary) !important;
+}
 
-  .toast-dialog {
-    background: #333337;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  }
-  .toast-dialog .toast-msg {
-    color: #ddd;
-  }
-  .toast-dialog .toast-action {
-    background: #5a9a5a;
-  }
-  .toast-dialog .toast-action:hover {
-    background: #6aaa6a;
-  }
-  .toast-dialog .toast-close-btn {
-    color: #777;
-  }
-  .toast-dialog .toast-close-btn:hover {
-    color: #bbb;
-  }
+/* ========== 【方案A】Tooltip 样式（替代旧 Popup 样式）========== */
+
+/* 悬停提示 Tooltip */
+.leaflet-tooltip.hover-tooltip {
+  background: var(--panel-bg);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 0;
+  max-width: 300px;
+}
+
+.leaflet-tooltip.hover-tooltip::before {
+  display: none; /* 隐藏箭头 */
+}
+
+.leaflet-tooltip.hover-tooltip .feature-popup table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaflet-tooltip.hover-tooltip .feature-popup table td {
+  padding: 3px 5px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.leaflet-tooltip.hover-tooltip .feature-popup table tr:last-child td {
+  border-bottom: none;
+}
+
+.leaflet-tooltip.hover-tooltip .feature-popup {
+  margin: 8px 10px;
+}
+
+/* ========== 要素弹窗内容 ========== */
+
+.feature-popup {
+  font-size: 12px;
+  line-height: 1.7;
+  min-width: 160px;
+  max-width: 280px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.feature-popup table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.feature-popup td {
+  padding: 2px 4px;
+  vertical-align: top;
+}
+
+.feature-popup td:first-child {
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.feature-popup td:last-child {
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.feature-popup tr:nth-child(even) td {
+  background: var(--content-checked-bg);
+}
+
+/* 要素弹窗标题 */
+.feature-popup-title {
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--section-text);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 3px;
+}
+
+/* ========== Leaflet Hover Popup ========== */
+
+.leaflet-popup.hover-popup {
+  pointer-events: none;
+}
+
+.leaflet-popup.hover-popup .leaflet-popup-content-wrapper {
+  background: var(--panel-bg);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-popup.hover-popup .leaflet-popup-content {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin: 8px 10px;
+}
+
+.leaflet-popup.hover-popup .leaflet-popup-tip-container {
+  display: none;
+}
+
+.leaflet-popup.hover-popup .feature-popup table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaflet-popup.hover-popup .feature-popup table td {
+  padding: 3px 5px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.leaflet-popup.hover-popup .feature-popup table tr:last-child td {
+  border-bottom: none;
 }

@@ -17,6 +17,11 @@
         category: "显示",
         items: [
           {
+            id: "darkModeToggle",
+            label: "深色模式",
+            desc: "开启后切换为深色主题，适合弱光环境使用，减少屏幕眩光",
+          },
+          {
             id: "clusterToggle",
             label: "点要素聚类",
             desc: "开启后点要素按空间距离聚合成群组显示，大幅减轻渲染压力，页面操作更流畅",
@@ -573,6 +578,17 @@
 
   // 开关配置：cbId → { storageKey, control?, enable?, disable? }
   var toggleConfig = {
+    darkModeToggle: {
+      storageKey: TOGGLE_PREFIX + "darkMode",
+      enable: function () {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.documentElement.style.colorScheme = "dark";
+      },
+      disable: function () {
+        document.documentElement.removeAttribute("data-theme");
+        document.documentElement.style.colorScheme = "light";
+      },
+    },
     mouseCoordToggle: {
       storageKey: TOGGLE_PREFIX + "mouseCoord",
       enable: function () {
@@ -643,6 +659,17 @@
       },
     },
   };
+
+  // 初始化主题：仅置顶开关状态，由 initToggle 同时设置 data-theme
+  (function initTheme() {
+    var saved = localStorage.getItem(TOGGLE_PREFIX + "darkMode");
+    if (saved === null) {
+      var isDark =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      localStorage.setItem(TOGGLE_PREFIX + "darkMode", String(isDark));
+    }
+  })();
 
   function initToggle(cbId, cfg) {
     var cb = document.getElementById(cbId);

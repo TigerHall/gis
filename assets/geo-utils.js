@@ -126,13 +126,13 @@
     let titleKey = config.titleField || null;
     if (!titleKey) {
       // 不区分大小写查找 name 字段
-      const nameKey = keys.find(k => k.toLowerCase() === "name");
+      const nameKey = keys.find((k) => k.toLowerCase() === "name");
       if (nameKey && props[nameKey] != null && props[nameKey] !== "") {
         titleKey = nameKey;
       }
     }
     if (titleKey && props[titleKey] != null && props[titleKey] !== "") {
-      titleHtml = `<div style="font-weight:bold;font-size:13px;margin-bottom:4px;color:#2a6a2a;border-bottom:1px solid #eee;padding-bottom:3px;">${props[titleKey]}</div>`;
+      titleHtml = `<div class="feature-popup-title">${props[titleKey]}</div>`;
     }
     // 字段行（排除已作为标题的字段）
     const rows = displayKeys

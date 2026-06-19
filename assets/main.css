@@ -1,3 +1,84 @@
+:root {
+  --panel-bg: #fff;
+  --panel-border: #99cc99;
+  --panel-shadow: rgba(0, 0, 0, 0.05);
+  --section-bg: #f8fbf8;
+  --section-header-bg: #edf3ed;
+  --section-header-hover: #e2ece2;
+  --section-border: #dde8dd;
+  --section-text: #3a7a3a;
+  --section-shadow: rgba(74, 140, 74, 0.06);
+  --group-bg: #fff;
+  --group-header-bg: #f2f8f2;
+  --group-header-hover: #e6f1e6;
+  --group-border: #e4ece4;
+  --group-shadow: rgba(74, 140, 74, 0.08);
+  --content-bg: #fafcfa;
+  --content-hover-bg: #eef4ee;
+  --content-active-bg: #e0ece0;
+  --content-checked-bg: #f0f8f0;
+  --accent: #4a8c4a;
+  --accent-hover: #3a7a3a;
+  --accent-light: #5a9a5a;
+  --accent-lighter: #6aaa6a;
+  --text-primary: #333;
+  --text-secondary: #555;
+  --text-muted: #666;
+  --text-dim: #888;
+  --text-faint: #999;
+  --border-light: #e0e0e0;
+  --border-toggle: #d0d8d0;
+  --input-bg: #fafcfa;
+  --input-border: #d0d8d0;
+  --input-color: #333;
+  --link-color: #1890ff;
+  --status-idle: #ddd;
+  --status-loading: #f0c040;
+  --status-loaded: #4a8c4a;
+  --status-error: #e5534b;
+}
+
+/* 深色模式 */
+[data-theme="dark"] {
+  --panel-bg: #111;
+  --panel-border: #2a2a2a;
+  --panel-shadow: rgba(0, 0, 0, 0.6);
+  --section-bg: #181818;
+  --section-header-bg: #1e1e1e;
+  --section-header-hover: #242424;
+  --section-border: #2a2a2a;
+  --section-text: #4caf50;
+  --section-shadow: rgba(0, 0, 0, 0.3);
+  --group-bg: #111;
+  --group-header-bg: #181818;
+  --group-header-hover: #222;
+  --group-border: #2a2a2a;
+  --group-shadow: rgba(0, 0, 0, 0.3);
+  --content-bg: #111;
+  --content-hover-bg: #1e1e1e;
+  --content-active-bg: #242424;
+  --content-checked-bg: #181818;
+  --accent: #4caf50;
+  --accent-hover: #5cb85c;
+  --accent-light: #6abf6a;
+  --accent-lighter: #8fd88f;
+  --text-primary: #eee;
+  --text-secondary: #ccc;
+  --text-muted: #aaa;
+  --text-dim: #888;
+  --text-faint: #666;
+  --border-light: #2a2a2a;
+  --border-toggle: #2a2a2a;
+  --input-bg: #111;
+  --input-border: #333;
+  --input-color: #eee;
+  --link-color: #64b5f6;
+  --status-idle: #555;
+  --status-loading: #c89428;
+  --status-loaded: #4caf50;
+  --status-error: #d44c44;
+}
+
 /* 备案号悬浮条（固定右下角，合规要求） */
 #beianBar {
   position: fixed;
@@ -28,7 +109,7 @@
 }
 
 html {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 body {
@@ -55,8 +136,8 @@ body {
   transform: translateX(-240px); /* fallback，由 JS 覆盖 */
   width: 240px; /* fallback，由 JS 覆盖 */
   height: 100%;
-  background: #fff;
-  border-right: 1px solid #99cc99;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--panel-border);
   padding: 8px;
   box-sizing: border-box;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
@@ -75,25 +156,12 @@ body {
   -webkit-user-select: none;
   /* 细滚动条，与面板风格统一 */
   scrollbar-width: thin;
-  scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
 }
+
 /* 为所有直接子元素恢复字体 */
 .layer-panel > * {
   font-size: 13px;
   line-height: normal;
-}
-.layer-panel::-webkit-scrollbar {
-  width: 6px;
-}
-.layer-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-.layer-panel::-webkit-scrollbar-thumb {
-  background: rgba(106, 170, 106, 0.25);
-  border-radius: 3px;
-}
-.layer-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(106, 170, 106, 0.45);
 }
 
 /* 面板滚动容器：地图设置 + 搜索栏 + 图层列表统一滚动 */
@@ -102,20 +170,6 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
-}
-.panel-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-.panel-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.panel-scroll::-webkit-scrollbar-thumb {
-  background: rgba(106, 170, 106, 0.25);
-  border-radius: 3px;
-}
-.panel-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(106, 170, 106, 0.45);
 }
 
 /* 【修复】提升active类优先级，明确覆盖默认transform */
@@ -150,31 +204,31 @@ body.resizing-panel {
   transform: translateY(-50%);
   width: 40px;
   height: 80px;
-  background: #fff;
+  background: var(--panel-bg);
   user-select: none;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border-light);
   border-left: none;
   border-radius: 0 8px 8px 0;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 2px 0 5px var(--panel-shadow);
   z-index: 1000;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   writing-mode: vertical-rl;
-  color: #666;
+  color: var(--text-muted);
   font-size: 14px;
   transition: background 0.2s;
 }
 
 .layer-trigger:active {
-  background: #f5f5f5;
-  color: #333;
+  background: var(--content-hover-bg);
+  color: var(--text-primary);
 }
 
 .layer-panel h3 {
   font-size: 15px;
-  color: #3a7a3a;
+  color: var(--section-text);
   margin: 0 0 2px 0;
   padding: 10px 12px 4px;
   flex-shrink: 0;
@@ -184,10 +238,10 @@ body.resizing-panel {
   align-items: center;
   gap: 6px;
   font-size: 16px;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 15px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
 }
 
@@ -224,26 +278,26 @@ body.resizing-panel {
 /* ========== 图层组面板视觉层次 ========== */
 /* 主折叠区（"静态矢量要素"） */
 details.layer-section {
-  border: 1px solid #dde8dd;
+  border: 1px solid var(--section-border);
   border-radius: 8px;
-  background: #f8fbf8;
+  background: var(--section-bg);
   overflow: hidden;
   transition: box-shadow 0.25s ease;
 }
 details.layer-section[open] {
-  box-shadow: 0 1px 4px rgba(74, 140, 74, 0.06);
+  box-shadow: 0 1px 4px var(--section-shadow);
 }
 details.layer-section > summary {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 9px 10px;
-  background: #edf3ed;
+  background: var(--section-header-bg);
   cursor: pointer;
   user-select: none;
   font-size: 13px;
   font-weight: 600;
-  color: #3a7a3a;
+  color: var(--section-text);
   list-style: none;
   transition: background 0.15s;
 }
@@ -251,18 +305,18 @@ details.layer-section > summary::-webkit-details-marker {
   display: none;
 }
 details.layer-section > summary:hover {
-  background: #e2ece2;
+  background: var(--section-header-hover);
 }
 details.layer-section[open] > summary {
-  border-bottom: 1px solid #dde8dd;
+  border-bottom: 1px solid var(--section-border);
 }
 
 /* ========== 图层组折叠区（"全球板块构造"等） ========== */
 details.layer-group {
-  border: 1px solid #e4ece4;
+  border: 1px solid var(--group-border);
   border-radius: 7px;
   margin: 0;
-  background: #ffffff;
+  background: var(--group-bg);
   overflow: hidden;
   transition:
     box-shadow 0.2s ease,
@@ -270,42 +324,42 @@ details.layer-group {
 }
 details.layer-group:hover {
   border-color: #c8dcc8;
-  box-shadow: 0 1px 4px rgba(74, 140, 74, 0.08);
+  box-shadow: 0 1px 4px var(--group-shadow);
 }
 details.layer-group[open] {
-  border-color: #cde0cd;
-  box-shadow: 0 1px 3px rgba(74, 140, 74, 0.06);
+  border-color: var(--group-border);
+  box-shadow: 0 1px 3px var(--group-shadow);
 }
 details.layer-group > summary {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 7px 10px 7px 12px;
-  background: #f2f8f2;
+  background: var(--group-header-bg);
   cursor: pointer;
   user-select: none;
   font-size: 12.5px;
   font-weight: 600;
-  color: #3a7a3a;
+  color: var(--section-text);
   list-style: none;
   transition: background 0.15s;
   border-bottom: 1px solid transparent;
 }
 details.layer-group[open] > summary {
-  border-bottom-color: #e0ece0;
+  border-bottom-color: var(--group-border);
 }
 details.layer-group > summary::-webkit-details-marker {
   display: none;
 }
 details.layer-group > summary:hover {
-  background: #e6f1e6;
+  background: var(--group-header-hover);
 }
 
 /* 图层组展开箭头 */
 .layer-group-arrow {
   display: inline-block;
   font-size: 9px;
-  color: #7aae7a;
+  color: var(--accent-lighter);
   transition: transform 0.2s;
   flex-shrink: 0;
   width: 12px;
@@ -320,21 +374,21 @@ details.layer-section[open] > summary .layer-group-arrow {
 .layer-group-name {
   flex: 1;
   font-weight: 600;
-  color: #3a7a3a;
+  color: var(--section-text);
 }
 
 /* 图层组子项容器（缩进） */
 .layer-group-children {
   padding: 4px 0 6px 14px;
-  background: #fafcfa;
+  background: var(--content-bg);
 }
 
 /* 无分组图层的占位容器 */
 .layer-plain {
   padding: 2px 0 4px 10px;
-  border: 1px solid #e4ece4;
+  border: 1px solid var(--group-border);
   border-radius: 7px;
-  background: #ffffff;
+  background: var(--group-bg);
 }
 
 /* 图层项 */
@@ -352,14 +406,14 @@ details.layer-section[open] > summary .layer-group-arrow {
   position: relative;
 }
 .layer-item:hover {
-  background: #eef4ee;
+  background: var(--content-hover-bg);
 }
 .layer-item:active {
-  background: #e0ece0;
+  background: var(--content-active-bg);
 }
 /* 图层勾选时，左侧加一条小绿条 */
 .layer-item:has(input[type="checkbox"]:checked) {
-  background: #f0f8f0;
+  background: var(--content-checked-bg);
 }
 .layer-item input[type="checkbox"] {
   appearance: none;
@@ -369,11 +423,11 @@ details.layer-section[open] > summary .layer-group-arrow {
   margin: 0;
   cursor: pointer;
   flex-shrink: 0;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   border-radius: 3px;
   position: relative;
   outline: none;
-  background: #fff;
+  background: var(--panel-bg);
   transition: all 0.15s ease;
 }
 .layer-item input[type="checkbox"]:checked {
@@ -393,7 +447,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 .layer-item label {
   flex: 1;
   font-size: 12.5px;
-  color: #555;
+  color: var(--text-secondary);
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -411,17 +465,17 @@ details.layer-section[open] > summary .layer-group-arrow {
   transition: background 0.3s;
 }
 .layer-status[data-status="idle"] {
-  background: #ddd;
+  background: var(--status-idle);
 }
 .layer-status[data-status="loading"] {
-  background: #f0c040;
+  background: var(--status-loading);
   animation: statusPulse 0.8s ease-in-out infinite;
 }
 .layer-status[data-status="loaded"] {
-  background: #4a8c4a;
+  background: var(--accent);
 }
 .layer-status[data-status="error"] {
-  background: #e5534b;
+  background: var(--status-error);
 }
 @keyframes statusPulse {
   0%,
@@ -450,20 +504,20 @@ details.layer-section[open] > summary .layer-group-arrow {
   transition: background 0.2s;
 }
 .group-status[data-status="idle"] {
-  background: #d0d0d0;
+  background: var(--status-idle);
 }
 .group-status[data-status="loading"] {
-  background: #f0c040;
+  background: var(--status-loading);
   animation: groupStatusPulse 0.8s ease-in-out infinite;
 }
 .group-status[data-status="loaded"] {
-  background: #4a8c4a;
+  background: var(--accent);
 }
 .group-status[data-status="partial"] {
-  background: #e8a030;
+  background: var(--status-loading);
 }
 .group-status[data-status="error"] {
-  background: #e5534b;
+  background: var(--status-error);
 }
 
 @keyframes groupStatusPulse {
@@ -480,14 +534,12 @@ details.layer-section[open] > summary .layer-group-arrow {
 #selectAllLayers {
   margin-left: auto;
   flex-shrink: 0;
-  accent-color: #4a8c4a;
   width: 15px;
   height: 15px;
   cursor: pointer;
 }
 .group-select-all {
   flex-shrink: 0;
-  accent-color: #4a8c4a;
   width: 14px;
   height: 14px;
   cursor: pointer;
@@ -507,7 +559,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   width: min(96%, 100vw - 6px);
   margin: 0 auto;
   position: relative;
-  border: min(1.6px, 1vh) dashed #99cc99;
+  border: min(1.6px, 1vh) dashed var(--panel-border);
   border-radius: max(6px, 0.6vw);
   overflow: hidden;
   touch-action: pan-x pan-y;
@@ -515,43 +567,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 }
 
 #map:active {
-  box-shadow: 0 0 16px rgba(153, 204, 153, 0.6);
-}
-
-/* ========== 【方案A】Tooltip 样式（替代旧 Popup 样式）========== */
-
-/* 悬停提示 Tooltip */
-.leaflet-tooltip.hover-tooltip {
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #4a8c4a;
-  border-radius: 8px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-  font-size: 12px;
-  color: #333;
-  padding: 0;
-  max-width: 300px;
-}
-
-.leaflet-tooltip.hover-tooltip::before {
-  display: none; /* 隐藏箭头 */
-}
-
-.leaflet-tooltip.hover-tooltip .feature-popup table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.leaflet-tooltip.hover-tooltip .feature-popup table td {
-  padding: 3px 5px;
-  border-bottom: 1px solid #eee;
-}
-
-.leaflet-tooltip.hover-tooltip .feature-popup table tr:last-child td {
-  border-bottom: none;
-}
-
-.leaflet-tooltip.hover-tooltip .feature-popup {
-  margin: 8px 10px;
+  box-shadow: 0 0 16px rgba(106, 170, 106, 0.4);
 }
 
 /* 站点标签 Tooltip */
@@ -585,19 +601,19 @@ details.layer-section[open] > summary .layer-group-arrow {
   width: 100%;
   padding: 7px 28px 7px 10px;
   font-size: 13px;
-  border: 1px solid #d0d8d0;
+  border: 1px solid var(--border-toggle);
   border-radius: 6px;
-  background: #fafcfa;
-  color: #333;
+  background: var(--content-bg);
+  color: var(--text-primary);
   outline: none;
   transition:
     border-color 0.2s,
     background 0.2s;
 }
 .search-bar input[type="text"]:disabled {
-  background: #f0f2f0;
-  border-color: #d8dcd8;
-  color: #999;
+  background: var(--content-checked-bg);
+  border-color: var(--border-toggle);
+  color: var(--text-faint);
   cursor: not-allowed;
   opacity: 0.8;
 }
@@ -608,7 +624,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   top: 50%;
   transform: translateY(-50%) translate(0, -1px);
   font-size: 12px;
-  color: #999;
+  color: var(--text-faint);
   cursor: pointer;
   display: none;
   user-select: none;
@@ -619,7 +635,7 @@ details.layer-section[open] > summary .layer-group-arrow {
     background 0.15s;
 }
 .search-clear:hover {
-  color: #e5534b;
+  color: var(--status-error);
   font-size: 16px;
   /* background: #f0e0e0; */
 }
@@ -628,17 +644,17 @@ details.layer-section[open] > summary .layer-group-arrow {
 }
 
 .search-bar input[type="text"]:focus {
-  border-color: #4a8c4a;
-  background: #fff;
+  border-color: var(--accent);
+  background: var(--panel-bg);
 }
 
 .search-results {
   display: none;
-  background: #fff;
-  border: 1px solid #c8e0c8;
+  background: var(--panel-bg);
+  border: 1px solid var(--group-border);
   border-top: none;
   border-radius: 0 0 8px 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--panel-shadow);
   max-height: 65vh;
   overflow-y: auto;
   position: absolute;
@@ -659,7 +675,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   padding: 7px 12px;
   cursor: pointer;
   font-size: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-light);
   transition: background 0.15s;
 }
 
@@ -668,21 +684,21 @@ details.layer-section[open] > summary .layer-group-arrow {
 }
 
 .search-result-item:hover {
-  background: #f0f7f0;
+  background: var(--content-hover-bg);
 }
 
 .search-result-tag {
   flex-shrink: 0;
   font-size: 12px;
   color: #fff;
-  background: #6aaa6a;
+  background: var(--accent-lighter);
   border-radius: 3px;
   padding: 1px 5px;
   white-space: nowrap;
 }
 
 .search-result-text {
-  color: #333;
+  color: var(--text-primary);
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -692,7 +708,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 
 .search-result-text mark {
   background: #ffe066;
-  color: #333;
+  color: var(--text-primary);
   border-radius: 2px;
   padding: 0 1px;
 }
@@ -700,7 +716,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 .search-empty {
   padding: 10px 12px;
   font-size: 12px;
-  color: #999;
+  color: var(--text-faint);
   text-align: center;
 }
 
@@ -724,9 +740,9 @@ details.layer-section[open] > summary .layer-group-arrow {
 
 /* ========== 开关折叠区 ========== */
 .toggle-section {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border-light);
   border-radius: 6px;
-  background: #fafcfa;
+  background: var(--content-bg);
   flex-shrink: 0;
 }
 
@@ -734,7 +750,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: #4a8c4a;
+  color: var(--accent);
   padding: 8px 10px;
   user-select: none;
   list-style: none;
@@ -751,7 +767,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 .toggle-section summary::before {
   content: "▶";
   font-size: 10px;
-  color: #8ab88a;
+  color: var(--accent-lighter);
   transition: transform 0.2s;
   display: inline-block;
 }
@@ -761,7 +777,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 }
 
 .toggle-section summary:hover {
-  background: #f0f6f0;
+  background: var(--content-hover-bg);
   border-radius: 6px 6px 0 0;
 }
 
@@ -781,7 +797,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   flex: 1 1 120px;
   min-width: 120px;
   padding: 5px 4px 6px;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-light);
   border-radius: 5px;
   margin-bottom: 0;
   position: relative;
@@ -789,7 +805,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 
 .cluster-toggle-text {
   font-size: 12px;
-  color: #555;
+  color: var(--text-secondary);
   position: relative;
   z-index: 0; /* 文字在按钮下方 */
   padding-right: 48px; /* 给按钮留出空间 */
@@ -816,7 +832,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   transform: translateY(-50%);
   width: 36px;
   height: 20px;
-  background: #ccc;
+  background: var(--status-idle);
   border-radius: 10px;
   transition: background 0.2s;
   z-index: 1; /* 在文字上方 */
@@ -829,7 +845,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   left: 2px;
   width: 16px;
   height: 16px;
-  background: #fff;
+  background: var(--panel-bg);
   border-radius: 50%;
   transition: transform 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -837,7 +853,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 
 /* 开启状态 */
 .cluster-toggle-label input[type="checkbox"]:checked + .cluster-toggle-switch {
-  background: #4a8c4a;
+  background: var(--accent);
 }
 
 .cluster-toggle-label
@@ -852,10 +868,10 @@ details.layer-section[open] > summary .layer-group-arrow {
   flex: 0 0 100%;
   font-size: 11px;
   font-weight: 600;
-  color: #6aaa6a;
+  color: var(--accent-lighter);
   padding: 5px 2px 2px;
   margin-top: 2px;
-  border-top: 1px solid #e8ece8;
+  border-top: 1px solid var(--border-light);
   letter-spacing: 0.3px;
   user-select: none;
 }
@@ -863,41 +879,6 @@ details.layer-section[open] > summary .layer-group-arrow {
   border-top: none;
   margin-top: 0;
   padding-top: 0;
-}
-
-.leaflet-popup.hover-popup {
-  pointer-events: none;
-}
-
-.leaflet-popup.hover-popup .leaflet-popup-content-wrapper {
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #4a8c4a;
-  border-radius: 8px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-}
-
-.leaflet-popup.hover-popup .leaflet-popup-content {
-  font-size: 12px;
-  color: #333;
-  margin: 8px 10px;
-}
-
-.leaflet-popup.hover-popup .leaflet-popup-tip-container {
-  display: none;
-}
-
-.leaflet-popup.hover-popup .feature-popup table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.leaflet-popup.hover-popup .feature-popup table td {
-  padding: 3px 5px;
-  border-bottom: 1px solid #eee;
-}
-
-.leaflet-popup.hover-popup .feature-popup table tr:last-child td {
-  border-bottom: none;
 }
 
 /* ========== 加载缓冲动画 ========== */
@@ -940,7 +921,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 
 /* 版本号（图层面板底部） */
 .app-version {
-  color: rgba(0, 0, 0, 0.3);
+  color: var(--text-faint);
   font-size: 11px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-align: center;
@@ -950,7 +931,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   transition: color 0.15s;
 }
 .app-version:hover {
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--text-muted);
 }
 
 /* 版本号清理菜单（版号上方） */
@@ -976,12 +957,12 @@ details.layer-section[open] > summary .layer-group-arrow {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   cursor: pointer;
   text-align: center;
-  background: #e8e8ed;
-  color: #333;
+  background: var(--content-checked-bg);
+  color: var(--text-primary);
   transition: background 0.12s;
 }
 .refresh-menu button:hover {
-  background: #d8d8de;
+  background: var(--content-hover-bg);
 }
 
 /* 悬浮窗右下角缩放按钮 */
@@ -992,7 +973,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(74, 154, 74, 0.85);
+  background: var(--accent);
   color: #fff;
   border: none;
   font-size: 12px;
@@ -1007,7 +988,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   padding: 0;
 }
 .popup-zoom-btn:hover {
-  background: #3a8a3a;
+  background: var(--accent-hover);
   transform: scale(1.1);
 }
 
@@ -1016,14 +997,14 @@ details.layer-section[open] > summary .layer-group-arrow {
   display: none;
   position: fixed;
   z-index: 9999;
-  background: #fff;
-  border: 1px solid #99cc99;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   padding: 8px 12px;
   font-size: 12px;
   line-height: 1.6;
-  color: #333;
+  color: var(--text-primary);
   max-width: 360px;
   max-height: 280px;
   overflow-x: hidden;
@@ -1036,11 +1017,11 @@ details.layer-section[open] > summary .layer-group-arrow {
   display: block;
 }
 #searchTooltip .tt-key {
-  color: #6aaa6a;
+  color: var(--accent-lighter);
   font-weight: 600;
 }
 #searchTooltip .tt-val {
-  color: #333;
+  color: var(--text-primary);
 }
 
 /* ========== 帮助图标（绿色问号） ========== */
@@ -1051,7 +1032,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4a8c4a;
+  background: var(--accent);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -1062,7 +1043,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   user-select: none;
 }
 .help-icon:hover {
-  background: #3a7a3a;
+  background: var(--accent-hover);
 }
 
 /* 大号帮助图标（标题栏 20px 版本） */
@@ -1075,21 +1056,21 @@ details.layer-section[open] > summary .layer-group-arrow {
 /* ========== 本地图层提示 ========== */
 .local-hint {
   font-size: 11px;
-  color: #999;
+  color: var(--text-faint);
   padding: 2px 4px 6px;
 }
 
 /* ========== 空状态提示 ========== */
 .empty-hint {
   font-size: 12px;
-  color: #888;
+  color: var(--text-dim);
   padding: 10px 4px;
   text-align: center;
   line-height: 1.7;
 }
 .empty-hint-sub {
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
@@ -1099,37 +1080,45 @@ details.layer-section[open] > summary .layer-group-arrow {
   margin-top: 6px;
 }
 
-/* ========== 上传按钮 ========== */
-.upload-btn {
-  width: 100%;
-  padding: 8px 12px;
-  background: #f0f7f0;
-  border: 1px solid #99cc99;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #3a7a3a;
-  transition: background 0.15s;
-}
-.upload-btn:hover {
-  background: #e2f0e2;
+/* 投点按钮独占一行（点击展开投点编辑器） */
+#pointDropAnchor {
+  margin-bottom: 6px;
 }
 
-/* ========== 选择文件夹按钮 ========== */
+/* ========== 上传/文件夹二合一按钮行 ========== */
+.upload-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ========== 上传/文件夹/投点按钮 ========== */
+#pointDropAnchor .pd-btn,
+.upload-btn,
 .folder-btn {
   width: 100%;
   padding: 8px 12px;
-  background: #f0f0f7;
-  border: 1px solid #9999cc;
+  background: var(--content-bg);
+  border: 1px solid var(--border-light);
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
-  color: #3a3a7a;
+  color: var(--text-primary);
   transition: background 0.15s;
-  margin-top: 6px;
+}
+#pointDropAnchor .pd-btn:hover,
+.upload-btn:hover,
+.folder-btn:hover {
+  background: var(--content-hover-bg);
+}
+
+.upload-btn,
+.folder-btn {
+  flex: 1 1 140px;
+  min-width: 0;
 }
 .folder-btn:hover {
-  background: #e2e2f0;
+  background: var(--content-hover-bg);
 }
 
 /* 侧边栏图钉按钮 */
@@ -1241,257 +1230,6 @@ body.sidebar-pinned .layer-trigger {
 }
 
 /* ========== 深色模式 ========== */
-@media (prefers-color-scheme: dark) {
-  .layer-panel {
-    background: #222226;
-    border-right-color: #3a4a3a;
-  }
-
-  .layer-panel h3 {
-    color: #8aca8a;
-  }
-
-  /* 悬浮触发按钮 */
-  .layer-trigger {
-    background: #2a2a2e;
-    border-color: #3a4a3a;
-    color: #8aca8a;
-  }
-  .layer-trigger:active {
-    background: #333337;
-    color: #aadaaa;
-  }
-
-  /* 地图设置折叠区 */
-  .toggle-section {
-    border-color: #3a4a3a;
-    background: #28282c;
-  }
-  .toggle-section summary {
-    color: #7aca7a;
-  }
-  .toggle-section summary:hover {
-    background: #333337;
-    border-radius: 6px 6px 0 0;
-  }
-  .toggle-section:not([open]) summary:hover {
-    border-radius: 6px;
-  }
-  .toggle-section .toggle-bar {
-    border-color: #3a3a3e;
-    background: #2e2e32;
-  }
-  .toggle-section .toggle-bar .cluster-toggle-text {
-    color: #ccc;
-  }
-  .toggle-section .toggle-category {
-    color: #5aaa5a;
-    border-top-color: #3a4a3a;
-  }
-
-  /* 搜索框 */
-  .search-bar input[type="text"] {
-    border-color: #3a4a3a;
-    background: #28282c;
-    color: #ddd;
-  }
-  .search-bar input[type="text"]:focus {
-    border-color: #5a9a5a;
-    background: #222226;
-  }
-  .search-bar input[type="text"]:disabled {
-    background: #222226;
-    border-color: #2e3e2e;
-    color: #666;
-    opacity: 0.7;
-  }
-
-  /* 图层要素面板 */
-  details.layer-section {
-    border-color: #3a4a3a;
-    background: #222226;
-  }
-  details.layer-section[open] {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  }
-  details.layer-section > summary {
-    background: #2a2a2e;
-    color: #7aca7a;
-  }
-  details.layer-section > summary:hover {
-    background: #333337;
-  }
-  details.layer-section[open] > summary {
-    border-bottom-color: #3a4a3a;
-  }
-
-  /* 图层要素面板内容区 */
-  .layer-section-content {
-    background: #1e1e22;
-  }
-
-  /* 图层组 */
-  details.layer-group {
-    border-color: #2e3e2e;
-    background: #252529;
-  }
-  details.layer-group:hover {
-    border-color: #3a5a3a;
-    box-shadow: 0 1px 5px rgba(90, 154, 90, 0.1);
-  }
-  details.layer-group[open] {
-    border-color: #3a5a3a;
-    box-shadow: 0 1px 4px rgba(90, 154, 90, 0.08);
-  }
-  details.layer-group > summary {
-    background: #2a2e2a;
-    color: #7aca7a;
-    border-bottom-color: transparent;
-  }
-  details.layer-group[open] > summary {
-    border-bottom-color: #2e3e2e;
-  }
-  details.layer-group > summary:hover {
-    background: #323632;
-  }
-  .layer-group-name {
-    color: #7aca7a;
-  }
-  .layer-group-children {
-    background: #1e2022;
-  }
-
-  /* 无分组图层容器 */
-  .layer-plain {
-    border-color: #2e3e2e;
-    background: #252529;
-  }
-
-  /* 图层组箭头 */
-  .layer-group-arrow {
-    color: #5a8a5a;
-  }
-
-  /* 图层项 */
-  .layer-item:hover {
-    background: #2a2a2e;
-  }
-  .layer-item:active {
-    background: #222226;
-  }
-  .layer-item:has(input[type="checkbox"]:checked) {
-    background: #282e28;
-  }
-  .layer-item label {
-    color: #bbb;
-  }
-  .layer-item input[type="checkbox"] {
-    accent-color: #5a9a5a;
-  }
-
-  /* 状态指示器 */
-  .layer-status[data-status="idle"] {
-    background: #444;
-  }
-  .layer-status[data-status="loaded"] {
-    background: #5a9a5a;
-  }
-  .group-status[data-status="idle"] {
-    background: #3a3a3a;
-  }
-  .group-status[data-status="loading"] {
-    background: #c8a030;
-  }
-  .group-status[data-status="loaded"] {
-    background: #5a9a5a;
-  }
-  .group-status[data-status="partial"] {
-    background: #c89030;
-  }
-  .group-status[data-status="error"] {
-    background: #c9433b;
-  }
-
-  /* 全选框 */
-  #selectAllLayers,
-  .group-select-all {
-    accent-color: #5a9a5a;
-  }
-
-  /* 版本号 */
-  .app-version {
-    color: rgba(255, 255, 255, 0.25);
-  }
-  .refresh-menu button {
-    background: #2a2a2e;
-    color: #bbb;
-  }
-  .refresh-menu button:hover {
-    background: #333337;
-  }
-
-  /* 用户上传区域 */
-  #userLayerGroup {
-    border-top-color: #3a3a3e;
-    border-bottom-color: #3a3a3e;
-  }
-  #userLayerHint {
-    color: #777 !important;
-  }
-
-  /* 上传按钮 */
-  #userLayerGroup ~ div button {
-    background: #2a3a2a !important;
-    border-color: #3a5a3a !important;
-    color: #8aca8a !important;
-  }
-
-  /* 投点编辑器 */
-  #pointDropTable {
-    background: #333338 !important;
-    border-color: #886633 !important;
-  }
-  #pointDropTable,
-  #pointDropTable * {
-    color: #ddd !important;
-  }
-  #pointDropTable input[type="text"],
-  #pointDropTable textarea,
-  #pdPasteArea {
-    background: #222226 !important;
-    border-color: #555 !important;
-    color: #eee !important;
-  }
-  #pointDropTable input[type="text"]:focus,
-  #pointDropTable textarea:focus,
-  #pdPasteArea:focus {
-    border-color: #cc9933 !important;
-    background: #2a2a1e !important;
-  }
-  #pdTableWrap th {
-    background: #333338 !important;
-    color: #aaa !important;
-  }
-  #pdTableWrap td {
-    color: #ccc !important;
-  }
-
-  /* 本地图层查看提示 */
-  .layer-section-content > div[style*="color:#888"] {
-    color: #999 !important;
-  }
-
-  /* 面板滚动容器暗色滚动条 */
-  .panel-scroll {
-    scrollbar-color: rgba(106, 170, 106, 0.2) transparent;
-  }
-  .panel-scroll::-webkit-scrollbar-thumb {
-    background: rgba(106, 170, 106, 0.2);
-  }
-  .panel-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(106, 170, 106, 0.35);
-  }
-}
 
 /* ===== DEM 高程渲染控制 ===== */
 .dem-controls {
