@@ -49,15 +49,15 @@
             desc: "开启/关闭地图左下角的比例尺条，直观显示当前缩放级别下的距离比例",
           },
           {
+            id: "geomenToggle",
+            label: "编辑测量",
+            desc: "开启/关闭要素编辑与测量工具栏（绘制、修改、删除、测距、测面）",
+          },
+          {
             id: "layerCtrlToggle",
             label: "图层控件",
             desc: "开启/关闭右上角的图层切换控件，可切换天地图不同底图图层",
             checked: true,
-          },
-          {
-            id: "geomenToggle",
-            label: "编辑测量",
-            desc: "开启/关闭要素编辑与测量工具栏（绘制、修改、删除、测距、测面）",
           },
           {
             id: "moreBasemapToggle",
@@ -677,28 +677,4 @@
   for (var cbId in toggleConfig) {
     if (toggleConfig.hasOwnProperty(cbId)) initToggle(cbId, toggleConfig[cbId]);
   }
-
-  // 折叠区 open/close 持久化
-  var sectionEl = document.getElementById("toggleSection");
-  if (sectionEl) {
-    var secSaved = localStorage.getItem(TOGGLE_PREFIX + "sectionOpen");
-    sectionEl.open = secSaved !== null ? secSaved === "true" : true;
-    sectionEl.addEventListener("toggle", function () {
-      localStorage.setItem(TOGGLE_PREFIX + "sectionOpen", String(this.open));
-    });
-  }
-
-  // 地图控制面板：点击面板其他区域自动折叠
-  (function () {
-    var sec = document.getElementById("toggleSection");
-    var panel = document.querySelector(".layer-panel");
-    if (sec && panel) {
-      panel.addEventListener("click", function (e) {
-        if (!sec.open) return;
-        if (sec !== e.target && !sec.contains(e.target)) {
-          sec.open = false;
-        }
-      });
-    }
-  })();
 })();

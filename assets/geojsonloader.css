@@ -1,10 +1,7 @@
 /**
  * GeoJSON Loader - 图层管理样式
- * 提供图层面板、复选框、弹窗等样式
- *
- * 注意：图层组（layer-section/layer-group/layer-item）
- * 的主样式已迁移至 main.css，本文件仅保留
- * 复选框自定义样式等 main.css 未覆盖的细节。
+ * 本文件仅保留 geojsonloader.js 特有的非侧边栏样式。
+ * 所有侧边栏通用样式已迁移至 main.css。
  */
 
 /* ========== 全选行样式（已废弃，保留以防回滚） ========== */
@@ -17,181 +14,18 @@
   user-select: none;
 }
 
-/* ========== 通用复选框样式 ========== */
-.layer-item input[type="checkbox"],
-.group-select-all,
-#selectAllLayers {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  border: 1px solid #ccc;
-  border-radius: 2px;
-  cursor: pointer;
-  position: relative;
-  outline: none;
-  background: #fff;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.layer-item input[type="checkbox"]:checked,
-.group-select-all:checked,
-#selectAllLayers:checked {
-  border-color: transparent;
-}
-
-.layer-item input[type="checkbox"]:checked::after,
-.group-select-all:checked::after,
-#selectAllLayers:checked::after {
-  content: "✓";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff;
-  font-size: 11px;
-  font-weight: bold;
-}
-
-/* 半选状态 */
-.group-select-all.indeterminate,
-#selectAllLayers.indeterminate {
-  border-color: transparent;
-  background: #aaccaa;
-}
-
-.group-select-all.indeterminate::after,
-#selectAllLayers.indeterminate::after {
-  content: "−";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff;
-  font-size: 13px;
-  font-weight: bold;
-  line-height: 1;
-}
-
-#selectAllLayers:checked {
-  background: #5a9a5a;
-}
-
-.group-select-all:checked {
-  background: #6aaa6a;
-}
-
-.layer-item input[type="checkbox"]:checked {
-  background: var(--layer-color, #4caf50);
-}
-
-/* ========== 无分组图层容器（直接显示，无折叠头，主样式见 main.css）========== */
-
-/* 子项容器 - details[open] 时自动可见 */
+/* ========== 子项容器 ========== */
 .layer-group-children {
   overflow: visible;
 }
 
-/* ========== 图层项样式 ========== */
-.layer-item {
-  display: flex;
-  align-items: center;
-  padding: 5px 10px 5px 22px;
-  margin: 1px 0;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s;
+/* ========== 用户上传图层区域 ========== */
+#userLayerGroup {
+  margin: 6px 0;
+  padding: 6px 0;
+  border-top: 1px solid #d0d8d0;
+  border-bottom: 1px solid #d0d8d0;
 }
-
-.layer-item:hover {
-  background: #f5f5f5;
-}
-
-.layer-item label {
-  flex: 1;
-  font-size: 12px;
-  color: #555;
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-left: 6px;
-}
-
-/* ========== 图层状态指示器 ========== */
-.layer-status {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-  background: #ddd;
-  transition: all 0.3s ease;
-}
-
-.layer-status[data-status="idle"] {
-  background: #ddd;
-}
-
-.layer-status[data-status="loading"] {
-  background: #4a90d9;
-  animation: status-pulse 1s infinite;
-}
-
-.layer-status[data-status="loaded"] {
-  background: #5a9a5a;
-  cursor: pointer;
-}
-.layer-status[data-status="loaded"]:hover {
-  transform: scale(1.4);
-  opacity: 0.7;
-}
-
-.layer-status[data-status="error"] {
-  background: #d9534f;
-}
-
-@keyframes status-pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.2);
-  }
-}
-
-/* ========== 定位按钮 ========== */
-.layer-locate-btn {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: #888;
-  font-size: 12px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 3px;
-  margin-left: 2px;
-  transition:
-    color 0.15s,
-    background 0.15s;
-}
-
-.layer-locate-btn:hover {
-  color: #3a7a3a;
-  background: #e2f0e2;
-}
-
-/* ========== 弹窗样式 ========== */
 .feature-popup {
   font-size: 12px;
   line-height: 1.7;
@@ -226,42 +60,29 @@
   background: #f9f9f9;
 }
 
-/* ========== 用户上传图层区域 ========== */
-#userLayerGroup {
-  margin: 6px 0;
-  padding: 6px 0;
-  border-top: 1px solid #d0d8d0;
-  border-bottom: 1px solid #d0d8d0;
-}
-
-/* (标题 div 已移除) */
-
-/* ========== 图层组加载状态指示器 ========== */
-.group-status {
+/* ========== 图层定位按钮 ========== */
+.layer-locate-btn {
   flex-shrink: 0;
-  font-size: 11px;
-  margin-right: 4px;
-  min-width: 16px;
-  text-align: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
   color: #888;
-  transition: all 0.3s ease;
+  font-size: 12px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  margin-left: 2px;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
-
-.group-status[data-status="loading"] {
-  color: #4a90d9;
-  animation: status-pulse 1s infinite;
-}
-
-.group-status[data-status="loaded"] {
-  color: #5a9a5a;
-}
-
-.group-status[data-status="partial"] {
-  color: #f0ad4e;
-}
-
-.group-status[data-status="error"] {
-  color: #d9534f;
+.layer-locate-btn:hover {
+  color: #3a7a3a;
+  background: #e2f0e2;
 }
 
 /* ========== 颜色设置按钮 ========== */

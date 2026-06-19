@@ -119,8 +119,21 @@ body {
 }
 
 /* 【修复】提升active类优先级，明确覆盖默认transform */
-.layer-panel.active {
+#sidebarToggle:checked ~ .layer-panel {
   transform: translateX(0) !important;
+}
+
+/* 点击外部关闭遮罩 */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1665;
+  background: transparent;
+  display: none;
+  cursor: default;
+}
+#sidebarToggle:checked ~ .sidebar-backdrop {
+  display: block;
 }
 
 /* 面板拖拽时全局状态 */
@@ -166,19 +179,6 @@ body.resizing-panel {
   padding: 10px 12px 4px;
   flex-shrink: 0;
 }
-.about-link {
-  color: #999;
-  font-size: 15px;
-  text-decoration: none;
-  line-height: 1;
-  transition: color 0.2s;
-  margin-left: auto;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.about-link:hover {
-  color: #1976d2;
-}
 #selectAllRow {
   display: flex;
   align-items: center;
@@ -190,29 +190,35 @@ body.resizing-panel {
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
 }
-.layer-item {
+
+/* ========== 面板通用模块系统 ========== */
+/* 所有侧边栏内部区块使用统一间距和视觉规范 */
+.panel-module {
+  margin-bottom: 6px;
+}
+
+/* ========== 面板标题栏 ========== */
+.panel-title {
   display: flex;
   align-items: center;
-  padding: 8px 5px;
-  margin-bottom: 5px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
+  flex-wrap: wrap;
+  gap: 6px;
 }
-.layer-item:hover {
-  background: #f5f5f5;
+.title-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.layer-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin-right: 10px;
-  cursor: pointer;
-}
-.layer-item label {
+
+/* ========== 摘要行标题（flex:1 占满剩余空间） ========== */
+.summary-title {
   flex: 1;
-  font-size: 14px;
-  color: #666;
-  cursor: pointer;
+}
+
+/* ========== 隐藏文件输入 ========== */
+.file-input-hidden {
+  display: none;
 }
 
 /* ========== 图层组面板视觉层次 ========== */
@@ -221,7 +227,6 @@ details.layer-section {
   border: 1px solid #dde8dd;
   border-radius: 8px;
   background: #f8fbf8;
-  margin-bottom: 6px;
   overflow: hidden;
   transition: box-shadow 0.25s ease;
 }
@@ -357,12 +362,33 @@ details.layer-section[open] > summary .layer-group-arrow {
   background: #f0f8f0;
 }
 .layer-item input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
   width: 16px;
   height: 16px;
   margin: 0;
   cursor: pointer;
   flex-shrink: 0;
-  accent-color: #4a8c4a;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  position: relative;
+  outline: none;
+  background: #fff;
+  transition: all 0.15s ease;
+}
+.layer-item input[type="checkbox"]:checked {
+  border-color: transparent;
+  background: var(--layer-color, #4caf50);
+}
+.layer-item input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
 }
 .layer-item label {
   flex: 1;
@@ -550,10 +576,9 @@ details.layer-section[open] > summary .layer-group-arrow {
 
 /* ========== 搜索框（侧边栏内，介于地图设置与图层要素之间） ========== */
 .search-bar {
-  padding: 0;
   position: relative;
   flex-shrink: 0;
-  margin: 0;
+  padding: 0 8px;
 }
 
 .search-bar input[type="text"] {
@@ -703,8 +728,6 @@ details.layer-section[open] > summary .layer-group-arrow {
   border-radius: 6px;
   background: #fafcfa;
   flex-shrink: 0;
-  margin-top: 0;
-  margin-bottom: 4px;
 }
 
 .toggle-section summary {
@@ -1020,29 +1043,93 @@ details.layer-section[open] > summary .layer-group-arrow {
   color: #333;
 }
 
-/* 面板内容滚动区：占满剩余高度 */
-#layerItemsContainer {
-  flex: 1;
-  overflow-x: hidden;
-  overflow-y: auto;
-  min-height: 0; /* flex 子元素溢出滚动必须 */
-  padding-top: 4px;
-  /* 细滚动条 */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
+/* ========== 帮助图标（绿色问号） ========== */
+.help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4a8c4a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 0 4px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  user-select: none;
 }
-#layerItemsContainer::-webkit-scrollbar {
-  width: 6px;
+.help-icon:hover {
+  background: #3a7a3a;
 }
-#layerItemsContainer::-webkit-scrollbar-track {
-  background: transparent;
+
+/* 大号帮助图标（标题栏 20px 版本） */
+.help-icon-lg {
+  width: 20px;
+  height: 20px;
+  text-decoration: none;
 }
-#layerItemsContainer::-webkit-scrollbar-thumb {
-  background: rgba(106, 170, 106, 0.25);
-  border-radius: 3px;
+
+/* ========== 本地图层提示 ========== */
+.local-hint {
+  font-size: 11px;
+  color: #999;
+  padding: 2px 4px 6px;
 }
-#layerItemsContainer::-webkit-scrollbar-thumb:hover {
-  background: rgba(106, 170, 106, 0.45);
+
+/* ========== 空状态提示 ========== */
+.empty-hint {
+  font-size: 12px;
+  color: #888;
+  padding: 10px 4px;
+  text-align: center;
+  line-height: 1.7;
+}
+.empty-hint-sub {
+  font-size: 11px;
+  color: #666;
+  font-weight: 600;
+}
+
+/* ========== 上传区域 ========== */
+.upload-area {
+  padding: 10px 0 0;
+  margin-top: 6px;
+}
+
+/* ========== 上传按钮 ========== */
+.upload-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: #f0f7f0;
+  border: 1px solid #99cc99;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #3a7a3a;
+  transition: background 0.15s;
+}
+.upload-btn:hover {
+  background: #e2f0e2;
+}
+
+/* ========== 选择文件夹按钮 ========== */
+.folder-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: #f0f0f7;
+  border: 1px solid #9999cc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #3a3a7a;
+  transition: background 0.15s;
+  margin-top: 6px;
+}
+.folder-btn:hover {
+  background: #e2e2f0;
 }
 
 /* 侧边栏图钉按钮 */
@@ -1162,13 +1249,6 @@ body.sidebar-pinned .layer-trigger {
 
   .layer-panel h3 {
     color: #8aca8a;
-  }
-
-  .about-link {
-    color: #888;
-  }
-  .about-link:hover {
-    color: #5ab0ff;
   }
 
   /* 地图设置折叠区 */

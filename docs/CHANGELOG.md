@@ -1,6 +1,56 @@
 # 更新记录
 
-## 2026-06-17 — v1.8.1
+## 2026-06-19 — 侧边栏全面重构与交互优化
+
+### 新增文档
+
+- 创建 `docs/static-vector-help.md`：静态矢量要素使用说明 + 全量数据来源表格（7 分组、30+ 图层）
+- 创建 `docs/local-layer-help.md`：本地图层使用说明，含拖拽/上传/PWA 打开/投点功能说明
+
+### Dialog 优化
+
+- **dialog.css**: MD 弹窗内容区文字断行处理（`word-break: break-word` + `overflow-wrap: break-word`），段落/列表首行缩进两格
+- **dialog.js**: 更新为 v1.2.0，完善 API 文档，新增声明式 `data-dialog` 绑定，底部添加 ES Module 迁移注释
+
+### 架构重构
+
+- **index.html**: 侧边栏骨架从 JS 迁移到 HTML，新增完整 DOM 结构（标题栏、搜索栏、图层区、本地区、DEM 区），减少 JS 依赖
+- **CSS 开关**: 侧边栏展开/收起从 JS `classList.toggle` 改为纯 CSS Checkbox Hack（`#sidebarToggle:checked ~ .layer-panel`）
+- **模块化布局**: 新增 `.panel-module` 统一类管理所有侧边栏内部组件间距（`margin-bottom: 6px`）
+- **样式清理**: 约 150 行样式从 `geojsonloader.css` 迁移到 `main.css`，删除重复声明
+- **CSS → main.css 迁移**: `.help-icon` / `.help-icon-lg` / `.summary-title` / `.file-input-hidden` / `.panel-title` / `.title-right` / `.panel-module` / `.upload-btn` / `.folder-btn` / `.local-hint` / `.empty-hint` 等
+
+### 交互优化
+
+- **声明式弹窗**: 新增 `data-dialog` HTML 属性 + `dialog.js` 自动绑定，帮助图标无需写 JS 事件（`geojsonloader.js` 删除约 30 行手动绑定）
+- **帮助图标统一**: `aboutLink` 从 `<a class="about-link">` 改为 `<span class="help-icon help-icon-lg">`，与图层组 `?` 图标标签一致；全部添加 `tabindex="0" role="button"`
+- **标题栏右对齐**: `?` 和 📌 用 `.title-right` + `margin-left: auto` 推到右侧
+- **面板开合持久化**: 新增 `initDetailsPersistence()`，`[data-persist-details]` 属性自动保存/恢复 `<details>` 状态
+- **图层展开**: 新增 `expandToLayerGroup(cbOrId)` 抽象函数，在 checkbox change / restore / addUserLayer 中统一调用
+- **搜索持久化**: 搜索勾选的图层调用 `persistLayerCheckState()` 保存状态，刷新后可恢复
+- **Ctrl+F 修复**: 改用 `sidebarToggle.checked = true` 替代已删除的 `classList.add("active")`
+- **移除自动折叠**: 删除 `app.js` 中 toggleSection 自动折叠逻辑，开合完全由用户控制
+
+### Bug 修复
+
+- **复选框颜色回归**: 恢复 `.layer-item input[type="checkbox"]` 自定义 `appearance: none`，`--layer-color` 显示各图层专属颜色而非统一绿色
+- **搜索展开图层**: 搜索点击结果时同时展开子组 (`details.layer-group`) 和父级 section
+- **展开逻辑覆盖**: 修复图层恢复 (`restoreLayerCheckStates`) 和用户图层创建 (`addUserLayer`) 时未展开面板的问题
+- **残留 JS 面板代码**: 3 处 `panel.classList.add("active")` 改为 `sidebarToggle.checked = true`
+
+### 细节
+
+- **搜索栏移至顶部**: 搜索栏调到地图设置之上，优先搜索
+- **地图设置重排**: "编辑测量"和"图层控件"顺序互换
+- **localStorage key 统一**:
+  - `yugis_sidebar_pinned` → `dupal_sidebar_pinned`
+  - `yugis_panel_width` → `dupal_panel_width`
+  - `clusterEnabled` → `dupal_cluster_enabled`
+  - `labelEnabled` → `dupal_label_enabled`
+- **删除死代码**: `__yugis_justResized` 变量及相关逻辑
+- **dialog.js 文档**: 完善描述说明，新增 `data-dialog` 声明式绑定文档和 ES Module 迁移注释
+
+---
 
 ### 新增网络底图图层
 
@@ -142,7 +192,7 @@
 - 对应 `index.html` 新增 `<script>` 标签，`service-worker.js` 缓存列表同步更新
 - 保留待拆分（内部耦合度高）：文件/文件夹上传（~200行）、搜索功能（~729行）
 
-### Bug 修复
+### 1.8.1 Bug 修复
 
 - 全选/全不选操作不持久化 → 新增 `persistLayerCheckState(cb, checked)`，覆盖 4 条全选路径
 - 用户图层 checkbox 增加 `dataset.persistentId` 属性

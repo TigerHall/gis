@@ -21,7 +21,7 @@
 - **GeoJSON**（`.geojson` / `.json`）
 - **KML**（`.kml`）
 - **KMZ**（`.kmz`，压缩的 KML）
-- **ZIP 压缩包**（`.zip`，内含 SHP / KML / GeoJSON）
+- **ZIP 压缩包**（`.zip`，可内含 SHP / KML / GeoJSON）
 
 ### 方式二：拖拽文件
 

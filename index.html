@@ -95,20 +95,47 @@
   </head>
 
   <body>
+    <!-- 侧边栏开关（隐藏checkbox） -->
+    <input
+      type="checkbox"
+      id="sidebarToggle"
+      class="sidebar-toggle-input"
+      hidden
+    />
     <!-- 悬浮触发按钮 -->
-    <div class="layer-trigger" id="layerTrigger">要素加载</div>
+    <label
+      class="layer-trigger"
+      id="layerTrigger"
+      for="sidebarToggle"
+      tabindex="0"
+      >要素加载</label
+    >
+    <!-- 点击外部关闭的遮罩 -->
+    <label class="sidebar-backdrop" for="sidebarToggle"></label>
     <!-- 左侧图层控制面板 -->
     <div class="layer-panel" id="layerPanel">
-      <h3>OGV-海洋地质一张图</h3>
+      <h3 id="panelTitle" class="panel-title">
+        <span>OGV-海洋地质一张图</span>
+        <span class="title-right">
+          <span
+            class="help-icon help-icon-lg"
+            id="aboutLink"
+            tabindex="0"
+            role="button"
+            data-dialog="README.md"
+            data-dialog-title="关于本站"
+            title="关于本站"
+            >?</span
+          >
+          <button class="sidebar-pin-btn" id="pinBtn" title="钉住侧边栏">
+            📌
+          </button>
+        </span>
+      </h3>
       <div class="panel-resize-handle" id="panelResizeHandle"></div>
       <div class="panel-scroll" id="panelScroll">
-        <!-- 地图设置（由标题行 ⚙️ 按钮控制） -->
-        <details class="toggle-section" id="toggleSection">
-          <summary>⚙️ 地图设置</summary>
-          <div class="toggle-body" id="toggleBody"></div>
-        </details>
         <!-- 搜索框 -->
-        <div class="search-bar" id="searchBar">
+        <div class="search-bar panel-module" id="searchBar">
           <input
             type="text"
             id="searchInput"
@@ -118,9 +145,111 @@
           <span class="search-clear" id="searchClear" title="清空搜索">❌</span>
           <div class="search-results" id="searchResults"></div>
         </div>
-        <div id="layerItemsContainer"></div>
+        <!-- 地图设置（由标题行 ⚙️ 按钮控制） -->
+        <details
+          class="toggle-section panel-module"
+          id="toggleSection"
+          data-persist-details
+        >
+          <summary>⚙️ 地图设置</summary>
+          <div class="toggle-body" id="toggleBody"></div>
+        </details>
+        <!-- 静态矢量要素图层组 -->
+        <details
+          class="layer-section panel-module"
+          id="dataLayerSection"
+          open
+          data-persist-details
+        >
+          <summary id="dataLayerSummary">
+            <span class="layer-group-arrow">▶</span>
+            <span class="summary-title">📑 静态矢量要素</span>
+            <span
+              class="help-icon"
+              id="dataHelpIcon"
+              tabindex="0"
+              role="button"
+              data-dialog="docs/static-vector-help.md"
+              data-dialog-title="📑 静态矢量要素 — 帮助"
+              title="查看使用说明及数据来源"
+              >?</span
+            >
+            <input
+              type="checkbox"
+              class="group-select-all"
+              id="selectAllLayers"
+              title="全选 / 全不选所有图层"
+            />
+          </summary>
+          <div class="layer-section-content" id="dataLayerContent"></div>
+        </details>
+        <!-- 本地图层查看组 -->
+        <details
+          class="layer-section panel-module"
+          id="userLayerSection"
+          open
+          data-persist-details
+        >
+          <summary id="userLayerSummary">
+            <span class="layer-group-arrow">▶</span>
+            <span class="summary-title">🗺️ 本地图层查看</span>
+            <span
+              class="help-icon"
+              id="localHelpIcon"
+              tabindex="0"
+              role="button"
+              data-dialog="docs/local-layer-help.md"
+              data-dialog-title="🗺️ 本地图层查看 — 帮助"
+              title="查看本地图层使用说明"
+              >?</span
+            >
+            <input
+              type="checkbox"
+              class="group-select-all"
+              id="selectAllLocalLayers"
+              title="全选/全不选所有本地图层"
+            />
+          </summary>
+          <div class="layer-section-content" id="userLayerContent">
+            <div class="local-hint">
+              数据仅在本机解析加载，不会上传至任何服务器
+            </div>
+            <div id="userLayerGroup">
+              <div id="userLayerHint" class="empty-hint">
+                还没有本地图层载入<br /><span class="empty-hint-sub"
+                  >💡 可拖拽文件/文件夹到页面中直接加载</span
+                >
+              </div>
+            </div>
+            <div class="upload-area" id="uploadArea">
+              <div id="pointDropAnchor"></div>
+              <button class="upload-btn" id="uploadBtn">
+                📄 上传矢量（单文件）
+              </button>
+              <input
+                type="file"
+                id="fileInput"
+                class="file-input-hidden"
+                multiple
+                accept=".geojson,.json,.shp,.zip,.kml,application/vnd.google-earth.kml+xml,.kmz,application/vnd.google-earth.kmz"
+              />
+              <button class="folder-btn" id="folderBtn">📁 选择文件夹</button>
+              <input
+                type="file"
+                id="folderInput"
+                class="file-input-hidden"
+                webkitdirectory
+                multiple
+              />
+            </div>
+          </div>
+        </details>
         <!-- DEM 高程图层控制 -->
-        <details class="toggle-section" id="demSection">
+        <details
+          class="toggle-section panel-module"
+          id="demSection"
+          data-persist-details
+        >
           <summary>🏔️ DEM高程渲染（实验中）</summary>
           <div class="dem-controls">
             <div class="dem-upload-row">

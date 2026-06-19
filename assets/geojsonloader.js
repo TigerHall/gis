@@ -46,118 +46,79 @@
     }, 100);
 
     // ========== 面板交互逻辑 ==========
-    const layerTrigger = document.getElementById("layerTrigger");
-    const layerPanel = document.getElementById("layerPanel");
     let selectAllCheckbox = null;
 
-    if (layerTrigger && layerPanel) {
-      layerTrigger.addEventListener("click", (e) => {
+    // 图钉按钮
+    var pinBtn = document.getElementById("pinBtn");
+    var layerPanel = document.getElementById("layerPanel");
+    var sidebarToggle = document.getElementById("sidebarToggle");
+    if (pinBtn) {
+      pinBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        layerPanel.classList.toggle("active");
-      });
-      document.addEventListener("click", (e) => {
-        if (
-          layerPanel.classList.contains("active") &&
-          !layerPanel.contains(e.target) &&
-          !layerTrigger.contains(e.target) &&
-          !window.__yugis_justResized &&
-          !document.body.classList.contains("sidebar-pinned")
-        ) {
-          layerPanel.classList.remove("active");
+        var isPinned = !document.body.classList.contains("sidebar-pinned");
+        document.body.classList.toggle("sidebar-pinned", isPinned);
+        pinBtn.classList.toggle("active", isPinned);
+        if (pinBtn.classList.contains("active")) {
+          pinBtn.style.opacity = "1";
+          pinBtn.style.transform = "rotate(45deg)";
+        } else {
+          pinBtn.style.opacity = "0.35";
+          pinBtn.style.transform = "";
         }
+        localStorage.setItem("dupal_sidebar_pinned", isPinned);
+        if (isPinned && sidebarToggle) {
+          sidebarToggle.checked = true;
+        }
+        setTimeout(function () {
+          map.invalidateSize();
+        }, 350);
       });
-      layerPanel.addEventListener("click", (e) => {
-        e.stopPropagation();
-      });
 
-      const titleH3 = layerPanel.querySelector("h3");
-      if (titleH3) {
-        titleH3.textContent = "";
-        titleH3.style.cssText =
-          "display:flex;align-items:center;flex-wrap:wrap;gap:6px;";
-
-        var titleSpan = document.createElement("span");
-        titleSpan.textContent = "OGV-海洋地质一张图";
-
-        // 关于按钮
-        var aboutLink = document.createElement("a");
-        aboutLink.className = "about-link";
-        aboutLink.title = "关于本站";
-        aboutLink.textContent = "?";
-        aboutLink.href = "#";
-        aboutLink.style.cssText =
-          "display:inline-flex;align-items:center;justify-content:center;" +
-          "width:20px;height:20px;border-radius:50%;background:#4a8c4a;color:#fff;" +
-          "font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;flex-shrink:0;" +
-          "transition:background 0.15s;user-select:none;";
-        aboutLink.addEventListener("mouseenter", function () {
-          this.style.background = "#3a7a3a";
-        });
-        aboutLink.addEventListener("mouseleave", function () {
-          this.style.background = "#4a8c4a";
-        });
-        aboutLink.addEventListener("click", function (e) {
-          e.preventDefault();
-          if (typeof showMarkdown === "function") {
-            showMarkdown("README.md", "关于本站");
-          }
-        });
-
-        // 图钉按钮
-        var pinBtn = document.createElement("button");
-        pinBtn.className = "sidebar-pin-btn";
-        pinBtn.title = "钉住侧边栏";
-        pinBtn.innerHTML = "📌";
-        pinBtn.style.cssText =
-          "background:none;border:none;cursor:pointer;font-size:15px;padding:0 4px;opacity:0.35;transition:opacity 0.2s,transform 0.2s;line-height:1;flex-shrink:0;";
-        pinBtn.addEventListener("mouseenter", function () {
-          this.style.opacity = "0.7";
-        });
-        pinBtn.addEventListener("mouseleave", function () {
-          this.style.opacity = "0.35";
-        });
-        pinBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          var isPinned = !document.body.classList.contains("sidebar-pinned");
-          document.body.classList.toggle("sidebar-pinned", isPinned);
-          pinBtn.classList.toggle("active", isPinned);
-          if (pinBtn.classList.contains("active")) {
-            pinBtn.style.opacity = "1";
-            pinBtn.style.transform = "rotate(45deg)";
-          } else {
-            pinBtn.style.opacity = "0.35";
-            pinBtn.style.transform = "";
-          }
-          localStorage.setItem("yugis_sidebar_pinned", isPinned);
-          if (isPinned) {
-            layerPanel.classList.add("active");
-          }
+      // 恢复图钉状态
+      (function () {
+        var savedPinned =
+          localStorage.getItem("dupal_sidebar_pinned") === "true";
+        if (savedPinned) {
+          document.body.classList.add("sidebar-pinned");
+          pinBtn.classList.add("active");
+          pinBtn.style.opacity = "1";
+          pinBtn.style.transform = "rotate(45deg)";
+          if (sidebarToggle) sidebarToggle.checked = true;
           setTimeout(function () {
             map.invalidateSize();
           }, 350);
-        });
-
-        // 恢复图钉状态
-        (function () {
-          var savedPinned =
-            localStorage.getItem("yugis_sidebar_pinned") === "true";
-          if (savedPinned) {
-            document.body.classList.add("sidebar-pinned");
-            pinBtn.classList.add("active");
-            pinBtn.style.opacity = "1";
-            pinBtn.style.transform = "rotate(45deg)";
-            layerPanel.classList.add("active");
-            setTimeout(function () {
-              map.invalidateSize();
-            }, 350);
-          }
-        })();
-
-        titleH3.appendChild(titleSpan);
-        titleH3.appendChild(aboutLink);
-        titleH3.appendChild(pinBtn);
-      }
+        }
+      })();
     }
+
+    // ========== details 面板开合状态持久化 ==========
+    // 为所有带 data-persist-details 属性的 <details> 保存/恢复 open 状态
+    (function initDetailsPersistence() {
+      var STORAGE_PREFIX = "dupal_details_open_";
+
+      // 清理 app.js 旧版残留
+      try {
+        localStorage.removeItem("dupal_toggle_sectionOpen");
+      } catch (e) {}
+
+      document
+        .querySelectorAll("details[data-persist-details]")
+        .forEach(function (el) {
+          var key = STORAGE_PREFIX + el.id;
+          if (!el.id) return;
+
+          // 恢复上次状态
+          var saved = localStorage.getItem(key);
+          if (saved !== null) {
+            el.open = saved === "true";
+          }
+
+          // 监听开合变化并保存
+          el.addEventListener("toggle", function () {
+            localStorage.setItem(key, String(el.open));
+          });
+        });
+    })();
 
     // ========== 侧边栏宽度可调节 ==========
     (function initPanelResize() {
@@ -166,7 +127,7 @@
       var trigger = document.getElementById("layerTrigger");
       if (!panel || !handle) return;
 
-      var STORAGE_KEY = "yugis_panel_width";
+      var STORAGE_KEY = "dupal_panel_width";
       var MIN_WIDTH = 180;
       var MAX_WIDTH = 500;
       var DEFAULT_WIDTH = 300;
@@ -217,9 +178,6 @@
         applyWidth(newWidth);
       }
 
-      // 标记是否刚结束拖拽，防止 mouseup 冒泡触发 panel 收起
-      window.__yugis_justResized = false;
-
       function stopResize() {
         if (!isResizing) return;
         isResizing = false;
@@ -230,11 +188,6 @@
         document.removeEventListener("touchmove", onResize);
         document.removeEventListener("touchend", stopResize);
         localStorage.setItem(STORAGE_KEY, String(panelWidth));
-        // 标记：接下来 300ms 内的 click 不触发 panel 收起
-        window.__yugis_justResized = true;
-        setTimeout(function () {
-          window.__yugis_justResized = false;
-        }, 300);
       }
     })();
 
@@ -1372,6 +1325,17 @@
       } catch (e) {}
     }
 
+    // 展开 checkbox 所在的面板层级：子组 → section
+    function expandToLayerGroup(cbOrId) {
+      var cb =
+        typeof cbOrId === "string" ? document.getElementById(cbOrId) : cbOrId;
+      if (!cb) return;
+      var group = cb.closest("details.layer-group");
+      if (group) group.open = true;
+      var section = cb.closest("details.layer-section, details.toggle-section");
+      if (section && !section.open) section.open = true;
+    }
+
     // ========== 状态同步 ==========
     function syncGroupStatus(groupDiv) {
       const groupCb = groupDiv.querySelector(".group-select-all");
@@ -1758,72 +1722,28 @@
     let globalLayerIndex = 0;
 
     function generateLayerItems() {
-      const container = document.getElementById("layerItemsContainer");
+      // ====== 数据图层区：子组填充 ======
+      var layerContent = document.getElementById("dataLayerContent");
 
-      // 创建图层组面板（可折叠），摘要行 = 全选复选框 + "图层要素"
-      var layerSection = document.createElement("details");
-      layerSection.className = "layer-section";
-      layerSection.open = true;
-      var layerSummary = document.createElement("summary");
+      // 全选/全不选复选框
+      selectAllCheckbox = document.getElementById("selectAllLayers");
+      if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener("change", function () {
+          this.classList.remove("indeterminate");
+          if (this.checked) {
+            selectAllLayers();
+            document
+              .querySelectorAll("details.layer-group")
+              .forEach(function (d) {
+                if (!d.open) d.open = true;
+              });
+          } else {
+            unselectAllLayers();
+          }
+        });
+      }
 
-      selectAllCheckbox = document.createElement("input");
-      selectAllCheckbox.type = "checkbox";
-      selectAllCheckbox.id = "selectAllLayers";
-      selectAllCheckbox.title = "全选 / 全不选所有图层";
-      selectAllCheckbox.addEventListener("change", function () {
-        this.classList.remove("indeterminate");
-        if (this.checked) {
-          selectAllLayers();
-          document
-            .querySelectorAll("details.layer-group")
-            .forEach(function (d) {
-              if (!d.open) d.open = true;
-            });
-        } else {
-          unselectAllLayers();
-        }
-      });
-
-      var arrow = document.createElement("span");
-      arrow.className = "layer-group-arrow";
-      arrow.textContent = "▶";
-
-      var sectionTitle = document.createElement("span");
-      sectionTitle.textContent = "📑 静态矢量要素";
-      sectionTitle.style.cssText = "flex:1;";
-
-      layerSummary.appendChild(arrow);
-      layerSummary.appendChild(sectionTitle);
-
-      // 帮助图标
-      var dataHelpIcon = document.createElement("span");
-      dataHelpIcon.textContent = "?";
-      dataHelpIcon.title = "查看使用说明及数据来源";
-      dataHelpIcon.style.cssText =
-        "display:inline-flex;align-items:center;justify-content:center;" +
-        "width:18px;height:18px;border-radius:50%;background:#4a8c4a;color:#fff;" +
-        "font-size:12px;font-weight:700;cursor:pointer;margin:0 4px;flex-shrink:0;" +
-        "transition:background 0.15s;user-select:none;";
-      dataHelpIcon.onmouseover = function () {
-        dataHelpIcon.style.background = "#3a7a3a";
-      };
-      dataHelpIcon.onmouseout = function () {
-        dataHelpIcon.style.background = "#4a8c4a";
-      };
-      dataHelpIcon.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (typeof showMarkdown === "function") {
-          showMarkdown("docs/static-vector-help.md", "📑 静态矢量要素 — 帮助");
-        }
-      });
-      layerSummary.appendChild(dataHelpIcon);
-
-      layerSummary.appendChild(selectAllCheckbox);
-
-      layerSection.appendChild(layerSummary);
-      var layerContent = document.createElement("div");
-      layerContent.className = "layer-section-content";
-      layerSection.appendChild(layerContent);
+      // 帮助图标（已通过 data-dialog 属性在 dialog.js 声明式绑定）
 
       window.geoJsonGroups.forEach(function (group) {
         const isPlain = !group.groupName; // 无分组名 = 直接显示图层
@@ -1948,6 +1868,8 @@
           }
           checkbox.addEventListener("change", function () {
             this.style.background = this.checked ? fixedColor : "#fff";
+            // 勾选时展开到对应面板层级
+            if (this.checked) expandToLayerGroup(this);
             // 持久化内置图层的勾选状态
             try {
               localStorage.setItem(
@@ -2010,161 +1932,56 @@
         }
       });
 
-      // ====== 本地图层查看面板（用户上传 + 投点，独立于预制图层） ======
-      var localSection = document.createElement("details");
-      localSection.className = "layer-section";
-      localSection.open = true;
-      var localSummary = document.createElement("summary");
-      var localArrow = document.createElement("span");
-      localArrow.className = "layer-group-arrow";
-      localArrow.textContent = "▶";
-      var localTitle = document.createElement("span");
-      localTitle.textContent = "🗺️ 本地图层查看";
-      localTitle.style.cssText = "flex:1;";
-      localSummary.appendChild(localArrow);
-      localSummary.appendChild(localTitle);
-
-      // 帮助图标
-      var localHelpIcon = document.createElement("span");
-      localHelpIcon.textContent = "?";
-      localHelpIcon.title = "查看本地图层使用说明";
-      localHelpIcon.style.cssText =
-        "display:inline-flex;align-items:center;justify-content:center;" +
-        "width:18px;height:18px;border-radius:50%;background:#4a8c4a;color:#fff;" +
-        "font-size:12px;font-weight:700;cursor:pointer;margin:0 4px;flex-shrink:0;" +
-        "transition:background 0.15s;user-select:none;";
-      localHelpIcon.onmouseover = function () {
-        localHelpIcon.style.background = "#3a7a3a";
-      };
-      localHelpIcon.onmouseout = function () {
-        localHelpIcon.style.background = "#4a8c4a";
-      };
-      localHelpIcon.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (typeof showMarkdown === "function") {
-          showMarkdown("docs/local-layer-help.md", "🗺️ 本地图层查看 — 帮助");
-        }
-      });
-      localSummary.appendChild(localHelpIcon);
+      // ====== 本地图层查看面板：事件绑定（骨架已在 HTML 中） ======
+      // 帮助图标已通过 data-dialog 属性在 dialog.js 声明式绑定
 
       // 本地图层全选/全不选
-      var localSelectAll = document.createElement("input");
-      localSelectAll.type = "checkbox";
-      localSelectAll.className = "group-select-all";
-      localSelectAll.title = "全选/全不选所有本地图层";
-      localSelectAll.addEventListener("click", function (e) {
-        e.stopPropagation();
-      });
-      localSelectAll.addEventListener("change", function () {
-        var items = document.querySelectorAll(
-          '#userLayerGroup .layer-item input[type="checkbox"]',
-        );
-        var isChecked = this.checked;
-        items.forEach(function (cb) {
-          if (isChecked && !cb.checked) {
-            cb.checked = true;
-            var lc = layerCache[cb.id];
-            cb.style.background = cb.style.getPropertyValue("--layer-color");
-            persistLayerCheckState(cb, true);
-            if (lc) lc.addTo(map);
-          } else if (!isChecked && cb.checked) {
-            cb.checked = false;
-            cb.style.background = "#fff";
-            persistLayerCheckState(cb, false);
-            if (layerCache[cb.id]) map.removeLayer(layerCache[cb.id]);
-          }
+      var localSelectAll = document.getElementById("selectAllLocalLayers");
+      if (localSelectAll) {
+        localSelectAll.addEventListener("click", function (e) {
+          e.stopPropagation();
         });
-      });
-      localSummary.appendChild(localSelectAll);
+        localSelectAll.addEventListener("change", function () {
+          var items = document.querySelectorAll(
+            '#userLayerGroup .layer-item input[type="checkbox"]',
+          );
+          var isChecked = this.checked;
+          items.forEach(function (cb) {
+            if (isChecked && !cb.checked) {
+              cb.checked = true;
+              var lc = layerCache[cb.id];
+              cb.style.background = cb.style.getPropertyValue("--layer-color");
+              persistLayerCheckState(cb, true);
+              if (lc) lc.addTo(map);
+            } else if (!isChecked && cb.checked) {
+              cb.checked = false;
+              cb.style.background = "#fff";
+              persistLayerCheckState(cb, false);
+              if (layerCache[cb.id]) map.removeLayer(layerCache[cb.id]);
+            }
+          });
+        });
+      }
 
-      localSection.appendChild(localSummary);
-      var localContent = document.createElement("div");
-      localContent.className = "layer-section-content";
-      localSection.appendChild(localContent);
-
-      // 提示文字（仅本地解析）
-      var localHint = document.createElement("div");
-      localHint.style.cssText =
-        "font-size:11px;color:#999;padding:2px 4px 6px;";
-      localHint.textContent = "数据仅在本机解析加载，不会上传至任何服务器";
-      localContent.appendChild(localHint);
-
-      var userGroup = document.createElement("div");
-      userGroup.id = "userLayerGroup";
-      // 空状态提示
-      var emptyHint = document.createElement("div");
-      emptyHint.id = "userLayerHint";
-      emptyHint.style.cssText =
-        "font-size:12px;color:#888;padding:10px 4px;text-align:center;line-height:1.7;";
-      emptyHint.innerHTML =
-        "还没有本地图层载入<br>" +
-        '<span style="font-size:11px;color:#666;font-weight:600;">💡 可拖拽文件/文件夹到页面中直接加载</span>';
-      userGroup.appendChild(emptyHint);
-      localContent.appendChild(userGroup);
-
-      var uploadDiv = document.createElement("div");
-      uploadDiv.style.cssText = "padding:10px 0 0;margin-top:6px;";
-
-      // 投点按钮锚点（pointdrop.js 在这里插入按钮和处理面板），放在上传按钮上方
-      var pdAnchor = document.createElement("div");
-      pdAnchor.id = "pointDropAnchor";
-      uploadDiv.appendChild(pdAnchor);
-
-      var uploadBtn = document.createElement("button");
-      uploadBtn.textContent = "📄 上传矢量（单文件）";
-      uploadBtn.title =
-        "支持格式：GeoJSON、JSON、KML、KMZ、ZIP（内可含 SHP/KML/GeoJSON）";
-      uploadBtn.style.cssText =
-        "width:100%;padding:8px 12px;background:#f0f7f0;border:1px solid #99cc99;border-radius:4px;cursor:pointer;font-size:12px;color:#3a7a3a;transition:background 0.15s;";
-      uploadBtn.onmouseover = function () {
-        uploadBtn.style.background = "#e2f0e2";
-      };
-      uploadBtn.onmouseout = function () {
-        uploadBtn.style.background = "#f0f7f0";
-      };
-      var fileInput = document.createElement("input");
-      fileInput.type = "file";
-      fileInput.accept =
-        ".geojson,.json,.shp,.zip,.kml,application/vnd.google-earth.kml+xml,.kmz,application/vnd.google-earth.kmz";
-      fileInput.multiple = true;
-      fileInput.style.display = "none";
-      uploadBtn.addEventListener("click", function () {
-        fileInput.click();
-      });
-      fileInput.addEventListener("change", handleFileUpload);
-      uploadDiv.appendChild(uploadBtn);
-      uploadDiv.appendChild(fileInput);
+      // 上传按钮
+      var uploadBtn = document.getElementById("uploadBtn");
+      var fileInput = document.getElementById("fileInput");
+      if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener("click", function () {
+          fileInput.click();
+        });
+        fileInput.addEventListener("change", handleFileUpload);
+      }
 
       // 选择文件夹按钮
-      var folderBtn = document.createElement("button");
-      folderBtn.textContent = "📁 选择文件夹";
-      folderBtn.title =
-        "递归搜索文件夹内的 shp、kml、kmz、json、geojson 文件并添加为图层";
-      folderBtn.style.cssText =
-        "width:100%;padding:8px 12px;background:#f0f0f7;border:1px solid #9999cc;border-radius:4px;cursor:pointer;font-size:12px;color:#3a3a7a;transition:background 0.15s;margin-top:6px;";
-      folderBtn.onmouseover = function () {
-        folderBtn.style.background = "#e2e2f0";
-      };
-      folderBtn.onmouseout = function () {
-        folderBtn.style.background = "#f0f0f7";
-      };
-      var folderInput = document.createElement("input");
-      folderInput.type = "file";
-      folderInput.webkitdirectory = true;
-      folderInput.multiple = true;
-      folderInput.style.display = "none";
-      folderBtn.addEventListener("click", function () {
-        folderInput.click();
-      });
-      folderInput.addEventListener("change", handleFolderUpload);
-      uploadDiv.appendChild(folderBtn);
-      uploadDiv.appendChild(folderInput);
-
-      localContent.appendChild(uploadDiv);
-
-      // 将两个面板放入容器
-      container.appendChild(layerSection);
-      container.appendChild(localSection);
+      var folderBtn = document.getElementById("folderBtn");
+      var folderInput = document.getElementById("folderInput");
+      if (folderBtn && folderInput) {
+        folderBtn.addEventListener("click", function () {
+          folderInput.click();
+        });
+        folderInput.addEventListener("change", handleFolderUpload);
+      }
     }
 
     // ========== 文件上传 ==========
@@ -2347,8 +2164,8 @@
 
           Promise.allSettled(shpLoadPromises).then(function () {
             window.hideLoading();
-            var layerPanel = document.getElementById("layerPanel");
-            if (layerPanel) layerPanel.classList.add("active");
+            var toggle = document.getElementById("sidebarToggle");
+            if (toggle) toggle.checked = true;
             // 弹出缺失/失败的提示
             if (warnings.length > 0) {
               alert("SHP 加载提示：\n\n" + warnings.join("\n\n"));
@@ -2533,6 +2350,8 @@
       checkbox.style.background = autoShow !== false ? fixedColor : "#fff";
       checkbox.addEventListener("change", function () {
         this.style.background = this.checked ? fixedColor : "#fff";
+        // 勾选时展开到对应面板层级
+        if (this.checked) expandToLayerGroup(this);
         if (this.checked) {
           if (layerCache[uid]) layerCache[uid].addTo(map);
         } else {
@@ -2568,6 +2387,8 @@
           }
         }
       });
+      // checkbox 创建时如果已勾选（如恢复），展开对应层级
+      if (checkbox.checked) expandToLayerGroup(checkbox);
 
       var label = document.createElement("label");
       label.htmlFor = uid;
@@ -2689,8 +2510,8 @@
           try {
             var data = JSON.parse(ev.target.result);
             addUserLayer(data, file.name);
-            var layerPanel = document.getElementById("layerPanel");
-            if (layerPanel) layerPanel.classList.add("active");
+            var toggle = document.getElementById("sidebarToggle");
+            if (toggle) toggle.checked = true;
           } catch (err) {
             alert("GeoJSON 解析失败：" + file.name + "\n" + err.message);
           }
@@ -3065,6 +2886,7 @@
               if (cb && !cb.checked) {
                 cb.checked = true;
                 cb.style.background = layerColorMap[cbId] || "#fff";
+                persistLayerCheckState(cb, true);
                 loadGeoJSONLayer(cb.value, cbId, true);
               } else if (cb && cb.checked) {
                 // 已加载则直接缩放到图层
@@ -3077,11 +2899,8 @@
                   });
                 }
               }
-              // 勾选时展开对应组
-              if (cb) {
-                var groupDetails = cb.closest("details.layer-group");
-                if (groupDetails) groupDetails.open = true;
-              }
+              // 展开对应组及父级 section
+              expandToLayerGroup(cb);
               resultsBox.classList.remove("open");
               return;
             }
@@ -3092,10 +2911,10 @@
               // 图层未加载 → 先勾选加载，加载后再高亮
               cb.checked = true;
               cb.style.background = layerColorMap[cbId] || "#fff";
+              persistLayerCheckState(cb, true);
               loadGeoJSONLayer(cb.value, cbId, true);
-              // 展开对应组
-              var groupDetails = cb.closest("details.layer-group");
-              if (groupDetails) groupDetails.open = true;
+              // 展开对应组及父级 section
+              expandToLayerGroup(cb);
               resultsBox.classList.remove("open");
 
               // 注册加载完成后的回调：定位到该要素
@@ -3261,8 +3080,9 @@
         if ((e.ctrlKey || e.metaKey) && e.key === "f") {
           e.preventDefault();
           var panel = document.getElementById("layerPanel");
-          if (panel && !panel.classList.contains("active")) {
-            panel.classList.add("active");
+          var toggle = document.getElementById("sidebarToggle");
+          if (toggle && !toggle.checked) {
+            toggle.checked = true;
           }
           input.focus();
           input.select();
@@ -3274,7 +3094,7 @@
     function initClusterToggle() {
       var toggle = document.getElementById("clusterToggle");
       if (!toggle) return;
-      var saved = localStorage.getItem("clusterEnabled");
+      var saved = localStorage.getItem("dupal_cluster_enabled");
       if (saved !== null) {
         clusterEnabled = saved === "true";
         toggle.checked = clusterEnabled;
@@ -3283,7 +3103,7 @@
       }
       toggle.addEventListener("change", function () {
         clusterEnabled = this.checked;
-        localStorage.setItem("clusterEnabled", String(clusterEnabled));
+        localStorage.setItem("dupal_cluster_enabled", String(clusterEnabled));
         rebuildLoadedPointLayers();
       });
     }
@@ -3292,7 +3112,7 @@
     function initLabelToggle() {
       var toggle = document.getElementById("labelToggle");
       if (!toggle) return;
-      var saved = localStorage.getItem("labelEnabled");
+      var saved = localStorage.getItem("dupal_label_enabled");
       if (saved !== null) {
         labelEnabled = saved === "true";
         toggle.checked = labelEnabled;
@@ -3302,7 +3122,7 @@
       }
       toggle.addEventListener("change", function () {
         labelEnabled = this.checked;
-        localStorage.setItem("labelEnabled", String(labelEnabled));
+        localStorage.setItem("dupal_label_enabled", String(labelEnabled));
         rebuildLoadedPointLayers();
       });
     }
@@ -3451,6 +3271,8 @@
           if (saved === "true" && !cb.checked) {
             cb.checked = true;
             cb.style.background = layerColorMap[cb.id] || "#fff";
+            // 展开对应面板层级
+            expandToLayerGroup(cb);
             // 触发加载
             if (cb.dataset.userLayer) {
               if (layerCache[cb.id]) layerCache[cb.id].addTo(map);

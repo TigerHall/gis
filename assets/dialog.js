@@ -1,42 +1,44 @@
 /*!
- * Dialog.js v1.1.0 — 原生 dialog 弹窗工具
- * 依赖: dialog.css（必须引入）
- * 可选依赖: marked.js（showMarkdown 需要）
+ * Dialog.js v1.2.0 — 原生 dialog 弹窗工具
+ *
+ * 全局函数：showToast / closeToast / showMarkdown / showConfirm
+ *
+ * ── 依赖 ──────────────────────────────
+ * 必须: dialog.css（样式）
+ * 可选: marked.js（showMarkdown 渲染 MD 需要）
+ *
+ * ── 加载方式（传统 script 标签） ──────
+ *    <link rel="stylesheet" href="./assets/dialog.css">
+ *    <script src="./assets/dialog.js"></script>
+ *    <!-- showMarkdown 需要 marked.js（可选） -->
+ *    <script src="./assets/marked.min.js"></script>
+ *
+ *    说明：本文件使用 IIFE（立即执行函数）暴露全局变量，
+ *    不依赖 ES module 系统，与项目现有加载方式一致。
+ *    如需改为 ES module，见底部「ES Module 迁移」注释。
  *
  * ========================================
  *  快速开始
  * ========================================
  *
- * 1. 引入资源（顺序重要）：
- *    <link rel="stylesheet" href="./assets/dialog.css">
- *    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>  <!-- 可选 -->
- *    <script src="./assets/dialog.js"></script>
- *
- * 2. 使用：
- *    // 顶部通知（自动堆叠、自动消失）
- *    showToast('消息内容');
- *
- *    // 带操作按钮（如刷新）
+ * 1. Toast 通知
+ *    showToast('消息内容');                    // 顶部通知，自动消失
+ *    showToast('消息', { position: 'bottom' }); // 底部弹出
+ *    showToast('处理中…', { duration: 0 });     // 不自动消失
  *    showToast('新版本可用', { action: '刷新', onAction: () => location.reload() });
  *
- *    // 不自动消失（无操作按钮时自动加上 ✕ 关闭按钮）
- *    showToast('正在处理…', { duration: 0 });
- *
- *    // 获取引用，手动关闭（如导出流程：先 loading → 完成时关掉再弹新 toast）
- *    var t = showToast('⏳ 处理中…', { duration: 0 });
- *    // ... 完成后 ...
- *    closeToast(t);
- *    showToast('✅ 完成');
- *
- *    // 底部弹出
- *    showToast('消息', { position: 'bottom' });
- *
- *    // 角落弹出
- *    showToast('消息', { position: 'top-right' });
- *    showToast('消息', { position: 'bottom-left' });
- *
- *    // 模态弹窗加载 Markdown 文档
+ * 2. Markdown 弹窗
  *    showMarkdown('docs/CHANGELOG.md', '更新记录');
+ *
+ * 3. 声明式 data-dialog 绑定（推荐）
+ *    <!-- 在 HTML 中直接通过 data 属性声明，无需写 JS -->
+ *    <span data-dialog="docs/help.md" data-dialog-title="帮助">?</span>
+ *    <!-- dialog.js 在 DOMContentLoaded 时自动绑定点击事件 -->
+ *
+ * 4. 确认弹窗
+ *    showConfirm('确定删除？').then(function(ok) {
+ *      if (ok) deleteSomething();
+ *    });
  *
  * ========================================
  *  函数说明
@@ -77,6 +79,14 @@
  *     - 表格、代码块等有完整样式
  *     - 右下角回到顶部按钮（滚动超过 300px 显示）
  *     - 弹窗 DOM 为单例，首次创建后复用
+ *
+ * ── [声明式] data-dialog 属性 ─────────
+ *    HTML 中任意元素加上以下属性，点击时自动调用 showMarkdown()：
+ *      data-dialog       : string  - Markdown 文件路径（必填）
+ *      data-dialog-title : string  - 弹窗标题（可选，默认"文档"）
+ *    示例：
+ *      <span data-dialog="docs/help.md" data-dialog-title="帮助">?</span>
+ *    限制：仅能在 DOMContentLoaded 之后生效（dialog.js 自动处理）
  *
  * ── showConfirm(message, opts?) ────────
  *   message : string  - 弹窗正文（支持 HTML）
@@ -484,6 +494,22 @@
     });
   }
 
+  // ==================== data-dialog 声明式绑定 ====================
+  // 在 HTML 中给任意元素加上 data-dialog="path.md" 属性，
+  // 点击时自动调用 showMarkdown()，无需手动写 JS 事件。
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-dialog]").forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var url = el.getAttribute("data-dialog");
+        var title = el.getAttribute("data-dialog-title") || "文档";
+        if (typeof showMarkdown === "function") {
+          showMarkdown(url, title);
+        }
+      });
+    });
+  });
+
   // ==================== 工具 ====================
 
   function _esc(str) {
@@ -499,3 +525,38 @@
   global.showMarkdown = showMarkdown;
   global.showConfirm = showConfirm;
 })(window);
+
+/* ============================================
+ * ES Module 迁移说明
+ * ============================================
+ *
+ * 如需改为 ES Module（import 方式），步骤：
+ *
+ * 1. 将 `})(window);` 改为：
+ *      export { showToast, closeToast, showMarkdown, showConfirm };
+ *
+ * 2. 将入口文件（如 index.html）的加载方式从：
+ *      <script src="./assets/dialog.js"></script>
+ *    改为 type="module"：
+ *      <script type="module">
+ *        import { showToast, showMarkdown } from "./assets/dialog.js";
+ *        window.showToast = showToast;  // 如需保持全局可用
+ *        window.showMarkdown = showMarkdown;
+ *      </script>
+ *
+ * 3. 注意：使用 type="module" 后，所有 import 导入的文件
+ *    都会延迟执行（类似 defer），无法在 <head> 中同步可用。
+ *    因此 data-dialog 的 DOMContentLoaded 绑定可保留不变。
+ *
+ * ── 为什么不现在改？ ──────────────────
+ *
+ * 当前项目使用<script>同步加载的方式有实际优势：
+ *   a) dialog.js 在 <head> 中加载，页面解析完即可调用
+ *   b) showToast / showMarkdown 在 <script> 标签间立即可用
+ *      （如 index.html 中的 <script> 块可以直接调用）
+ *   c) 无需改动其他 30+ 个调用方（geojsonloader.js、app.js 等）
+ *   d) 与 marked.js、leaflet.js 等第三方库的加载方式一致
+ *
+ * 改为 ES Module 是可行的，但当前没有足够收益来覆盖迁移成本。
+ * 如果未来项目全面采用打包工具（Webpack/Vite），再统一迁移。
+ * ============================================ */
