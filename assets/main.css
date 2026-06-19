@@ -1251,6 +1251,17 @@ body.sidebar-pinned .layer-trigger {
     color: #8aca8a;
   }
 
+  /* 悬浮触发按钮 */
+  .layer-trigger {
+    background: #2a2a2e;
+    border-color: #3a4a3a;
+    color: #8aca8a;
+  }
+  .layer-trigger:active {
+    background: #333337;
+    color: #aadaaa;
+  }
+
   /* 地图设置折叠区 */
   .toggle-section {
     border-color: #3a4a3a;
