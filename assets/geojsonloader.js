@@ -3121,12 +3121,16 @@
         if (cb) {
           cb.checked = true;
           cb.dispatchEvent(new Event("change", { bubbles: true }));
+          // updateLayerCount（异步）最终会创建 .ft-count，但第一次调用后
+          // 立即更新让用户即时看到计数变化
           var label = cb.closest(".layer-item")?.querySelector("label");
           if (label) {
-            var cnt = label.querySelector(".geo-count");
+            // 如果已有 .ft-count（前一次异步更新留下的），直接改它
+            // 否则新建一个（.ft-count 是全局统一计数字段名）
+            var cnt = label.querySelector(".ft-count");
             if (!cnt) {
               cnt = document.createElement("span");
-              cnt.className = "geo-count";
+              cnt.className = "ft-count";
               cnt.style.cssText =
                 "font-size:10px;color:var(--text-dim);margin-left:6px;";
               label.appendChild(cnt);
