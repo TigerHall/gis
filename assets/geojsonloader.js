@@ -1897,7 +1897,9 @@
               // 高级功能：未激活则提示
               if (!window.premiumCheck || !window.premiumCheck()) {
                 if (typeof window.showToast === "function")
-                  window.showToast("🔒 下载 GeoJSON 需要激活高级功能", { duration: 3000 });
+                  window.showToast("🔒 下载 GeoJSON 需要激活高级功能", {
+                    duration: 3000,
+                  });
                 return;
               }
               downloadLayerGeoJson(cbId, fPath, fName);
@@ -2412,7 +2414,9 @@
           // 高级功能：未激活则提示
           if (!window.premiumCheck || !window.premiumCheck()) {
             if (typeof window.showToast === "function")
-              window.showToast("🔒 下载 GeoJSON 需要激活高级功能", { duration: 3000 });
+              window.showToast("🔒 下载 GeoJSON 需要激活高级功能", {
+                duration: 3000,
+              });
             return;
           }
           downloadLayerGeoJson(cbId, null, fName);
@@ -2846,6 +2850,121 @@
         });
       };
 
+      // ========== 天地图地名搜索结果积累图层 ==========
+      var _tdtSearchPoints = []; // [{ lat, lng, name, address, typeName }]
+      var _tdtSearchLayerId = null;
+      var _TDT_LAYER_NAME = "🔍 地名搜索结果";
+
+      function addTdtPointToLayer(poi) {
+        _tdtSearchPoints.push(poi);
+
+        // 构建 GeoJSON FeatureCollection（保留 POI 全部可用字段）
+        var features = _tdtSearchPoints.map(function (p) {
+          var coords = p.lonlat.split(",").map(parseFloat);
+          var props = {};
+          // Name 放第一个，作为弹窗标题
+          props.Name = p.name || "";
+          // 其余字段
+          Object.keys(p).forEach(function (k) {
+            if (k === "name" || k === "lonlat") return;
+            props[k] = p[k] || "";
+          });
+          // lonlat 也作为字段展示
+          if (p.lonlat) {
+            var parts = p.lonlat.split(",");
+            props.经度 = parts[0];
+            props.纬度 = parts[1];
+          }
+          // 中文友好名
+          if (props.address) {
+            props.地址 = props.address;
+            delete props.address;
+          }
+          if (props.phone) {
+            props.电话 = props.phone;
+            delete props.phone;
+          }
+          if (props.poiType) {
+            props.分类码 = props.poiType;
+            delete props.poiType;
+          }
+          if (props.source) {
+            props.数据源 = props.source;
+            delete props.source;
+          }
+          return {
+            type: "Feature",
+            properties: props,
+            geometry: {
+              type: "Point",
+              coordinates: [coords[0], coords[1]],
+            },
+          };
+        });
+        var fc = { type: "FeatureCollection", features: features };
+
+        // 移除旧图层（Leaflet 层 + checkbox）
+        if (_tdtSearchLayerId) {
+          try {
+            map.removeLayer(layerCache[_tdtSearchLayerId]);
+          } catch (e) {}
+          delete layerCache[_tdtSearchLayerId];
+          delete userLayerGeoJson[_tdtSearchLayerId];
+          delete layerBoundsCache[_tdtSearchLayerId];
+          delete colorMode[_tdtSearchLayerId];
+          delete fieldKey[_tdtSearchLayerId];
+          // 移除对应的 DOM checkbox
+          var oldCb = document.getElementById(_tdtSearchLayerId);
+          if (oldCb) {
+            var oldBar = oldCb.closest(".layer-item");
+            if (oldBar) oldBar.remove();
+          }
+          // 清理持久化
+          try {
+            localStorage.removeItem("dupal_user_layer_tdt_search");
+          } catch (e) {}
+        }
+
+        // 调用 addUserLayer 创建完整图层（含 checkbox / 搜索索引）
+        addUserLayer(fc, _TDT_LAYER_NAME, true, "tdt_search");
+
+        // 找到刚创建的 layer checkbox（最新一个 user_layer）
+        var allUserLayers = document.querySelectorAll(
+          '#userLayerGroup .layer-item input[type="checkbox"]',
+        );
+        if (allUserLayers.length > 0) {
+          _tdtSearchLayerId = allUserLayers[allUserLayers.length - 1].id;
+        }
+
+        // 显示积累数量
+        var cb = _tdtSearchLayerId
+          ? document.getElementById(_tdtSearchLayerId)
+          : null;
+        if (cb) {
+          cb.checked = true;
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+          // 在图层名后追加点数 badge
+          var label = cb.closest(".layer-item")?.querySelector("label");
+          if (label) {
+            var countEl = label.querySelector(".tdt-count");
+            if (!countEl) {
+              countEl = document.createElement("span");
+              countEl.className = "tdt-count";
+              countEl.style.cssText =
+                "font-size:10px;color:var(--text-dim);margin-left:6px;";
+              label.appendChild(countEl);
+            }
+            countEl.textContent = "(" + _tdtSearchPoints.length + " 点)";
+          }
+        }
+
+        // 缩放到新添加的点
+        var coords = poi.lonlat.split(",").map(parseFloat);
+        map.setView([coords[1], coords[0]], Math.max(map.getZoom(), 10), {
+          animate: true,
+        });
+      }
+
       function renderTdtResults(pois, query) {
         resultsBox.innerHTML = "";
         if (!pois || pois.length === 0) {
@@ -2864,34 +2983,52 @@
         pois.forEach(function (poi) {
           var item = document.createElement("div");
           item.className = "search-result-item";
+
           var tag = document.createElement("span");
           tag.className = "search-result-tag";
           tag.textContent = "🗺️ 地名";
+
           var text = document.createElement("span");
           text.className = "search-result-text";
-          text.textContent = poi.name + (poi.address ? "  " + poi.address : "");
+          // 显示名称 + 地址，如有其他字段也在行内显示
+          var label = poi.name;
+          if (poi.address) label += "  " + poi.address;
+          if (poi.phone) label += "  📞" + poi.phone;
+          text.textContent = label;
           item.appendChild(tag);
           item.appendChild(text);
 
-          // 原生 title 显示详细地址+分类
-          var tipParts = [poi.name];
-          if (poi.address) tipParts.push("地址: " + poi.address);
-          if (poi.typeName) tipParts.push("分类: " + poi.typeName);
-          item.title = tipParts.join("\n");
+          // title 显示全部可用字段
+          var tip = [];
+          if (poi.name) tip.push(poi.name);
+          if (poi.address) tip.push("地址: " + poi.address);
+          if (poi.phone) tip.push("电话: " + poi.phone);
+          if (poi.poiType) tip.push("分类码: " + poi.poiType);
+          if (poi.source) tip.push("数据源: " + poi.source);
+          if (poi.cityName) tip.push("城市: " + poi.cityName);
+          item.title = tip.join("\n");
 
           if (poi.lonlat) {
             var parts = poi.lonlat.split(",");
             if (parts.length >= 2) {
               var lng = parseFloat(parts[0]);
               var lat = parseFloat(parts[1]);
-              (function (lat_, lng_) {
+              (function (lat_, lng_, poi_) {
                 item.addEventListener("click", function () {
-                  map.setView([lat_, lng_], Math.max(map.getZoom(), 10), {
-                    animate: true,
-                  });
+                  // 积累到地名搜索结果图层（内含缩放到该点）
+                  addTdtPointToLayer(poi_);
+                  // toast 提示
+                  if (typeof window.showToast === "function") {
+                    window.showToast(
+                      "📍 已添加「" + poi_.name + "」到搜索结果图层",
+                      {
+                        duration: 2000,
+                      },
+                    );
+                  }
                   resultsBox.classList.remove("open");
                 });
-              })(lat, lng);
+              })(lat, lng, poi);
             }
           }
           resultsBox.appendChild(item);

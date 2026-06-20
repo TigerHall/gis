@@ -26,74 +26,49 @@
 
 ### 全球板块构造
 
-| 图层                         | 文件                          | 数据来源              |
-| ---------------------------- | ----------------------------- | --------------------- |
-| 全球16大板块 plate16         | `plate16.geojson`             | —                     |
-| 全球280个板块 (Hasterok2022) | `plates_Hasterok2022.geojson` | Hasterok et al., 2022 |
-| 大陆板块 plate_cont          | `plate_cont.json`             | —                     |
-| 大洋板块 plate_ocean         | `plate_ocean.json`            | —                     |
-| 洋中脊和转换断层 MOR&TF      | `ridgenew.json`               | —                     |
-| 海沟 Trench                  | `Pb_trench.json`              | —                     |
-| 其他板块边界 Other boundries | `Pb_transformall.json`        | —                     |
-| 大西洋断裂带 Atlantic_FZ     | `Atlantic_FZ.json`            | —                     |
-| 印度洋断裂带 Indian_FZ       | `Indian_FZ.json`              | —                     |
-| 太平洋断裂带 Pacific_FZ      | `Pacific_FZ.json`             | —                     |
+- **全球16大板块 plate16** — USGS 板块边界数据
+- **全球280个板块 (Hasterok2022)** — Hasterok et al., 2022 新一代板块构造模型
+- **大陆板块 / 大洋板块** — 大陆与大洋板块分类
+- **洋中脊和转换断层 MOR&TF** — 全球洋中脊及转换断层
+- **海沟 Trench** — 全球海沟分布
+- **其他板块边界 Other boundries** — 板块边界补充数据
+- **大西洋/印度洋/太平洋断裂带** — 三大洋断裂带分区数据
 
 ### 洋中脊作用域
 
-| 图层                            | 文件                            | 数据来源 |
-| ------------------------------- | ------------------------------- | -------- |
-| 1全球洋壳 GlobalOceanicCrust    | `1GlobalOceanicCrust.json`      | —        |
-| 2大洋域 OceanDomian             | `2OceanDomian.json`             | —        |
-| 3次大洋域 SubOceanDomain        | `3SubOceanDomain.json`          | —        |
-| 4洋中脊作用域 RidgeDomain       | `4RidgeDomain.json`             | —        |
-| 全球陆壳 GlobalContinentalCrust | `global_continental_crust.json` | —        |
-| 0作用域边界 RDboundary          | `RD_plgn1_5.json`               | —        |
+- **全球洋壳 / 全球陆壳** — 洋壳与陆壳范围
+- **大洋域 / 次大洋域 / 洋中脊作用域** — 大洋域分级分类数据
+- **作用域边界** — 1-5 级作用域边界
 
 ### 海底基础信息
 
-| 图层                   | 文件                                | 数据来源         |
-| ---------------------- | ----------------------------------- | ---------------- |
-| 火山 volcanos          | `volcanos.json`                     | —                |
-| 热点 hotspots          | `hotspots.json`                     | —                |
-| 大火成岩省 (Johansson) | `LIP_Johansson.json`                | Johansson et al. |
-| 洋壳年龄30Ma间隔       | `seafloor_age_30.geojson`           | —                |
-| 盆地 (Evenick2021)     | `global_basins_Evenick2021.geojson` | Evenick, 2021    |
-| 盆地 (CGG)             | `Sedimentary_CGG.geojson`           | CGG              |
+- **火山 volcanos** — 全球火山分布
+- **热点 hotspots** — 全球热点位置
+- **大火成岩省 (Johansson)** — Johansson et al. 数据
+- **洋壳年龄30Ma间隔** — 海底年龄等时线
+- **盆地 Evenick2021** — Evenick, 2021 全球盆地数据
+- **盆地 CGG** — CGG 全球沉积盆地
 
 ### 大型异常区
 
-| 图层                   | 文件              | 数据来源 |
-| ---------------------- | ----------------- | -------- |
-| LLSVP                  | `LLSVP.json`      | —        |
-| Dupal异常洋 DupalOcean | `DupalOcean.json` | —        |
+- **LLSVP** — 大型低剪切速度区
+- **Dupal异常洋** — Dupal 异常区范围
 
 ### 海底矿产资源
 
-| 图层                            | 文件                         | 数据来源 |
-| ------------------------------- | ---------------------------- | -------- |
-| 热液喷口 HydrothermalVents(ISA) | `hydrothermal_vents.geojson` | ISA      |
-| 多金属结核 Fe-MnNodule(NOAA)    | `Fe_MnNodule.geojson`        | NOAA     |
-| 富钴结壳 Co-richCrust(NOAA)     | `Co-richCrust.geojson`       | NOAA     |
+- **热液喷口 (ISA)** — 国际海底管理局热液喷口数据
+- **多金属结核 (NOAA)** — NOAA 铁锰结核数据
+- **富钴结壳 (NOAA)** — NOAA 富钴结壳数据
 
 ### 地质站位
 
-| 图层              | 文件                   | 数据来源                     |
-| ----------------- | ---------------------- | ---------------------------- |
-| DSDP              | `DSDP.geojson`         | DSDP                         |
-| ODP               | `ODP.geojson`          | ODP                          |
-| IODP03-13         | `IODP03-13.geojson`    | IODP                         |
-| IODP13-26         | `IODP13-26.geojson`    | IODP                         |
-| NWIR_rock         | `NWIR_ridge.geojson`   | —                            |
-| SWIR_rock         | `SWIR_ridge.geojson`   | —                            |
-| SEIR_rock         | `SEIR_ridge.geojson`   | —                            |
-| SEIR_offaxis_rock | `SEIR_offaxis.geojson` | —                            |
-| RedSea_rock       | `RedSea_rift.geojson`  | —                            |
-| 古生物学 PBDB     | `PBDB.geojson`         | PBDB (Paleobiology Database) |
-| 气候岩性指标 PBDB | `Boucot.geojson`       | PBDB (Paleobiology Database) |
+- **DSDP / ODP / IODP** — 深海钻探计划站点数据
+- **NWIR / SWIR / SEIR 岩石** — 洋中脊岩石采样数据
+- **SEIR_offaxis** — 西南印度洋中脊离轴采样
+- **RedSea_rock** — 红海裂谷岩石数据
+- **古生物学 PBDB** — 古生物学数据库站点数据
+- **气候岩性指标 PBDB** — PBDB 古气候沉积数据
 
 ### 测试数据
 
-| 图层       | 文件          | 数据来源 |
-| ---------- | ------------- | -------- |
-| PIC 45万点 | `pic.geojson` | —        |
+- **PIC 45万点** — 性能测试用 45 万点矢量数据集

@@ -1,5 +1,13 @@
 # 更新记录
 
+## 2026-06-20 v1.8.6 — 地名搜索结果积累图层
+
+### 地名搜索增强
+
+- **搜索结果积累图层**：点击天地图地名搜索结果后，自动创建/追加到 `🔍 地名搜索结果` 用户图层（支持逐步叠加、可搜索、可控制显示）
+- **API 字段全保留**：POI 全部字段（`name` / `address` / `phone` / `poiType` / `source` / `hotPointID` / 经纬度）写入要素属性表，`Name` 排第一作为弹窗标题
+- **显示增强**：搜索结果列表展示名称 + 地址 + 电话，title 悬浮展示全部字段
+
 ## 2026-06-20 v1.8.5 — 付费高级功能系统
 
 ### 付费激活码系统
@@ -69,16 +77,16 @@
 
 | 文件                                                | 变更                                              |
 | --------------------------------------------------- | ------------------------------------------------- |
-| `service-worker.js`                                 | ➕ `pointdrop.css` 缓存，版本 v1.8.4               |
+| `service-worker.js`                                 | ➕ `pointdrop.css` 缓存，版本 v1.8.4              |
 | `index.html`                                        | `window.TDT_TK` 暴露 key；`upload-btn-row` 包装器 |
-| `assets/main.css`                                   | 🔄 深色模式简化、变量体系、按钮 flex               |
-| `assets/dialog.css`                                 | 🔄 弹窗样式归集、变量化                            |
-| `assets/pointdrop.css`                              | 🆕 新建                                            |
-| `assets/geojsonloader.js`                           | 🆕 天地图搜索、原生 title                          |
-| `assets/pointdrop.js`                               | 🔄 移除 inline styles                              |
-| `assets/geo-utils.js`                               | 🔄 feature-popup 标题内联样式改为 class            |
-| `docs/overview.md`                                  | 🗂️ 从根目录移至 docs/                              |
-| `assets/bk/Leaflet.VectorGrid-master/docs/main.css` | ℹ️ 第三方 demo 文件，无需修改                      |
+| `assets/main.css`                                   | 🔄 深色模式简化、变量体系、按钮 flex              |
+| `assets/dialog.css`                                 | 🔄 弹窗样式归集、变量化                           |
+| `assets/pointdrop.css`                              | 🆕 新建                                           |
+| `assets/geojsonloader.js`                           | 🆕 天地图搜索、原生 title                         |
+| `assets/pointdrop.js`                               | 🔄 移除 inline styles                             |
+| `assets/geo-utils.js`                               | 🔄 feature-popup 标题内联样式改为 class           |
+| `docs/overview.md`                                  | 🗂️ 从根目录移至 docs/                             |
+| `assets/bk/Leaflet.VectorGrid-master/docs/main.css` | ℹ️ 第三方 demo 文件，无需修改                     |
 
 ### 新增文档
 

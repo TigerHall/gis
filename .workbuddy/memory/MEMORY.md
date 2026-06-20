@@ -200,3 +200,8 @@ rendererFactory: function(tileCoord, tileSize, opts) {
 - **`window.premiumCheck()`** 供各模块调用检查激活状态
 - **`window.showPremiumActivation(callback)`** 弹出激活弹窗
 - **重置**：`window.premiumReset()` 清除激活状态
+
+## MD 文档约定
+
+- **MD 文档尽量不要用表格**（移动端阅读体验差，弹窗内滚动困难）。数据列表改用纯文本文字描述，每项一行 "**图层名** — 来源/说明"
+- `showMarkdown()` 弹窗内正文段落使用 `text-indent: 2em` 首行缩进（仅 `#_mdBody > p` 直接子级段落），blockquote 内不缩进
