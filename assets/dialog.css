@@ -172,6 +172,73 @@
   }
 }
 
+/* ========== 高级功能激活弹窗 ========== */
+.premium-dialog {
+  width: min(400px, calc(100vw - 32px)) !important;
+}
+.premium-dialog .dialog-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--dlg-header-text);
+}
+.premium-dialog .dialog-body {
+  padding: 18px;
+  color: var(--dlg-body-text);
+  font-size: 13px;
+}
+.premium-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  box-sizing: border-box;
+  outline: none;
+}
+.premium-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(76,175,80,0.15);
+}
+.premium-error {
+  margin: 8px 0 0;
+  color: var(--status-error);
+  font-size: 12px;
+  display: none;
+}
+.premium-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.premium-btn {
+  flex: 1;
+  padding: 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  border: none;
+  transition: background 0.12s;
+}
+.premium-btn-cancel {
+  border: 1px solid var(--dlg-cancel-bg);
+  background: var(--dlg-cancel-bg);
+  color: var(--dlg-cancel-text);
+}
+.premium-btn-cancel:hover {
+  background: var(--dlg-cancel-hover-bg);
+  color: var(--dlg-cancel-hover-text);
+}
+.premium-btn-submit {
+  background: var(--dlg-ok-bg);
+  color: #fff;
+  font-weight: 600;
+}
+.premium-btn-submit:hover {
+  background: var(--dlg-ok-hover);
+}
+
 /* 标题栏 */
 .app-dialog .dialog-header {
   display: flex;
@@ -267,6 +334,9 @@
 }
 .app-dialog .dialog-body p {
   margin: 8px 0;
+}
+/* MD 文档弹窗正文首行缩进（仅直接子级段落，不含引用块内） */
+#_mdBody > p {
   text-indent: 2em;
 }
 .app-dialog .dialog-body code {
@@ -299,8 +369,11 @@
 }
 .app-dialog .dialog-body li {
   margin: 4px 0;
-  text-indent: 1em;
   list-style-position: inside;
+}
+/* MD 文档弹窗才有首行缩进 */
+#_mdBody li {
+  text-indent: 1em;
 }
 .app-dialog .dialog-body a {
   color: var(--dlg-link-color);

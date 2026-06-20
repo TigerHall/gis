@@ -1,5 +1,37 @@
 # 更新记录
 
+## 2026-06-20 v1.8.5 — 付费高级功能系统
+
+### 付费激活码系统
+
+- **`assets/codes.json`**: 5 个 6 位随机数激活码，每月可更新替换
+- **`app.js`**: premium 模块合并入 app.js，`premiumCheck()` / `showPremiumActivation()` 全局 API
+- **`dialog.css`**: 新增 `.premium-dialog` / `.premium-input` / `.premium-btn` 样式
+- **开关控制**: 地图设置 → "高级" → "高级功能" 开关，开启后弹激活码输入框
+- **付费门槛**: 下载 GeoJSON 功能需要激活后才能使用（`premiumCheck()` 拦截）
+- **URL 自动激活**: `?activate=837291` 参数扫码直达激活，sessionStorage 标记后 Toast 提示
+- **激活后二维码**: 激活成功弹窗切换为 QR 码（`?activate=CODE` 网址），手机扫码同步激活
+- **开关自动同步**: 已激活用户刷新页面后高级功能开关自动开启
+- **清理保护**: `doRefresh()` 保留 `ogv_premium_active` 不被 `localStorage.clear()` 清除
+- **`README.md`**: 新增"高级功能"章节，内测激活码 `837291`
+
+### 地图设置重构
+
+- **按钮型 toggle**: TOGGLE_GROUPS 新增 `type: "button"` 支持，渲染为 `<button class="action-btn">`
+- **导出图片**: 从版号菜单移入地图设置 → "操作" → `📷 导出图片` 按钮
+- **深色模式**: 从"显示"分类移入"高级"分类，与高级功能同组
+- **`main.css`**: 新增 `.action-btn` 按钮样式，flex 自适应布局
+
+### 样式修复
+
+- **`dialog.css`**: 补回 `.toast-cnt` / `.toast-msg` / `.toast-action` / `.toast-close-btn` 样式（CSS 重构时遗漏）
+- **`dialog.css`**: `text-indent` 从全局 `.app-dialog .dialog-body p` 改为 `#_mdBody > p`，仅 MD 文档直接段落缩进
+
+### 帮助文档更新
+
+- **`docs/static-vector-help.md`**: 下载 GeoJSON 改为高级功能描述
+- **`docs/local-layer-help.md`**: 新增"高级功能：下载 GeoJSON"章节，说明格式转换用途
+
 ## 2026-06-19 v1.8.4 — 深色模式重构 + 天地图地名搜索
 
 ### CSS 变量体系与深色模式

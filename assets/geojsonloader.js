@@ -1894,6 +1894,12 @@
             statusSpan.addEventListener("click", function (e) {
               e.stopPropagation();
               if (statusSpan.dataset.status !== "loaded") return;
+              // 高级功能：未激活则提示
+              if (!window.premiumCheck || !window.premiumCheck()) {
+                if (typeof window.showToast === "function")
+                  window.showToast("🔒 下载 GeoJSON 需要激活高级功能", { duration: 3000 });
+                return;
+              }
               downloadLayerGeoJson(cbId, fPath, fName);
             });
           })(checkboxId, fullPath, layerConfig.name);
@@ -2403,6 +2409,12 @@
         statusSpan.addEventListener("click", function (e) {
           e.stopPropagation();
           if (statusSpan.dataset.status !== "loaded") return;
+          // 高级功能：未激活则提示
+          if (!window.premiumCheck || !window.premiumCheck()) {
+            if (typeof window.showToast === "function")
+              window.showToast("🔒 下载 GeoJSON 需要激活高级功能", { duration: 3000 });
+            return;
+          }
           downloadLayerGeoJson(cbId, null, fName);
         });
       })(uid, fileName);

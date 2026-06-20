@@ -814,6 +814,27 @@ details.layer-section[open] > summary .layer-group-arrow {
   gap: 3px;
 }
 
+/* 操作按钮（置于 toggle body 内，flex 自适应排列） */
+.toggle-section .action-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 5px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toggle-section .action-btn:hover {
+  background: var(--content-hover-bg);
+}
+
 /* 开关折叠区内部的 toggle bar */
 .toggle-section .toggle-bar {
   flex: 1 1 120px;

@@ -187,3 +187,16 @@ rendererFactory: function(tileCoord, tileSize, opts) {
 - 内部仍保留两个隐藏的 `<input type="file">`（一个 accept 多文件、一个 webkitdirectory）
 - 菜单弹出在按钮上方（`bottom: calc(100% + 4px)`），避免遮挡下方的图层列表
 - 点击菜单外部自动关闭
+
+## 付费高级功能（激活码）系统
+
+- **激活码来源**：6 位数字激活码定义在 `app.js` 顶部 `_PR_CODES` 数组，每月更新
+- **流程**：用户开启"高级功能"开关 → 弹窗输入激活码 → 验证通过后 `localStorage.setItem("ogv_premium_active", "true")` → 开关锁定为开启
+- **激活码每月更新**（旧码从数组移除），已激活的用户 localStorage 不受影响，永久有效
+- **多端同步**：激活成功后弹窗显示 QR 码（`?activate=CODE` 网址），手机扫码自动激活
+- **URL 自动激活**：`?activate=837291` 参数在页面加载时自动检测并激活
+- **清理保护**：`doRefresh()` 保留 `ogv_premium_active` 不被 `localStorage.clear()` 清除
+- **付费门槛**：目前仅锁定下载 GeoJSON 功能（`geojsonloader.js` 中 `downloadLayerGeoJson` 的点击入口加 `premiumCheck()` 判断）
+- **`window.premiumCheck()`** 供各模块调用检查激活状态
+- **`window.showPremiumActivation(callback)`** 弹出激活弹窗
+- **重置**：`window.premiumReset()` 清除激活状态

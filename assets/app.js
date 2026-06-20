@@ -6,6 +6,15 @@
  *
  * ⚠️ 新增地图设置开关 → 在下方 TOGGLE_GROUPS 数据数组中添加一项即可
  */
+
+// ========== 付费激活码（每月更新） ==========
+var _PR_CODES = [
+  "837291",
+  "460518",
+  "915742",
+  "283604",
+  "671849"
+];
 (function () {
   // ========== 数据驱动渲染（必须在 toggleConfig 执行前创建 DOM）==========
   (function () {
@@ -16,11 +25,6 @@
       {
         category: "显示",
         items: [
-          {
-            id: "darkModeToggle",
-            label: "深色模式",
-            desc: "开启后切换为深色主题，适合弱光环境使用，减少屏幕眩光",
-          },
           {
             id: "clusterToggle",
             label: "点要素聚类",
@@ -88,6 +92,33 @@
           },
         ],
       },
+      {
+        category: "高级",
+        items: [
+          {
+            id: "darkModeToggle",
+            label: "深色模式",
+            desc: "开启后切换为深色主题，适合弱光环境使用，减少屏幕眩光",
+          },
+          {
+            id: "premiumToggle",
+            label: "高级功能",
+            desc: "开启后进入激活流程，输入激活码解锁下载 GeoJSON 等高级功能",
+          },
+        ],
+      },
+      {
+        category: "操作",
+        items: [
+          {
+            type: "button",
+            id: "exportMapBtn",
+            label: "导出图片",
+            icon: "📷",
+            desc: "将当前地图截图导出为 PNG 图片",
+          },
+        ],
+      },
     ];
 
     var html = "";
@@ -96,6 +127,22 @@
       html += '<div class="toggle-category">' + group.category + "</div>";
       for (var ii = 0; ii < group.items.length; ii++) {
         var item = group.items[ii];
+        if (item.type === "button") {
+          html +=
+            '<div class="toggle-bar" id="' +
+            item.id +
+            'Bar" title="' +
+            (item.desc || "") +
+            '">' +
+            '<button class="action-btn" id="' +
+            item.id +
+            '">' +
+            (item.icon || "") +
+            " " +
+            item.label +
+            "</button>" +
+            "</div>";
+        } else {
         html +=
           '<div class="toggle-bar" id="' +
           item.id +
@@ -116,7 +163,16 @@
           "</div>";
       }
     }
+    }
     body.innerHTML = html;
+
+    // 绑定导出图片按钮事件
+    var exportBtn = document.getElementById("exportMapBtn");
+    if (exportBtn) {
+      exportBtn.addEventListener("click", function () {
+        exportMapImage();
+      });
+    }
   })();
 
   // ========== 版本号显示 ==========
@@ -162,7 +218,11 @@
       });
     }
     function doRefresh(all) {
-      localStorage.clear(); // 清理用户设置（底图选择等）
+      // 保存高级功能激活状态，避免被 clear 清除
+      var premium = localStorage.getItem("ogv_premium_active");
+      localStorage.clear();
+      // 恢复高级功能激活
+      if (premium) localStorage.setItem("ogv_premium_active", premium);
       var tasks = [clearSWCache()];
       if (all) tasks.push(clearIDB());
       Promise.all(tasks).then(function () {
@@ -658,6 +718,36 @@
         }
       },
     },
+    premiumToggle: {
+      storageKey: TOGGLE_PREFIX + "premium",
+      enable: function () {
+        if (typeof window.premiumCheck === "function" && window.premiumCheck()) {
+          return; // 已激活，无需再次弹窗
+        }
+        if (typeof window.showPremiumActivation === "function") {
+          window.showPremiumActivation(function (ok) {
+            if (!ok) {
+              var cb = document.getElementById("premiumToggle");
+              if (cb) {
+                cb.checked = false;
+                localStorage.setItem(TOGGLE_PREFIX + "premium", "false");
+              }
+            }
+          });
+        }
+      },
+      disable: function () {
+        // 已激活后不允许关闭
+        if (typeof window.premiumCheck === "function" && window.premiumCheck()) {
+          var cb = document.getElementById("premiumToggle");
+          if (cb) {
+            cb.checked = true;
+            localStorage.setItem(TOGGLE_PREFIX + "premium", "true");
+          }
+          return;
+        }
+      },
+    },
   };
 
   // 初始化主题：仅置顶开关状态，由 initToggle 同时设置 data-theme
@@ -701,7 +791,136 @@
     });
   }
 
+  // 同步高级功能激活状态 → 开关
+  if (localStorage.getItem("ogv_premium_active") === "true") {
+    var _pcb = document.getElementById("premiumToggle");
+    if (_pcb) {
+      _pcb.checked = true;
+      localStorage.setItem("dupal_premium", "true");
+    }
+  }
+
   for (var cbId in toggleConfig) {
     if (toggleConfig.hasOwnProperty(cbId)) initToggle(cbId, toggleConfig[cbId]);
   }
+
+  // ========== 高级功能激活码验证 ==========
+  (function () {
+    var _activated = false;
+    var _PR_KEY = "ogv_premium_active";
+
+    _activated = localStorage.getItem(_PR_KEY) === "true";
+
+    // 已激活 → 同步勾上高级功能开关
+    if (_activated) {
+      var cb = document.getElementById("premiumToggle");
+      if (cb) {
+        cb.checked = true;
+        localStorage.setItem("dupal_premium", "true");
+      }
+    }
+
+    window.premiumCheck = function () {
+      return _activated;
+    };
+
+    window.showPremiumActivation = function (callback) {
+      if (_activated) {
+        if (typeof callback === "function") callback(true);
+        return;
+      }
+
+      var dlg = document.createElement("dialog");
+      dlg.className = "app-dialog premium-dialog";
+      dlg.innerHTML =
+        '<div class="dialog-header"><h3>🔒 激活高级功能</h3></div>' +
+        '<div class="dialog-body">' +
+        "<p>请输入激活码：</p>" +
+        '<input id="prCodeInput" class="premium-input" type="text" placeholder="输入激活码" />' +
+        '<p id="prError" class="premium-error">激活码无效，请检查后重试</p>' +
+        '<div class="premium-btns">' +
+        '<button id="prCancel" class="premium-btn premium-btn-cancel">取消</button>' +
+        '<button id="prSubmit" class="premium-btn premium-btn-submit">验证激活</button>' +
+        "</div>" +
+        '<p style="margin:8px 0 0;color:var(--text-muted);font-size:11px;">激活永久有效，请勿清除本网站浏览器数据</p>' +
+        '<p style="margin:2px 0 0;color:var(--text-muted);font-size:11px;">更换设备后联系管理员重新发码</p>' +
+        "</div>";
+      document.body.appendChild(dlg);
+      dlg.showModal();
+
+      var input = dlg.querySelector("#prCodeInput");
+      var errEl = dlg.querySelector("#prError");
+      input.focus();
+
+      function showQrAfterActivate(code) {
+        // 替换弹窗内容为成功信息 + 二维码
+        dlg.querySelector(".dialog-body").innerHTML =
+          '<div style="text-align:center;">' +
+          '<p style="font-size:15px;font-weight:600;color:var(--accent);margin:0 0 4px;">✅ 高级功能已激活</p>' +
+          '<p style="font-size:12px;color:var(--text-muted);margin:0 0 14px;">扫二维码在手机上同步激活此功能</p>' +
+          '<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(location.origin + location.pathname + "?activate=" + code) + '" alt="QR" style="width:140px;height:140px;border-radius:6px;border:1px solid var(--border-light);" />' +
+          '<p style="margin:6px 0 0;font-size:10px;color:var(--text-faint);">' + (location.origin + location.pathname + "?activate=" + code) + '</p>' +
+          '<button id="prDone" class="premium-btn premium-btn-submit" style="margin-top:14px;padding:7px 24px;">完成</button>' +
+          "</div>";
+        dlg.querySelector("#prDone").addEventListener("click", function () {
+          dlg.close();
+          document.body.removeChild(dlg);
+        });
+      }
+
+      function doActivate() {
+        var code = input.value.trim();
+        if (!code) { errEl.style.display = "block"; return; }
+        if (_PR_CODES.indexOf(code) >= 0) {
+          _activated = true;
+          localStorage.setItem(_PR_KEY, "true");
+          showQrAfterActivate(code);
+          if (typeof callback === "function") callback(true);
+        } else {
+          errEl.style.display = "block";
+        }
+      }
+
+      dlg.querySelector("#prSubmit").addEventListener("click", doActivate);
+      dlg.querySelector("#prCancel").addEventListener("click", function () {
+        dlg.close();
+        document.body.removeChild(dlg);
+        if (typeof callback === "function") callback(false);
+      });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); doActivate(); }
+      });
+      dlg.addEventListener("close", function () {
+        if (document.body.contains(dlg)) document.body.removeChild(dlg);
+      });
+    };
+
+    window.premiumReset = function () {
+      _activated = false;
+      localStorage.removeItem(_PR_KEY);
+    };
+
+    // ========== URL 参数自动激活（扫码直达）==========
+    (function () {
+      // 刚通过 URL 激活完成的页面，显示提示
+      if (sessionStorage.getItem("_pr_just_activated")) {
+        sessionStorage.removeItem("_pr_just_activated");
+        setTimeout(function () {
+          if (typeof window.showToast === "function")
+            window.showToast("✅ 已使用激活码激活高级功能", { duration: 5000 });
+        }, 500);
+      }
+      var m = location.search.match(/[?&]activate=(\d{6})\b/);
+      if (m) {
+        var code = m[1];
+        if (_PR_CODES.indexOf(code) >= 0) {
+          _activated = true;
+          localStorage.setItem(_PR_KEY, "true");
+          sessionStorage.setItem("_pr_just_activated", "1");
+          history.replaceState(null, "", location.pathname + location.hash);
+          location.reload();
+        }
+      }
+    })();
+  })();
 })();
