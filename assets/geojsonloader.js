@@ -21,6 +21,39 @@
   }
 
   waitForMap(function () {
+    // ========== 通用要素计数更新（提前声明，供后续回调使用）==========
+    function updateLayerCount(checkboxId, features) {
+      if (!checkboxId || !features || features.length === 0) return;
+      var cb = document.getElementById(checkboxId);
+      if (!cb) return;
+      var label =
+        cb.closest(".layer-item")?.querySelector("label") ||
+        cb.closest(".toggle-bar")?.querySelector("label");
+      if (!label) return;
+      var count = features.length;
+      var typeLabel = "要素";
+      for (var i = 0; i < Math.min(features.length, 5); i++) {
+        var f = features[i];
+        if (f && f.geometry && f.geometry.type) {
+          var t = f.geometry.type.toLowerCase();
+          if (t === "point" || t === "multipoint") typeLabel = "点";
+          else if (t === "linestring" || t === "multilinestring")
+            typeLabel = "线";
+          else if (t === "polygon" || t === "multipolygon") typeLabel = "面";
+          break;
+        }
+      }
+      var badge = label.querySelector(".ft-count");
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "ft-count";
+        badge.style.cssText =
+          "font-size:10px;color:var(--text-dim);margin-left:6px;";
+        label.appendChild(badge);
+      }
+      badge.textContent = "(" + count + " " + typeLabel + ")";
+    }
+
     // ========== 防抖函数 + 全局缩放锁 ==========
     function debounce(func, wait) {
       let timeout;
@@ -981,6 +1014,9 @@
               });
               // 搜索索引构建完成后触发回调
               fireLoadedCallback(checkboxId);
+              // 更新要素计数
+              if (data_ && data_.features)
+                updateLayerCount(checkboxId, data_.features);
             });
           } else {
             fireLoadedCallback(checkboxId);
@@ -2509,6 +2545,7 @@
         buildSearchIndex(uid, data_.features, cacheKey, function () {
           if (_idxToast2) closeToast(_idxToast2);
           showToast("✅ " + fileName + " 搜索索引就绪", { duration: 3000 });
+          if (data_ && data_.features) updateLayerCount(uid, data_.features);
         });
       }
     }
@@ -2851,9 +2888,11 @@
       };
 
       // ========== 天地图地名搜索结果积累图层 ==========
-      var _tdtSearchPoints = []; // [{ lat, lng, name, address, typeName }]
+      var _tdtSearchPoints = [];
       var _tdtSearchLayerId = null;
-      var _TDT_LAYER_NAME = "🔍 地名搜索结果";
+      var _tdtSessionId = Date.now().toString(36);
+      var _tdtPersistentId = "tdt_" + _tdtSessionId;
+      var _TDT_LAYER_NAME = "🔍 地名记录 " + new Date().toLocaleString("zh-CN");
 
       function addTdtPointToLayer(poi) {
         _tdtSearchPoints.push(poi);
@@ -2913,20 +2952,22 @@
           delete layerBoundsCache[_tdtSearchLayerId];
           delete colorMode[_tdtSearchLayerId];
           delete fieldKey[_tdtSearchLayerId];
-          // 移除对应的 DOM checkbox
+          // Remove old checkbox DOM
           var oldCb = document.getElementById(_tdtSearchLayerId);
           if (oldCb) {
             var oldBar = oldCb.closest(".layer-item");
             if (oldBar) oldBar.remove();
           }
-          // 清理持久化
-          try {
-            localStorage.removeItem("dupal_user_layer_tdt_search");
-          } catch (e) {}
         }
 
-        // 调用 addUserLayer 创建完整图层（含 checkbox / 搜索索引）
-        addUserLayer(fc, _TDT_LAYER_NAME, true, "tdt_search");
+        // 调用 addUserLayer 创建完整图层
+        addUserLayer(fc, _TDT_LAYER_NAME, true, _tdtPersistentId);
+
+        // 手动持久化到 IDB
+        if (isRememberLayerEnabled()) {
+          L.GzIdbLoader.setCache("user_geo_" + _tdtPersistentId, fc);
+          saveUserLayerMeta(_tdtPersistentId, _TDT_LAYER_NAME);
+        }
 
         // 找到刚创建的 layer checkbox（最新一个 user_layer）
         var allUserLayers = document.querySelectorAll(
@@ -2936,26 +2977,13 @@
           _tdtSearchLayerId = allUserLayers[allUserLayers.length - 1].id;
         }
 
-        // 显示积累数量
+        // 自动勾选
         var cb = _tdtSearchLayerId
           ? document.getElementById(_tdtSearchLayerId)
           : null;
         if (cb) {
           cb.checked = true;
           cb.dispatchEvent(new Event("change", { bubbles: true }));
-          // 在图层名后追加点数 badge
-          var label = cb.closest(".layer-item")?.querySelector("label");
-          if (label) {
-            var countEl = label.querySelector(".tdt-count");
-            if (!countEl) {
-              countEl = document.createElement("span");
-              countEl.className = "tdt-count";
-              countEl.style.cssText =
-                "font-size:10px;color:var(--text-dim);margin-left:6px;";
-              label.appendChild(countEl);
-            }
-            countEl.textContent = "(" + _tdtSearchPoints.length + " 点)";
-          }
         }
 
         // 缩放到新添加的点
@@ -3035,6 +3063,159 @@
         });
         resultsBox.classList.add("open");
       }
+
+      // ========== GPS 定位 ==========
+      var _geoPoints = [];
+      var _geoLayerId = null;
+      var _geoSessionId = Date.now().toString(36);
+      var _geoPersistentId = "geo_" + _geoSessionId;
+      var _GEO_LAYER_NAME = "📍 位置记录 " + new Date().toLocaleString("zh-CN");
+
+      function addGeoPointToLayer(lat, lng, note, category) {
+        _geoPoints.push({ lat: lat, lng: lng, note: note, category: category });
+
+        var features = _geoPoints.map(function (p, i) {
+          return {
+            type: "Feature",
+            properties: {
+              Name: "位置 " + (i + 1),
+              备注: p.note || "",
+              分类: p.category || "",
+              纬度: String(p.lat),
+              经度: String(p.lng),
+            },
+            geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+          };
+        });
+        var fc = { type: "FeatureCollection", features: features };
+
+        if (_geoLayerId) {
+          try {
+            map.removeLayer(layerCache[_geoLayerId]);
+          } catch (e) {}
+          delete layerCache[_geoLayerId];
+          delete userLayerGeoJson[_geoLayerId];
+          var oldCb = document.getElementById(_geoLayerId);
+          if (oldCb) {
+            var oldBar = oldCb.closest(".layer-item");
+            if (oldBar) oldBar.remove();
+          }
+        }
+
+        addUserLayer(fc, _GEO_LAYER_NAME, true, _geoPersistentId);
+
+        // 手动持久化到 IDB
+        if (isRememberLayerEnabled()) {
+          L.GzIdbLoader.setCache("user_geo_" + _geoPersistentId, fc);
+          saveUserLayerMeta(_geoPersistentId, _GEO_LAYER_NAME);
+        }
+
+        var allLayers = document.querySelectorAll(
+          '#userLayerGroup .layer-item input[type="checkbox"]',
+        );
+        if (allLayers.length > 0) {
+          _geoLayerId = allLayers[allLayers.length - 1].id;
+        }
+
+        var cb = _geoLayerId ? document.getElementById(_geoLayerId) : null;
+        if (cb) {
+          cb.checked = true;
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+          var label = cb.closest(".layer-item")?.querySelector("label");
+          if (label) {
+            var cnt = label.querySelector(".geo-count");
+            if (!cnt) {
+              cnt = document.createElement("span");
+              cnt.className = "geo-count";
+              cnt.style.cssText =
+                "font-size:10px;color:var(--text-dim);margin-left:6px;";
+              label.appendChild(cnt);
+            }
+            cnt.textContent = "(" + _geoPoints.length + " 点)";
+          }
+        }
+
+        map.setView([lat, lng], Math.max(map.getZoom(), 14), { animate: true });
+      }
+
+      window.startGeoLocate = function () {
+        if (!navigator.geolocation) {
+          if (typeof window.showToast === "function")
+            window.showToast("⚠️ 当前浏览器不支持定位功能", { duration: 3000 });
+          return;
+        }
+        // 参考导出图片 Toast 模式
+        var _locToast = window.showToast("📍 正在获取位置…", { duration: 0 });
+
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            if (_locToast) {
+              var msgEl = _locToast.querySelector(".toast-msg");
+              if (msgEl) msgEl.textContent = "📍 已获取位置";
+              setTimeout(function () {
+                if (_locToast && typeof window.closeToast === "function")
+                  window.closeToast(_locToast);
+              }, 600);
+            }
+
+            var lat = pos.coords.latitude;
+            var lng = pos.coords.longitude;
+
+            var dlg = document.createElement("dialog");
+            dlg.className = "app-dialog premium-dialog";
+            dlg.innerHTML =
+              '<div class="dialog-header"><h3>📍 记录位置</h3></div>' +
+              '<div class="dialog-body">' +
+              "<p>纬度: " +
+              lat.toFixed(5) +
+              "　经度: " +
+              lng.toFixed(5) +
+              "</p>" +
+              '<input id="geoNote" class="premium-input" type="text" placeholder="备注（可选）" style="margin-bottom:8px;" />' +
+              '<input id="geoCat" class="premium-input" type="text" placeholder="分类（可选，如：采样点、观测站…）" />' +
+              '<div class="premium-btns">' +
+              '<button id="geoCancel" class="premium-btn premium-btn-cancel">取消</button>' +
+              '<button id="geoSave" class="premium-btn premium-btn-submit">保存位置</button>' +
+              "</div>" +
+              "</div>";
+            document.body.appendChild(dlg);
+            dlg.showModal();
+
+            dlg
+              .querySelector("#geoSave")
+              .addEventListener("click", function () {
+                var note = dlg.querySelector("#geoNote").value.trim();
+                var cat = dlg.querySelector("#geoCat").value.trim();
+                dlg.close();
+                document.body.removeChild(dlg);
+                addGeoPointToLayer(lat, lng, note, cat);
+              });
+            dlg
+              .querySelector("#geoCancel")
+              .addEventListener("click", function () {
+                dlg.close();
+                document.body.removeChild(dlg);
+              });
+            dlg.addEventListener("close", function () {
+              if (document.body.contains(dlg)) document.body.removeChild(dlg);
+            });
+          },
+          function (err) {
+            if (_locToast && typeof window.closeToast === "function")
+              window.closeToast(_locToast);
+            var msg = "定位失败";
+            if (err.code === 1)
+              msg = "⚠️ 定位权限被拒绝，请在浏览器设置中允许位置访问";
+            else if (err.code === 2) msg = "⚠️ 无法获取位置，请检查 GPS 或网络";
+            else if (err.code === 3) msg = "⚠️ 定位超时，请重试";
+            if (typeof window.showToast === "function")
+              window.showToast(msg, { duration: 4000 });
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
+        );
+      };
+
+      // ========== 通用要素计数更新（已前移至文件头部）==========
 
       function renderResults(results, query, totalCount) {
         resultsBox.innerHTML = "";

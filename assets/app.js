@@ -8,13 +8,7 @@
  */
 
 // ========== 付费激活码（每月更新） ==========
-var _PR_CODES = [
-  "837291",
-  "460518",
-  "915742",
-  "283604",
-  "671849"
-];
+var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
 (function () {
   // ========== 数据驱动渲染（必须在 toggleConfig 执行前创建 DOM）==========
   (function () {
@@ -117,6 +111,13 @@ var _PR_CODES = [
             icon: "📷",
             desc: "将当前地图截图导出为 PNG 图片",
           },
+          {
+            type: "button",
+            id: "geoLocateBtn",
+            label: "定位当前位置",
+            icon: "📍",
+            desc: "获取设备 GPS 坐标，在地图上标记当前位置并记录备注与分类",
+          },
         ],
       },
     ];
@@ -143,26 +144,26 @@ var _PR_CODES = [
             "</button>" +
             "</div>";
         } else {
-        html +=
-          '<div class="toggle-bar" id="' +
-          item.id +
-          'Bar" title="' +
-          item.desc +
-          '">' +
-          '<label class="cluster-toggle-label">' +
-          '<span class="cluster-toggle-text">' +
-          item.label +
-          "</span>" +
-          '<input type="checkbox" id="' +
-          item.id +
-          '"' +
-          (item.checked ? " checked" : "") +
-          ">" +
-          '<span class="cluster-toggle-switch"></span>' +
-          "</label>" +
-          "</div>";
+          html +=
+            '<div class="toggle-bar" id="' +
+            item.id +
+            'Bar" title="' +
+            item.desc +
+            '">' +
+            '<label class="cluster-toggle-label">' +
+            '<span class="cluster-toggle-text">' +
+            item.label +
+            "</span>" +
+            '<input type="checkbox" id="' +
+            item.id +
+            '"' +
+            (item.checked ? " checked" : "") +
+            ">" +
+            '<span class="cluster-toggle-switch"></span>' +
+            "</label>" +
+            "</div>";
+        }
       }
-    }
     }
     body.innerHTML = html;
 
@@ -171,6 +172,20 @@ var _PR_CODES = [
     if (exportBtn) {
       exportBtn.addEventListener("click", function () {
         exportMapImage();
+      });
+    }
+    var geoBtn = document.getElementById("geoLocateBtn");
+    if (geoBtn) {
+      geoBtn.addEventListener("click", function () {
+        if (typeof window.startGeoLocate === "function") {
+          window.startGeoLocate();
+        } else {
+          if (typeof window.showToast === "function") {
+            window.showToast("⏳ 定位功能加载中，请稍后再试", {
+              duration: 2000,
+            });
+          }
+        }
       });
     }
   })();
@@ -721,7 +736,10 @@ var _PR_CODES = [
     premiumToggle: {
       storageKey: TOGGLE_PREFIX + "premium",
       enable: function () {
-        if (typeof window.premiumCheck === "function" && window.premiumCheck()) {
+        if (
+          typeof window.premiumCheck === "function" &&
+          window.premiumCheck()
+        ) {
           return; // 已激活，无需再次弹窗
         }
         if (typeof window.showPremiumActivation === "function") {
@@ -738,7 +756,10 @@ var _PR_CODES = [
       },
       disable: function () {
         // 已激活后不允许关闭
-        if (typeof window.premiumCheck === "function" && window.premiumCheck()) {
+        if (
+          typeof window.premiumCheck === "function" &&
+          window.premiumCheck()
+        ) {
           var cb = document.getElementById("premiumToggle");
           if (cb) {
             cb.checked = true;
@@ -858,8 +879,14 @@ var _PR_CODES = [
           '<div style="text-align:center;">' +
           '<p style="font-size:15px;font-weight:600;color:var(--accent);margin:0 0 4px;">✅ 高级功能已激活</p>' +
           '<p style="font-size:12px;color:var(--text-muted);margin:0 0 14px;">扫二维码在手机上同步激活此功能</p>' +
-          '<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(location.origin + location.pathname + "?activate=" + code) + '" alt="QR" style="width:140px;height:140px;border-radius:6px;border:1px solid var(--border-light);" />' +
-          '<p style="margin:6px 0 0;font-size:10px;color:var(--text-faint);">' + (location.origin + location.pathname + "?activate=" + code) + '</p>' +
+          '<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' +
+          encodeURIComponent(
+            location.origin + location.pathname + "?activate=" + code,
+          ) +
+          '" alt="QR" style="width:140px;height:140px;border-radius:6px;border:1px solid var(--border-light);" />' +
+          '<p style="margin:6px 0 0;font-size:10px;color:var(--text-faint);">' +
+          (location.origin + location.pathname + "?activate=" + code) +
+          "</p>" +
           '<button id="prDone" class="premium-btn premium-btn-submit" style="margin-top:14px;padding:7px 24px;">完成</button>' +
           "</div>";
         dlg.querySelector("#prDone").addEventListener("click", function () {
@@ -870,7 +897,10 @@ var _PR_CODES = [
 
       function doActivate() {
         var code = input.value.trim();
-        if (!code) { errEl.style.display = "block"; return; }
+        if (!code) {
+          errEl.style.display = "block";
+          return;
+        }
         if (_PR_CODES.indexOf(code) >= 0) {
           _activated = true;
           localStorage.setItem(_PR_KEY, "true");
@@ -888,7 +918,10 @@ var _PR_CODES = [
         if (typeof callback === "function") callback(false);
       });
       input.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") { e.preventDefault(); doActivate(); }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          doActivate();
+        }
       });
       dlg.addEventListener("close", function () {
         if (document.body.contains(dlg)) document.body.removeChild(dlg);
