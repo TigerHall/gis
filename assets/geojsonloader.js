@@ -384,10 +384,7 @@
       if (!feature || !feature.properties) return "";
       var props = feature.properties;
       return (
-        props.Name ||
-        props.name ||
-        props.NAME ||
-        _getFirstFieldValue(props)
+        props.Name || props.name || props.NAME || _getFirstFieldValue(props)
       );
     }
 
@@ -565,8 +562,28 @@
 
       const isNoCluster = !isPointType || !clusterEnabled;
 
-      // 标签字段（统一由 geo-config.js 的 labelField 控制，默认 "Name"）
-      let labelField = labelFieldMap[checkboxId] || DEFAULT_LABEL_FIELD;
+      // 读取用户自定义设置（颜色、名称字段等）
+      var savedSettings = loadLayerSettings(checkboxId);
+      if (savedSettings.colorMode)
+        colorMode[checkboxId] = savedSettings.colorMode;
+      if (savedSettings.colorField)
+        fieldKey[checkboxId] = savedSettings.colorField;
+      if (savedSettings.colorValue)
+        layerColorMap[checkboxId] = savedSettings.colorValue;
+
+      // 标签字段：用户自定义 → geo-config.js 配置 → 默认 "Name"
+      let labelField =
+        savedSettings.labelField ||
+        labelFieldMap[checkboxId] ||
+        DEFAULT_LABEL_FIELD;
+
+      // 图层显示名称（用于弹窗底部标注）
+      var layerDisplayName = "";
+      try {
+        var cbEl = document.getElementById(checkboxId);
+        if (cbEl && cbEl.dataset && cbEl.dataset.layerName)
+          layerDisplayName = cbEl.dataset.layerName;
+      } catch (e) {}
 
       const isVolcanoLayer = fileName === "volcanos.json";
       const isHotspotLayer =
@@ -681,7 +698,12 @@
 
             // 点击回调：所有数据集均设置（f 即 featuresArray 元素，含完整属性）
             canvasLayer.options.onFeatureClick = function (f, latlng) {
-              const content = window.GeoUtils.buildPopupContent(f, fileName, labelField);
+              const content = window.GeoUtils.buildPopupContent(
+                f,
+                fileName,
+                labelField,
+                layerDisplayName,
+              );
               if (content) {
                 L.popup({ maxWidth: 300 })
                   .setLatLng(latlng)
@@ -722,6 +744,7 @@
                   feature,
                   fileName,
                   labelField,
+                  layerDisplayName,
                 );
                 if (content) marker.bindPopup(content, { maxWidth: 300 });
 
@@ -779,7 +802,12 @@
                   isHotspotLayer,
                 );
                 marker.bindPopup(
-                  window.GeoUtils.buildPopupContent(feature, fileName, labelField),
+                  window.GeoUtils.buildPopupContent(
+                    feature,
+                    fileName,
+                    labelField,
+                    layerDisplayName,
+                  ),
                   { maxWidth: 300 },
                 );
                 return marker;
@@ -812,7 +840,12 @@
               );
 
               marker.bindPopup(
-                window.GeoUtils.buildPopupContent(feature, fileName, labelField),
+                window.GeoUtils.buildPopupContent(
+                  feature,
+                  fileName,
+                  labelField,
+                  layerDisplayName,
+                ),
                 { maxWidth: 300 },
               );
               return marker;
@@ -847,6 +880,7 @@
                   feature,
                   fileName,
                   labelField,
+                  layerDisplayName,
                 );
                 if (content)
                   layer.bindPopup(content, { maxWidth: 300 }).openPopup();
@@ -874,6 +908,7 @@
                   feature,
                   fileName,
                   labelField,
+                  layerDisplayName,
                 );
                 if (content)
                   layer.bindPopup(content, { maxWidth: 300 }).openPopup();
@@ -1579,93 +1614,329 @@
       );
       if (!li) return;
       const btn = li.querySelector(".layer-color-btn");
-      if (btn) btn.title = "颜色模式：" + getColorModeLabel(checkboxId);
+      if (btn) btn.title = "图层设置 · " + getColorModeLabel(checkboxId);
     }
 
-    // ========== 颜色设置弹窗 ==========
-    let colorModalOverlay = null;
-    let colorModalData = null;
+    const LAYER_SETTINGS_PREFIX = "dupal_layer_set_";
 
-    function getColorModalHTML(checkboxId, fileName, availableFields) {
+    // ========== 统一图层设置持久化 ==========
+    // 所有图层自定义设置（颜色模式、名称字段等）统一为一个 JSON 对象，
+    // 按 checkboxId 存入 localStorage。新增设置只需在 settings 对象加字段。
+    function saveLayerSettings(checkboxId, settings) {
+      try {
+        localStorage.setItem(
+          LAYER_SETTINGS_PREFIX + checkboxId,
+          JSON.stringify(settings),
+        );
+      } catch (e) {}
+    }
+    function loadLayerSettings(checkboxId) {
+      try {
+        return (
+          JSON.parse(
+            localStorage.getItem(LAYER_SETTINGS_PREFIX + checkboxId),
+          ) || {}
+        );
+      } catch (e) {
+        return {};
+      }
+    }
+    function clearLayerSettings(checkboxId) {
+      try {
+        localStorage.removeItem(LAYER_SETTINGS_PREFIX + checkboxId);
+      } catch (e) {}
+    }
+
+    // ========== 图层设置弹窗（颜色 / 属性表 / 图表）==========
+    let _layerDialog = null;
+    let _layerDialogData = null;
+
+    // 抽象：统计指定字段的唯一值个数（可复用：属性表筛选 + 图表绘制）
+    function _getUniqueFieldValueCount(features, fieldName) {
+      if (!features || !features.length) return 0;
+      var set = {};
+      var count = 0;
+      for (var i = 0; i < features.length; i++) {
+        var f = features[i];
+        if (f && f.properties) {
+          var v = f.properties[fieldName];
+          if (v != null && typeof v !== "object" && !set.hasOwnProperty(v)) {
+            set[v] = true;
+            count++;
+          }
+        }
+      }
+      return count;
+    }
+
+    function getColorPanelHTML(checkboxId, fields, userLabelField) {
       const mode = colorMode[checkboxId] || "sequential";
       const currentField = fieldKey[checkboxId] || "";
       const currentColor = layerColorMap[checkboxId] || "#8B4513";
-      const fieldOptions = availableFields
+      const defaultLabelField =
+        labelFieldMap[checkboxId] || DEFAULT_LABEL_FIELD;
+      const fieldOptions = fields
         .map(function (f) {
           return `<option value="${f}" ${f === currentField ? "selected" : ""}>${f}</option>`;
         })
         .join("");
+      const labelFieldOptions = fields
+        .map(function (f) {
+          return `<option value="${f}" ${f === userLabelField ? "selected" : ""}>${f}</option>`;
+        })
+        .join("");
 
       return `
-        <div class="color-modal-content">
-          <div class="color-modal-header">
-            <span>颜色设置</span>
-            <button class="color-modal-close" id="colorModalClose">&times;</button>
+        <div class="color-settings-panel">
+          <div class="dlg-name-field-row">
+            <label class="dlg-name-field-label">名称字段：</label>
+            <div class="dlg-name-field-controls">
+              <select id="dlgNameFieldSelect" class="dlg-field-select">
+                ${labelFieldOptions || '<option value="">无可用字段</option>'}
+              </select>
+              <button class="dlg-btn dlg-btn-sm" id="dlgNameFieldReset" title="恢复默认字段">恢复默认</button>
+            </div>
           </div>
-          <div class="color-modal-body">
-            <div class="color-mode-group">
-              <label class="color-mode-option">
-                <input type="radio" name="colorModeRadio" value="single" ${mode === "single" ? "checked" : ""}>
-                <span>单一颜色</span>
-              </label>
-              <label class="color-mode-option">
-                <input type="radio" name="colorModeRadio" value="sequential" ${mode === "sequential" ? "checked" : ""}>
-                <span>内部多颜色（全部不同）</span>
-              </label>
-              <label class="color-mode-option">
-                <input type="radio" name="colorModeRadio" value="field" ${mode === "field" ? "checked" : ""}>
-                <span>内部多颜色（按字段分色）</span>
-              </label>
-            </div>
-            <div id="singleColorPanel" style="display:${mode === "single" ? "block" : "none"};margin-top:10px;">
-              <label style="font-size:12px;color:#555;">选择颜色：</label>
-              <input type="color" id="modalColorPicker" value="${currentColor}" style="margin-left:8px;cursor:pointer;">
-              <span id="modalColorHex" style="font-size:12px;color:#888;margin-left:6px;">${currentColor}</span>
-            </div>
-            <div id="fieldColorPanel" style="display:${mode === "field" ? "block" : "none"};margin-top:10px;">
-              <label style="font-size:12px;color:#555;">选择字段：</label>
-              <select id="modalFieldSelect" style="margin-left:8px;max-width:180px;">
+          <hr class="dlg-section-divider">
+          <div class="color-mode-group">
+            <label class="color-mode-option">
+              <input type="radio" name="dlgColorMode" value="single" ${mode === "single" ? "checked" : ""}>
+              <span>单一颜色</span>
+            </label>
+            <label class="color-mode-option">
+              <input type="radio" name="dlgColorMode" value="sequential" ${mode === "sequential" ? "checked" : ""}>
+              <span>内部多颜色（全部不同）</span>
+            </label>
+            <label class="color-mode-option">
+              <input type="radio" name="dlgColorMode" value="field" ${mode === "field" ? "checked" : ""}>
+              <span>内部多颜色（按字段分色）</span>
+            </label>
+          </div>
+          <div id="dlgSingleColorPanel" style="display:${mode === "single" ? "block" : "none"};margin-top:10px;">
+            <label style="font-size:12px;color:#555;">选择颜色：</label>
+            <input type="color" id="dlgColorPicker" value="${currentColor}" style="margin-left:8px;cursor:pointer;">
+            <span id="dlgColorHex" style="font-size:12px;color:#888;margin-left:6px;">${currentColor}</span>
+          </div>
+          <div id="dlgFieldColorPanel" style="display:${mode === "field" ? "block" : "none"};margin-top:10px;">
+            <label style="font-size:12px;color:#555;display:block;margin-bottom:4px;">选择字段：</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <select id="dlgFieldSelect" class="dlg-field-select">
                 ${fieldOptions || '<option value="">无可用字段</option>'}
               </select>
+              <span id="dlgFieldCount" class="dlg-field-count" style="display:none;"></span>
             </div>
-          </div>
-          <div class="color-modal-footer">
-            <button id="colorModalCancel" style="padding:5px 12px;cursor:pointer;">取消</button>
-            <button id="colorModalConfirm" style="padding:5px 12px;cursor:pointer;background:#4a8c4a;color:#fff;border:1px solid #3a6c3a;border-radius:3px;">确认</button>
           </div>
         </div>`;
     }
 
-    function openColorModal(checkboxId, fileName, filePath) {
-      if (colorModalOverlay) {
-        colorModalOverlay.remove();
-        colorModalOverlay = null;
+    function getAttrTablePanelHTML() {
+      return '<div class="tab-placeholder"><span style="font-size:32px;">📋</span><p style="color:#888;margin-top:8px;">属性表功能开发中，敬请期待</p></div>';
+    }
+
+    function getChartPanelHTML() {
+      return '<div class="tab-placeholder"><span style="font-size:32px;">📊</span><p style="color:#888;margin-top:8px;">图表功能开发中，敬请期待</p></div>';
+    }
+
+    function getLayerDialogHTML(checkboxId, layerName, fields, userLabelField) {
+      return `
+        <div class="layer-dialog-content">
+          <div class="dialog-header">
+            <h3>⚙️ ${layerName}</h3>
+            <button class="dialog-close" id="dlgCloseBtn">&times;</button>
+          </div>
+          <div class="dlg-tabs">
+            <button class="dlg-tab active" data-tab="color">🎨 颜色</button>
+            <button class="dlg-tab" data-tab="attr">📋 属性表</button>
+            <button class="dlg-tab" data-tab="chart">📊 图表</button>
+          </div>
+          <div class="dlg-tab-content" id="dlgTabColor">${getColorPanelHTML(checkboxId, fields, userLabelField)}</div>
+          <div class="dlg-tab-content" id="dlgTabAttr" style="display:none;">${getAttrTablePanelHTML()}</div>
+          <div class="dlg-tab-content" id="dlgTabChart" style="display:none;">${getChartPanelHTML()}</div>
+          <div class="dialog-footer">
+            <button class="dlg-btn dlg-btn-secondary" id="dlgCancelBtn">取消</button>
+            <button class="dlg-btn dlg-btn-primary" id="dlgConfirmBtn">确认</button>
+          </div>
+        </div>`;
+    }
+
+    function openLayerDialog(checkboxId, fileName, filePath, layerName) {
+      if (_layerDialog) {
+        _layerDialog.close();
+        _layerDialog.remove();
+        _layerDialog = null;
       }
 
-      // 获取 GeoJSON 数据：优先从搜索索引缓存取（避免大数据集重新 fetch 300MB）
-      // 搜索索引的 features 是原始 data_.features 引用，包含完整 properties
+      function showDialog(fields, featuresData, userLabelField) {
+        _layerDialogData = {
+          checkboxId: checkboxId,
+          fileName: fileName,
+          filePath: filePath,
+          features: featuresData,
+        };
+
+        var dlg = document.createElement("dialog");
+        dlg.className = "app-dialog layer-dialog";
+        dlg.innerHTML = getLayerDialogHTML(
+          checkboxId,
+          layerName,
+          fields,
+          userLabelField,
+        );
+        document.body.appendChild(dlg);
+        _layerDialog = dlg;
+
+        // === Tab 切换 ===
+        dlg.querySelectorAll(".dlg-tab").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            dlg.querySelectorAll(".dlg-tab").forEach(function (b) {
+              b.classList.remove("active");
+            });
+            this.classList.add("active");
+            var tab = this.dataset.tab;
+            ["color", "attr", "chart"].forEach(function (t) {
+              var el = document.getElementById(
+                "dlgTab" + t.charAt(0).toUpperCase() + t.slice(1),
+              );
+              if (el) el.style.display = t === tab ? "block" : "none";
+            });
+          });
+        });
+
+        // === 名称字段选择 ===
+        var nameFieldSel = document.getElementById("dlgNameFieldSelect");
+        var nameFieldReset = document.getElementById("dlgNameFieldReset");
+        if (nameFieldReset) {
+          nameFieldReset.addEventListener("click", function () {
+            var s = loadLayerSettings(checkboxId);
+            delete s.labelField;
+            saveLayerSettings(checkboxId, s);
+            // 重置到默认字段（labelFieldMap 或 "Name"）
+            var defaultField = labelFieldMap[checkboxId] || DEFAULT_LABEL_FIELD;
+            if (nameFieldSel) nameFieldSel.value = defaultField;
+          });
+        }
+
+        // === 颜色模式切换 ===
+        dlg
+          .querySelectorAll('input[name="dlgColorMode"]')
+          .forEach(function (r) {
+            r.addEventListener("change", function () {
+              var sp = document.getElementById("dlgSingleColorPanel");
+              if (sp)
+                sp.style.display = this.value === "single" ? "block" : "none";
+              var fp = document.getElementById("dlgFieldColorPanel");
+              if (fp)
+                fp.style.display = this.value === "field" ? "block" : "none";
+              // 切换到 field 模式时更新计数
+              if (this.value === "field") updateFieldCount();
+            });
+          });
+
+        // === 字段选择 → 显示唯一值计数 ===
+        function updateFieldCount() {
+          var sel = document.getElementById("dlgFieldSelect");
+          var cntEl = document.getElementById("dlgFieldCount");
+          if (!sel || !cntEl || !_layerDialogData || !_layerDialogData.features)
+            return;
+          var field = sel.value;
+          if (field) {
+            var cnt = _getUniqueFieldValueCount(
+              _layerDialogData.features,
+              field,
+            );
+            cntEl.style.display = "inline";
+            cntEl.textContent = "唯一值: " + cnt;
+          } else {
+            cntEl.style.display = "none";
+          }
+        }
+        var fieldSel = document.getElementById("dlgFieldSelect");
+        if (fieldSel) {
+          fieldSel.addEventListener("change", updateFieldCount);
+          // 如果当前 mode 是 field，立即显示
+          var curMode = dlg.querySelector('input[name="dlgColorMode"]:checked');
+          if (curMode && curMode.value === "field") updateFieldCount();
+        }
+
+        // === 色值实时预览 ===
+        var cp = document.getElementById("dlgColorPicker");
+        if (cp) {
+          cp.addEventListener("input", function () {
+            var hex = document.getElementById("dlgColorHex");
+            if (hex) hex.textContent = this.value;
+          });
+          cp.addEventListener("change", function () {
+            var sel = dlg.querySelector('input[name="dlgColorMode"]:checked');
+            if (sel && sel.value === "single") {
+              layerColorMap[_layerDialogData.checkboxId] = this.value;
+              refreshLayerColors(_layerDialogData.checkboxId);
+            }
+          });
+        }
+
+        // === 关闭与取消 ===
+        dlg.querySelector("#dlgCloseBtn").onclick = function () {
+          dlg.close();
+        };
+        dlg.querySelector("#dlgCancelBtn").onclick = function () {
+          dlg.close();
+        };
+        dlg.addEventListener("click", function (e) {
+          if (e.target === dlg) dlg.close();
+        });
+
+        // === 确认：保存所有设置 ===
+        dlg.querySelector("#dlgConfirmBtn").onclick = function () {
+          if (!_layerDialogData) return;
+          var cbId = _layerDialogData.checkboxId;
+          var selMode = dlg.querySelector('input[name="dlgColorMode"]:checked');
+          var newMode = selMode ? selMode.value : "sequential";
+          var cp = dlg.querySelector("#dlgColorPicker");
+          var newColor = cp ? cp.value : layerColorMap[cbId];
+          var fs = dlg.querySelector("#dlgFieldSelect");
+          var newField = fs ? fs.value : "";
+          var nameFieldSel = dlg.querySelector("#dlgNameFieldSelect");
+          var nf = nameFieldSel ? nameFieldSel.value : "";
+
+          // 统一写入持久化设置
+          var s = {};
+          s.colorMode = newMode;
+          s.colorValue = newColor;
+          if (newField) s.colorField = newField;
+          if (nf) s.labelField = nf;
+          saveLayerSettings(cbId, s);
+
+          reloadLayerWithNewMode(cbId, newMode, newColor, newField);
+          dlg.close();
+        };
+
+        dlg.addEventListener("close", function () {
+          _layerDialog = null;
+          _layerDialogData = null;
+          dlg.remove();
+        });
+
+        dlg.showModal();
+      }
+
+      // ---- 获取字段列表 ----
+      function loadFieldsAndShow(data_) {
+        var fields = window.GeoUtils.getAvailableFields(data_);
+        var savedSettings = loadLayerSettings(checkboxId);
+        var userLabelField = savedSettings.labelField || "";
+        showDialog(fields, data_.features || [], userLabelField);
+      }
+
       var si = searchIndexMap[checkboxId];
       if (si && si.features) {
-        // 构造轻量伪 GeoJSON 供 getAvailableFields 取字段名
-        var cachedData = {
-          type: "FeatureCollection",
-          features: si.features.slice(0, 50),
-        };
-        var fields = window.GeoUtils.getAvailableFields(cachedData);
-        showColorModalContent(checkboxId, fileName, filePath, fields);
+        loadFieldsAndShow({ type: "FeatureCollection", features: si.features });
       } else if (filePath) {
         function doFetch(p) {
-          fetchGzGeoJSON(p).then(function (data) {
-            var fields = window.GeoUtils.getAvailableFields(data);
-            showColorModalContent(checkboxId, fileName, filePath, fields);
-          });
+          fetchGzGeoJSON(p).then(loadFieldsAndShow);
         }
         if (filePath.startsWith("http")) {
           fetchGzGeoJSON(filePath)
-            .then(function (data) {
-              var fields = window.GeoUtils.getAvailableFields(data);
-              showColorModalContent(checkboxId, fileName, filePath, fields);
-            })
+            .then(loadFieldsAndShow)
             .catch(function () {
               doFetch(window.geoJsonBasePath + fileName);
             });
@@ -1673,96 +1944,10 @@
           doFetch(filePath);
         }
       } else if (userLayerGeoJson[checkboxId]) {
-        var fields = window.GeoUtils.getAvailableFields(
-          userLayerGeoJson[checkboxId].geoJsonData,
-        );
-        showColorModalContent(checkboxId, fileName, filePath, fields);
+        loadFieldsAndShow(userLayerGeoJson[checkboxId].geoJsonData);
       } else {
         alert("无法加载图层数据，请尝试重新添加图层。");
       }
-    }
-
-    function showColorModalContent(checkboxId, fileName, filePath, fields) {
-      colorModalData = {
-        checkboxId: checkboxId,
-        fileName: fileName,
-        filePath: filePath,
-      };
-
-      colorModalOverlay = document.createElement("div");
-      colorModalOverlay.id = "colorModalOverlay";
-      colorModalOverlay.innerHTML = getColorModalHTML(
-        checkboxId,
-        fileName,
-        fields,
-      );
-      colorModalOverlay.style.cssText =
-        "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:99999;display:flex;align-items:center;justify-content:center;";
-      document.body.appendChild(colorModalOverlay);
-
-      document
-        .querySelectorAll('input[name="colorModeRadio"]')
-        .forEach(function (r) {
-          r.addEventListener("change", function () {
-            document.getElementById("singleColorPanel").style.display =
-              this.value === "single" ? "block" : "none";
-            document.getElementById("fieldColorPanel").style.display =
-              this.value === "field" ? "block" : "none";
-          });
-        });
-
-      var colorPicker = document.getElementById("modalColorPicker");
-      if (colorPicker) {
-        colorPicker.addEventListener("input", function () {
-          var hexSpan = document.getElementById("modalColorHex");
-          if (hexSpan) hexSpan.textContent = this.value;
-        });
-        colorPicker.addEventListener("change", function () {
-          var selMode = document.querySelector(
-            'input[name="colorModeRadio"]:checked',
-          );
-          var newMode = selMode ? selMode.value : "sequential";
-          if (newMode === "single") {
-            layerColorMap[colorModalData.checkboxId] = this.value;
-            refreshLayerColors(colorModalData.checkboxId);
-          }
-        });
-      }
-
-      document.getElementById("colorModalClose").onclick = closeColorModal;
-      document.getElementById("colorModalCancel").onclick = closeColorModal;
-      colorModalOverlay.addEventListener("click", function (e) {
-        if (e.target === colorModalOverlay) closeColorModal();
-      });
-
-      document.getElementById("colorModalConfirm").onclick = function () {
-        if (!colorModalData) return;
-        const selMode = document.querySelector(
-          'input[name="colorModeRadio"]:checked',
-        );
-        const newMode = selMode ? selMode.value : "sequential";
-        const newColor = document.getElementById("modalColorPicker")
-          ? document.getElementById("modalColorPicker").value
-          : layerColorMap[colorModalData.checkboxId];
-        const newField = document.getElementById("modalFieldSelect")
-          ? document.getElementById("modalFieldSelect").value
-          : "";
-        reloadLayerWithNewMode(
-          colorModalData.checkboxId,
-          newMode,
-          newColor,
-          newField,
-        );
-        closeColorModal();
-      };
-    }
-
-    function closeColorModal() {
-      if (colorModalOverlay) {
-        colorModalOverlay.remove();
-        colorModalOverlay = null;
-      }
-      colorModalData = null;
     }
 
     // ========== 生成分组图层面板 ==========
@@ -1955,13 +2140,18 @@
             });
           })(checkboxId, fullPath, layerConfig.name);
 
-          var colorBtn = document.createElement("button");
-          colorBtn.className = "layer-color-btn";
-          colorBtn.title = "颜色模式：内部多颜色";
-          colorBtn.innerHTML = "🎨";
-          colorBtn.addEventListener("click", function (e) {
+          var settingsBtn = document.createElement("button");
+          settingsBtn.className = "layer-color-btn";
+          settingsBtn.title = "图层设置";
+          settingsBtn.innerHTML = "⚙️";
+          settingsBtn.addEventListener("click", function (e) {
             e.stopPropagation();
-            openColorModal(checkboxId, layerConfig.file, fullPath);
+            openLayerDialog(
+              checkboxId,
+              layerConfig.file,
+              fullPath,
+              layerConfig.name,
+            );
           });
 
           var locateBtn = document.createElement("button");
@@ -1976,7 +2166,7 @@
           layerItem.appendChild(checkbox);
           layerItem.appendChild(label);
           layerItem.appendChild(statusSpan);
-          layerItem.appendChild(colorBtn);
+          layerItem.appendChild(settingsBtn);
           layerItem.appendChild(locateBtn);
           children.appendChild(layerItem);
         });
@@ -2405,6 +2595,7 @@
       checkbox.dataset.persistentId = persistentId;
       checkbox.style.setProperty("--layer-color", fixedColor);
       checkbox.style.background = autoShow !== false ? fixedColor : "#fff";
+      checkbox.dataset.layerName = fileName;
       checkbox.addEventListener("change", function () {
         this.style.background = this.checked ? fixedColor : "#fff";
         // 勾选时展开到对应面板层级
@@ -2472,13 +2663,13 @@
         });
       })(uid, fileName);
 
-      var colorBtn = document.createElement("button");
-      colorBtn.className = "layer-color-btn";
-      colorBtn.title = "颜色模式：内部多颜色";
-      colorBtn.innerHTML = "🎨";
-      colorBtn.addEventListener("click", function (e) {
+      var settingsBtn = document.createElement("button");
+      settingsBtn.className = "layer-color-btn";
+      settingsBtn.title = "图层设置";
+      settingsBtn.innerHTML = "⚙️";
+      settingsBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        openColorModal(uid, fileName, null);
+        openLayerDialog(uid, fileName, null, fileName);
       });
 
       var locateBtn = document.createElement("button");
@@ -2526,7 +2717,7 @@
       layerItem.appendChild(checkbox);
       layerItem.appendChild(label);
       layerItem.appendChild(statusSpan);
-      layerItem.appendChild(colorBtn);
+      layerItem.appendChild(settingsBtn);
       layerItem.appendChild(locateBtn);
       layerItem.appendChild(removeBtn);
       userGroup.appendChild(layerItem);
@@ -3661,6 +3852,13 @@
       keysToRemove.forEach(function (k) {
         localStorage.removeItem(k);
       });
+      // 清除所有自定义图层设置
+      for (var j = 0; j < localStorage.length; j++) {
+        var k2 = localStorage.key(j);
+        if (k2 && k2.indexOf(LAYER_SETTINGS_PREFIX) === 0) {
+          localStorage.removeItem(k2);
+        }
+      }
       // 清除用户图层元数据列表
       try {
         var list = JSON.parse(
@@ -3702,7 +3900,7 @@
       syncSelectAllStatus();
     }
 
-const MAP_STATE_KEY = "dupal_map_state";
+    const MAP_STATE_KEY = "dupal_map_state";
 
     // ========== 初始化 ==========
     function initGeoJsonLayer() {

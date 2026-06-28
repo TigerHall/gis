@@ -199,7 +199,7 @@
 }
 .premium-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(76,175,80,0.15);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.15);
 }
 .premium-error {
   margin: 8px 0 0;
@@ -710,7 +710,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .toast-close-btn:hover {
   background: var(--dlg-close-hover-bg);
@@ -903,8 +905,20 @@
   line-height: 1.7;
   min-width: 160px;
   max-width: 280px;
-  max-height: 300px;
+  overflow: hidden;
+}
+
+.feature-popup-body {
+  max-height: 200px;
   overflow-y: auto;
+  scrollbar-width: thin;
+}
+.feature-popup-body::-webkit-scrollbar {
+  width: 4px;
+}
+.feature-popup-body::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 2px;
 }
 
 .feature-popup table {
@@ -940,6 +954,15 @@
   color: var(--section-text);
   border-bottom: 1px solid var(--border-light);
   padding-bottom: 3px;
+}
+
+.feature-popup-footer {
+  font-size: 10px;
+  color: #999;
+  padding-top: 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-light, #e8e8e8);
+  text-align: left;
 }
 
 /* ========== Leaflet Hover Popup ========== */

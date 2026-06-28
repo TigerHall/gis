@@ -148,8 +148,16 @@
     {
       groupName: "社会热点专题",
       layers: [
-        { name: "2026世界杯48强", file: "wc2026_48_teams.geojson", labelField: "name_zh" },
-        { name: "2026世界杯32强", file: "wc2026_round32_teams.geojson", labelField: "name_zh" },
+        {
+          name: "2026世界杯48强",
+          file: "wc2026_48_teams.geojson",
+          labelField: "name_zh",
+        },
+        {
+          name: "2026世界杯32强",
+          file: "wc2026_round32_teams.geojson",
+          labelField: "name_zh",
+        },
       ],
     },
     {

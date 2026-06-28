@@ -106,7 +106,7 @@
   };
 
   // ========== 构建弹窗内容 ==========
-  function buildPopupContent(feature, fileName, titleField) {
+  function buildPopupContent(feature, fileName, titleField, layerDisplayName) {
     if (!feature.properties) return null;
     const props = feature.properties;
     const keys = Object.keys(props);
@@ -145,7 +145,11 @@
       })
       .join("");
 
-    return `<div class="feature-popup">${titleHtml}<table><tbody>${rows}</tbody></table></div>`;
+    return `<div class="feature-popup">${titleHtml}<div class="feature-popup-body"><table><tbody>${rows}</tbody></table></div>${
+      layerDisplayName
+        ? `<div class="feature-popup-footer">📂 ${layerDisplayName}</div>`
+        : ""
+    }</div>`;
   }
   function buildHighlightStyle(origStyle) {
     return Object.assign({}, origStyle, {
