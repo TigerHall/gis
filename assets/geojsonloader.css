@@ -84,8 +84,9 @@
 /* ========== 颜色设置弹窗 ========== */
 /* ========== 图层设置弹窗（dialog）========== */
 .layer-dialog {
-  min-width: 420px;
-  max-width: 560px;
+  min-width: 320px;
+  max-width: min(560px, 85vw);
+  max-height: 85vh;
   padding: 0;
   border: none;
   border-radius: 10px;
