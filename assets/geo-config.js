@@ -3,6 +3,50 @@
  * GeoJSON 图层的路径和分组配置
  * 独立拆分以减负 geojsonloader.js，便于维护图层列表
  * 加载时机：必须在 geojsonloader.js 之前
+ *
+ * ==========================================================
+ * 📌 如何添加一个新图层
+ * ==========================================================
+ *
+ * 1. 将 GeoJSON 文件放入 assets/geojson/ 目录
+ * 2. 在下方 window.geoJsonGroups 数组中添加一项：
+ *
+ *    示例 —— 简单添加：
+ *      { name: "图层显示名称", file: "文件名.geojson" }
+ *
+ *    完整选项：
+ *      { name: "图层名", file: "file.geojson",
+ *        labelField: "字段名"   // ← 可选：指定标签和弹窗标题使用的字段
+ *      }
+ *
+ * 3. 如需添加新分组，在 geoJsonGroups 数组中新增一个对象：
+ *
+ *    {
+ *      groupName: "分组名称",        // ← 图层面板中显示的组名
+ *      layers: [
+ *        { name: "图层1", file: "a.geojson" },
+ *        { name: "图层2", file: "b.geojson", labelField: "name_zh" },
+ *      ],
+ *    }
+ *
+ * 4. 文件命名规则：
+ *    - 自动补全 .gz 后缀（系统按需加载 .geojson.gz 或 .json.gz）
+ *    - 文件路径以 window.geoJsonBasePath 为前缀（默认 ./assets/geojson/）
+ *
+ * 5. 默认使用 COS CDN 加速加载，无需额外配置。
+ *
+ * ==========================================================
+ * 📌 图层配置选项
+ * ==========================================================
+ *
+ * 字段            | 必需 | 说明
+ * ----------------|------|----------
+ * name            |  是  | 图层面板中显示的名称
+ * file            |  是  | GeoJSON 文件名（自动补全路径和 gz 后缀）
+ * labelField      |  否  | 标签/弹窗标题使用的属性字段名
+ *                    （不设置则依次查找 Name → name → NAME → 第一个字段值）
+ *
+ * ==========================================================
  */
 (function () {
   // ========== 路径配置 ==========
@@ -55,8 +99,8 @@
     {
       groupName: "海底基础信息",
       layers: [
-        { name: "火山 volcanos", file: "volcanos.json" },
-        { name: "热点 hotspots", file: "hotspots.json" },
+        { name: "火山 volcanos", file: "volcanos.json", labelField: "NAME" },
+        { name: "热点 hotspots", file: "hotspots.json", labelField: "geodesc" },
         { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
         { name: "洋壳年龄30Ma间隔", file: "seafloor_age_30.geojson" },
         {
@@ -79,6 +123,7 @@
         {
           name: "热液喷口 HydrothermalVents(ISA)",
           file: "hydrothermal_vents.geojson",
+          labelField: "Name ID",
         },
         { name: "多金属结核 Fe-MnNodule(NOAA)", file: "Fe_MnNodule.geojson" },
         { name: "富钴结壳 Co-richCrust(NOAA)", file: "Co-richCrust.geojson" },
@@ -87,10 +132,10 @@
     {
       groupName: "地质站位",
       layers: [
-        { name: "DSDP", file: "DSDP.geojson" },
-        { name: "ODP", file: "ODP.geojson" },
+        { name: "DSDP", file: "DSDP.geojson", labelField: "Hole" },
+        { name: "ODP", file: "ODP.geojson", labelField: "Fullname" },
         { name: "IODP03-13", file: "IODP03-13.geojson" },
-        { name: "IODP13-26", file: "IODP13-26.geojson" },
+        { name: "IODP13-26", file: "IODP13-26.geojson", labelField: "site" },
         { name: "NWIR_rock", file: "NWIR_ridge.geojson" },
         { name: "SWIR_rock", file: "SWIR_ridge.geojson" },
         { name: "SEIR_rock", file: "SEIR_ridge.geojson" },
@@ -103,8 +148,8 @@
     {
       groupName: "社会热点专题",
       layers: [
-        { name: "2026世界杯48强", file: "wc2026_48_teams.geojson" },
-        { name: "2026世界杯32强", file: "wc2026_round32_teams.geojson" },
+        { name: "2026世界杯48强", file: "wc2026_48_teams.geojson", labelField: "name_zh" },
+        { name: "2026世界杯32强", file: "wc2026_round32_teams.geojson", labelField: "name_zh" },
       ],
     },
     {

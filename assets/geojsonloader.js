@@ -228,6 +228,7 @@
     const searchRegistry = [];
     const layerCache = {};
     const layerColorMap = {};
+    const labelFieldMap = {}; // checkboxId → 自定义标签字段名（来自 geo-config.js）
     // ========== 颜色模式管理 ==========
     const colorMode = {};
     const fieldKey = {};
@@ -361,51 +362,65 @@
           });
         });
     }
-    // 标签配置（委托给 GeoUtils，这里保留引用以便快速判断）
-    const STATION_LABEL_CONFIG = window.GeoUtils.STATION_LABEL_CONFIG;
     // 缩放相关常量
     const DEFAULT_LABEL_FIELD = "Name";
     let clusterEnabled = true;
     let labelEnabled = false;
 
-    // ========== 线/面 hover 标签（mouseover 事件驱动，性能优先）==========
-    // 不在 onEachFeature 中提前 bindTooltip（会导致拖动卡顿），
-    // 而是在 onEachFeature 中注册 mouseover/mouseout，
-    // 鼠标真正进入要素时才绑定 tooltip，离开时立即解绑。
-    // 拖动地图时完全不触发这些事件，零开销。
+    // ========== 要素名称提取：支持多层 fallback ==========
+    // 优先 Name/name/NAME，都没有则使用第一个非空字段值
 
-    function _bindHoverLabel(layer) {
-      layer.on("mouseover", function (e) {
-        if (!labelEnabled) return;
-        var name = _getFeatureName(layer.feature);
-        if (!name) return;
-        layer.bindTooltip(String(name), {
-          permanent: false,
-          direction: "top",
-          offset: [0, -8],
-          className: "feature-label",
-        });
-        // 打开 tooltip
-        layer.openTooltip();
-      });
-      layer.on("mouseout", function () {
-        try {
-          layer.closeTooltip();
-        } catch (e) {}
-        try {
-          layer.unbindTooltip();
-        } catch (e) {}
-      });
+    function _getFirstFieldValue(props) {
+      for (var key in props) {
+        if (Object.prototype.hasOwnProperty.call(props, key)) {
+          var v = props[key];
+          if (v !== null && v !== undefined && v !== "") return String(v);
+        }
+      }
+      return "";
     }
 
     function _getFeatureName(feature) {
       if (!feature || !feature.properties) return "";
+      var props = feature.properties;
       return (
-        feature.properties.Name ||
-        feature.properties.name ||
-        feature.properties.NAME ||
-        ""
+        props.Name ||
+        props.name ||
+        props.NAME ||
+        _getFirstFieldValue(props)
       );
+    }
+
+    function _getLabelText(feature, labelField) {
+      if (!feature || !feature.properties) return null;
+      var props = feature.properties;
+      var val = props[labelField];
+      if (val) return val;
+      // 无配置字段时回退到第一个非空字段值
+      var fallback = _getFirstFieldValue(props);
+      return fallback || null;
+    }
+
+    // ========== 线/面要素永久标签 ==========
+    // 当 labelEnabled 打开时，onEachFeature 中直接绑定 permanent tooltip，
+    // 替代原来的 mouseover 动态绑定方式，与点要素标签行为一致。
+    // 拖动时永久 tooltip 跟随要素移动（由 Leaflet 处理）。
+
+    function _bindPermanentLabel(layer, labelField) {
+      if (!labelEnabled) return;
+      var name = "";
+      // 优先使用配置的自定义标签字段
+      if (labelField && layer.feature && layer.feature.properties) {
+        name = layer.feature.properties[labelField];
+      }
+      if (!name) name = _getFeatureName(layer.feature);
+      if (!name) return;
+      layer.bindTooltip(String(name), {
+        permanent: true,
+        direction: "top",
+        offset: [0, -8],
+        className: "feature-label",
+      });
     }
 
     function _closeFeatureTooltip() {
@@ -550,9 +565,8 @@
 
       const isNoCluster = !isPointType || !clusterEnabled;
 
-      // 标签字段（配置表统一管理，默认 "Name"）
-      const cfg = STATION_LABEL_CONFIG[fileName];
-      let labelField = cfg ? cfg.field : DEFAULT_LABEL_FIELD;
+      // 标签字段（统一由 geo-config.js 的 labelField 控制，默认 "Name"）
+      let labelField = labelFieldMap[checkboxId] || DEFAULT_LABEL_FIELD;
 
       const isVolcanoLayer = fileName === "volcanos.json";
       const isHotspotLayer =
@@ -667,7 +681,7 @@
 
             // 点击回调：所有数据集均设置（f 即 featuresArray 元素，含完整属性）
             canvasLayer.options.onFeatureClick = function (f, latlng) {
-              const content = window.GeoUtils.buildPopupContent(f, fileName);
+              const content = window.GeoUtils.buildPopupContent(f, fileName, labelField);
               if (content) {
                 L.popup({ maxWidth: 300 })
                   .setLatLng(latlng)
@@ -692,9 +706,7 @@
                   fileName,
                   idx,
                 );
-                const labelText = feature.properties
-                  ? feature.properties[labelField] || null
-                  : null;
+                const labelText = _getLabelText(feature, labelField);
 
                 const marker = L.GeoMarker.createPointMarkerByType(
                   map,
@@ -709,6 +721,7 @@
                 const content = window.GeoUtils.buildPopupContent(
                   feature,
                   fileName,
+                  labelField,
                 );
                 if (content) marker.bindPopup(content, { maxWidth: 300 });
 
@@ -755,9 +768,7 @@
                   fileName,
                   idx,
                 );
-                const labelText = feature.properties
-                  ? feature.properties[labelField] || null
-                  : null;
+                const labelText = _getLabelText(feature, labelField);
                 const marker = L.GeoMarker.createPointMarkerByType(
                   map,
                   feature,
@@ -768,7 +779,7 @@
                   isHotspotLayer,
                 );
                 marker.bindPopup(
-                  window.GeoUtils.buildPopupContent(feature, fileName),
+                  window.GeoUtils.buildPopupContent(feature, fileName, labelField),
                   { maxWidth: 300 },
                 );
                 return marker;
@@ -788,9 +799,7 @@
                 fileName,
                 idx,
               );
-              const labelText = feature.properties
-                ? feature.properties[labelField] || null
-                : null;
+              const labelText = _getLabelText(feature, labelField);
 
               const marker = L.GeoMarker.createPointMarkerByType(
                 map,
@@ -803,7 +812,7 @@
               );
 
               marker.bindPopup(
-                window.GeoUtils.buildPopupContent(feature, fileName),
+                window.GeoUtils.buildPopupContent(feature, fileName, labelField),
                 { maxWidth: 300 },
               );
               return marker;
@@ -821,8 +830,8 @@
               const isPoint = geomType === "point" || geomType === "multipoint";
               if (isPoint) return;
 
-              // 标签：mouseover/mouseout 事件驱动（拖动时零开销）
-              _bindHoverLabel(layer);
+              // 标签：permanent tooltip（由 labelEnabled 全局开关控制，与点要素标签同步）
+              _bindPermanentLabel(layer, labelField);
 
               layer.on("click", function (e) {
                 const idx = feature._featureIndex || 0;
@@ -837,6 +846,7 @@
                 const content = window.GeoUtils.buildPopupContent(
                   feature,
                   fileName,
+                  labelField,
                 );
                 if (content)
                   layer.bindPopup(content, { maxWidth: 300 }).openPopup();
@@ -863,6 +873,7 @@
                 const content = window.GeoUtils.buildPopupContent(
                   feature,
                   fileName,
+                  labelField,
                 );
                 if (content)
                   layer.bindPopup(content, { maxWidth: 300 }).openPopup();
@@ -1876,6 +1887,8 @@
               ? "#FF3333"
               : window.GeoUtils.getFixedColor(idx);
           layerColorMap[checkboxId] = fixedColor;
+          if (layerConfig.labelField)
+            labelFieldMap[checkboxId] = layerConfig.labelField;
 
           var layerItem = document.createElement("div");
           layerItem.className = "layer-item";
@@ -3663,6 +3676,7 @@
         });
       } catch (e) {}
       localStorage.removeItem(USER_LAYER_STORAGE_KEY);
+      localStorage.removeItem(MAP_STATE_KEY);
     }
 
     // 恢复内置图层的勾选状态
@@ -3688,21 +3702,60 @@
       syncSelectAllStatus();
     }
 
+const MAP_STATE_KEY = "dupal_map_state";
+
     // ========== 初始化 ==========
     function initGeoJsonLayer() {
       generateLayerItems();
       initSearch();
 
+      // 页面卸载时保存地图中心坐标和缩放级别
+      window.addEventListener("pagehide", function () {
+        try {
+          var center = map.getCenter();
+          var zoom = map.getZoom();
+          localStorage.setItem(
+            MAP_STATE_KEY,
+            JSON.stringify({ lat: center.lat, lng: center.lng, zoom: zoom }),
+          );
+        } catch (e) {}
+      });
+
+      // 恢复地图中心/缩放
+      function restoreMapCenter() {
+        try {
+          var saved = localStorage.getItem(MAP_STATE_KEY);
+          if (saved) {
+            var state = JSON.parse(saved);
+            if (
+              typeof state.lat === "number" &&
+              typeof state.lng === "number" &&
+              typeof state.zoom === "number"
+            ) {
+              map.setView([state.lat, state.lng], state.zoom, {
+                animate: false,
+              });
+            }
+          }
+        } catch (e) {}
+      }
+
       // 图层恢复：检测到已保存的图层状态时，弹窗询问用户是否恢复
       if (isRememberLayerEnabled() && hasSavedLayerState()) {
-        showConfirm("检测到上次访问时打开的图层，是否恢复？", {
-          title: "恢复图层",
-          confirmText: "恢复",
-          cancelText: "不恢复",
-        }).then(function (restore) {
+        showConfirm(
+          "检测到上次访问时打开的图层。<br><br>" +
+            "⚠️ 如果上次加载的图层数据较大导致页面运行缓慢或崩溃，请选择「不恢复」以避免自动重载。<br><br>" +
+            "您也可以在「地图设置」中关闭「记住图层」选项，",
+          {
+            title: "恢复图层",
+            confirmText: "恢复",
+            cancelText: "不恢复",
+          },
+        ).then(function (restore) {
           if (restore) {
             restoreLayerCheckStates();
             restoreUserLayers();
+            restoreMapCenter();
           } else {
             clearAllLayerStates();
           }

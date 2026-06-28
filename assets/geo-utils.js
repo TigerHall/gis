@@ -106,7 +106,7 @@
   };
 
   // ========== 构建弹窗内容 ==========
-  function buildPopupContent(feature, fileName) {
+  function buildPopupContent(feature, fileName, titleField) {
     if (!feature.properties) return null;
     const props = feature.properties;
     const keys = Object.keys(props);
@@ -121,9 +121,9 @@
         typeof props[k] !== "object",
     );
     if (displayKeys.length === 0) return null;
-    // 标题行：优先用配置的 titleField，否则自动检测 Name 字段（不区分大小写）
+    // 标题行：优先用传入的 titleField，其次配置的 titleField，最后自动检测 Name 字段
     let titleHtml = "";
-    let titleKey = config.titleField || null;
+    let titleKey = titleField || config.titleField || null;
     if (!titleKey) {
       // 不区分大小写查找 name 字段
       const nameKey = keys.find((k) => k.toLowerCase() === "name");
@@ -298,28 +298,6 @@
     return Array.from(fieldSet).sort();
   }
 
-  // ========== 标签配置 ==========
-  // 只需列出 field 非 "Name" 的图层；默认所有点图层都用 Name 字段显示标签
-  const STATION_LABEL_CONFIG = {
-    "DSDP.geojson": { field: "Hole" },
-    "ODP.geojson": { field: "Fullname" },
-    "IODP13-26.geojson": { field: "site" },
-    "volcanos.json": { field: "NAME" },
-    "hotspots.json": { field: "geodesc" },
-    "hydrothermal_vents.geojson": { field: "Name ID" },
-  };
-
-  function isStationFile(fileName) {
-    return true; // 所有点图层默认显示标签
-  }
-
-  function getStationLabel(feature, fileName) {
-    if (!feature.properties) return null;
-    var cfg = STATION_LABEL_CONFIG[fileName];
-    var field = cfg ? cfg.field : "Name";
-    return feature.properties[field] || null;
-  }
-
   // ========== 直接根据 GeoJSON 计算 bounds（不构建 Layer，避免大数据内存爆炸）==========
   function computeBounds(geojsonData) {
     if (!geojsonData || !geojsonData.features) return null;
@@ -396,9 +374,6 @@
     fixAntimeridian,
     fixGeometryCoords,
     getAvailableFields,
-    isStationFile,
-    getStationLabel,
-    STATION_LABEL_CONFIG,
     POPUP_FIELD_CONFIG,
     computeBounds,
   };
