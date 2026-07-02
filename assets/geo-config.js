@@ -104,6 +104,18 @@
       layers: [
         { name: "火山 volcanos", file: "volcanos.geojson", labelField: "NAME" },
         {
+          name: "4.5级以上地震(2024-2026)",
+          file: "EQ4_5_2024_2026.geojson",
+        },
+        {
+          name: "7.0级以上地震(1800-2023)",
+          file: "EQ7_1800_2023.geojson",
+        },
+        {
+          name: "8.0级以上地震(1800-2023)",
+          file: "EQ8_1800_2023.geojson",
+        },
+        {
           name: "热点 hotspots",
           file: "hotspots.geojson",
           labelField: "geodesc",
@@ -163,6 +175,36 @@
         {
           name: "2026世界杯32强",
           file: "wc2026_round32_teams.geojson",
+          labelField: "name_zh",
+        },
+        {
+          name: "世界各国",
+          file: "all-countries-195.geojson",
+          labelField: "name_zh",
+        },
+        {
+          name: "富裕国家",
+          file: "rich-countries-50K.geojson",
+          labelField: "name_zh",
+        },
+        {
+          name: "贫穷国家",
+          file: "poor-countries-5K.geojson",
+          labelField: "name_zh",
+        },
+        {
+          name: "人口大国",
+          file: "populous-countries.geojson",
+          labelField: "name_zh",
+        },
+        {
+          name: "经济强国",
+          file: "economic-powers.geojson",
+          labelField: "name_zh",
+        },
+        {
+          name: "领土大国",
+          file: "large-territory-countries.geojson",
           labelField: "name_zh",
         },
       ],
