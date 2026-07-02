@@ -69,14 +69,17 @@
           name: "全球280个板块 (Hasterok2022)",
           file: "plates_Hasterok2022.geojson",
         },
-        { name: "大陆板块 plate_cont", file: "plate_cont.json" },
-        { name: "大洋板块 plate_ocean", file: "plate_ocean.json" },
-        { name: "洋中脊和转换断层 MOR&TF", file: "ridgenew.json" },
-        { name: "海沟 Trench", file: "Pb_trench.json" },
-        { name: "其他板块边界 Other boundries", file: "Pb_transformall.json" },
-        { name: "大西洋断裂带 Atlantic_FZ", file: "Atlantic_FZ.json" },
-        { name: "印度洋断裂带 Indian_FZ", file: "Indian_FZ.json" },
-        { name: "太平洋断裂带 Pacific_FZ", file: "Pacific_FZ.json" },
+        { name: "大陆板块 plate_cont", file: "plate_cont.geojson" },
+        { name: "大洋板块 plate_ocean", file: "plate_ocean.geojson" },
+        { name: "洋中脊和转换断层 MOR&TF", file: "ridgenew.geojson" },
+        { name: "海沟 Trench", file: "Pb_trench.geojson" },
+        {
+          name: "其他板块边界 Other boundries",
+          file: "Pb_transformall.geojson",
+        },
+        { name: "大西洋断裂带 Atlantic_FZ", file: "Atlantic_FZ.geojson" },
+        { name: "印度洋断裂带 Indian_FZ", file: "Indian_FZ.geojson" },
+        { name: "太平洋断裂带 Pacific_FZ", file: "Pacific_FZ.geojson" },
       ],
     },
     {
@@ -84,24 +87,28 @@
       layers: [
         {
           name: "1全球洋壳 GlobalOceanicCrust",
-          file: "1GlobalOceanicCrust.json",
+          file: "1GlobalOceanicCrust.geojson",
         },
-        { name: "2大洋域 OceanDomian", file: "2OceanDomian.json" },
-        { name: "3次大洋域 SubOceanDomain", file: "3SubOceanDomain.json" },
-        { name: "4洋中脊作用域 RidgeDomain", file: "4RidgeDomain.json" },
+        { name: "2大洋域 OceanDomian", file: "2OceanDomian.geojson" },
+        { name: "3次大洋域 SubOceanDomain", file: "3SubOceanDomain.geojson" },
+        { name: "4洋中脊作用域 RidgeDomain", file: "4RidgeDomain.geojson" },
         {
           name: "全球陆壳 GlobalContinentalCrust",
-          file: "global_continental_crust.json",
+          file: "global_continental_crust.geojson",
         },
-        { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.json" },
+        { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.geojson" },
       ],
     },
     {
       groupName: "海底基础信息",
       layers: [
-        { name: "火山 volcanos", file: "volcanos.json", labelField: "NAME" },
-        { name: "热点 hotspots", file: "hotspots.json", labelField: "geodesc" },
-        { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.json" },
+        { name: "火山 volcanos", file: "volcanos.geojson", labelField: "NAME" },
+        {
+          name: "热点 hotspots",
+          file: "hotspots.geojson",
+          labelField: "geodesc",
+        },
+        { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.geojson" },
         { name: "洋壳年龄30Ma间隔", file: "seafloor_age_30.geojson" },
         {
           name: "盆地 (Evenick2021)",
@@ -113,8 +120,8 @@
     {
       groupName: "大型异常区",
       layers: [
-        { name: "LLSVP", file: "LLSVP.json" },
-        { name: "Dupal异常洋 DupalOcean", file: "DupalOcean.json" },
+        { name: "LLSVP", file: "LLSVP.geojson" },
+        { name: "Dupal异常洋 DupalOcean", file: "DupalOcean.geojson" },
       ],
     },
     {
@@ -166,7 +173,7 @@
     },
     {
       groupName: null,
-      layers: [{ name: "Dupal异常区", file: "DupalOcean.json" }],
+      layers: [{ name: "Dupal异常区", file: "DupalOcean.geojson" }],
     },
   ];
 })();
