@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.8.9";
+const CACHE_NAME = "v1.9.0";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -71,6 +71,13 @@ self.addEventListener("install", (event) => {
       })
       .then(() => self.skipWaiting()),
   );
+});
+
+// 消息处理：接收页面发来的 skipWaiting 指令
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.action === "skipWaiting") {
+    self.skipWaiting();
+  }
 });
 
 // 激活阶段：清理旧缓存

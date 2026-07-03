@@ -146,6 +146,9 @@
       clusterMaxZoom: 14, // 此 zoom 以下显示聚类
       clusterFont: "bold 11px sans-serif",
       onFeatureClick: null, // fn(feature, latlng)
+      iconImage: null, // 预加载的 Image 对象（自定义图标，单色模式）
+      iconImages: null, // { colorHex → Image } 映射（多颜色模式）
+      iconSize: 20, // 图标像素尺寸
     },
 
     // ── Leaflet 生命周期 ──
@@ -356,14 +359,37 @@
             screenY: u.y,
           });
         } else {
-          // 单点：半径 8px（匹配 IODP DOM 渲染点），白色描边
-          ctx.beginPath();
-          ctx.fillStyle = u.color;
-          ctx.arc(u.x, u.y, 8, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = "#fff";
-          ctx.lineWidth = 1;
-          ctx.stroke();
+          // 单点：有自定义图标则绘制图片，否则绘制圆形
+          var iconImg = this.options.iconImage;
+          // 多颜色模式：按点颜色查找对应的图标 Image
+          var colorImages = this.options.iconImages;
+          if (colorImages && u.color && colorImages[u.color]) {
+            iconImg = colorImages[u.color];
+          }
+          if (iconImg && iconImg.complete && iconImg.naturalWidth > 0) {
+            var sz = this.options.iconSize || 20;
+            // 保持宽高比
+            var iw = iconImg.naturalWidth;
+            var ih = iconImg.naturalHeight;
+            var scale = Math.min(sz / iw, sz / ih);
+            var dw = Math.round(iw * scale);
+            var dh = Math.round(ih * scale);
+            ctx.drawImage(
+              iconImg,
+              u.x - Math.round(dw / 2),
+              u.y - Math.round(dh / 2),
+              dw,
+              dh,
+            );
+          } else {
+            ctx.beginPath();
+            ctx.fillStyle = u.color;
+            ctx.arc(u.x, u.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
 
           var hitR = 10;
           hitItems.push({

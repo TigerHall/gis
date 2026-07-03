@@ -1,6 +1,61 @@
 # 更新记录
 
-## 2026-06-20 v1.8.6 — 地名搜索结果积累图层 + GPS 定位
+## 2026-07-03 v1.8.9 — 图标系统重构 + Canvas 图标自定义 + 聚类视觉统一
+
+### 图标系统架构重构
+
+- **`geo-config.js` 新增 `icon` 字段**：图层配置中可为点要素指定图标类型（内置：`"volcano"/"hotspot"/"star"/"point"`，或外部文件路径），替代原有硬编码 `isVolcanoLayer` / `isHotspotLayer` fileName 判定
+- **`Leaflet.GeoMarker.js` 重构**：`createPointMarkerByType` 废弃布尔参数，改为接收 `iconType` 字符串；新增 `createExternalFileIcon` / `createSvgFileIcon` / `getIconFactory`，统一查找链：注册表 → 外部路径 → null（圆形点兜底）
+- **内联 SVG 图标**：`createVolcanoSvgIcon` / `createHotspotSvgIcon` 将 `火山.svg` / `热点.svg` 路径数据内联为 JS 模板，支持 `fill="color"` 动态着色；移除 `fetch` SVG 文件机制，解决 404 和同步加载问题
+- **注册 6 种图标**：三角形、同心圆、五角形、默认圆点、火山SVG、火焰SVG，`registerIcon` 统一注册
+
+### 聚类视觉统一
+
+- **`createClusterIconWithContent(innerHtml, color, count)`**：所有聚类图标共用此函数，形状 + 纯白计数文本居中
+- **五角星聚类**：`createStarClusterIcon` 星形 + 计数居中
+- **自定义图片聚类**：`createCustomClusterIcon` 图片水印 + 计数居中
+- **内联SVG聚类**：`createInlineSvgClusterIcon` 自动提取 SVG 路径嵌入聚类圆
+- **计数文本可读性提升**：白色填充 + 深灰描边（`stroke="#222" stroke-width="1.5" paint-order="stroke"`），根据形状视觉中心调整 Y 坐标（三角形 y=37、五角星 y=28、其他 y=30）
+- **`getClusterIconForType` 自动分发**：专用工厂 → 内联 SVG 嵌入 → 默认圆形
+
+### Canvas 渲染图标支持
+
+- **`Leaflet.MarkersCanvas.js` 新增 `iconImage` / `iconImages` / `iconSize` 选项**
+- **单色模式**：通过图标工厂生成 SVG dataURL → Image，`ctx.drawImage()` 绘制，保持宽高比
+- **多颜色（field）模式**：`_loadCanvasIconColorMap` 扫描所有唯一颜色，为每种颜色生成对应的 Image，`_draw` 中按 `u.color` 查找
+- **加载时序优化**：`afterColorUpdate()` 在颜色更新完成后才生成图标映射
+
+### 设置弹窗增强
+
+- **图标下拉选择器**：6 种内置图标 + 自定义上传，选中时实时生成预览
+- **自定义图标上传**：支持 SVG/PNG/ICO，转 dataURL 存 localStorage
+- **图标大小调节**：8-64px 数字输入框
+- **名称字段保留默认**：`labelField` 优先读取 `labelFieldMap[checkboxId]`（geo-config 配置），用户未修改时不变
+- **弹窗高度修复**：`.layer-dialog-content` flex 布局，`.dlg-tab-content` 可滚动
+- **默认圆点预览修复**：初始化时始终调用 `updateIconPreviewFromSelect`
+- **恢复默认修复**：用 `defaultIconMap` 保存 geo-config 默认图标，恢复时回到配置值
+
+### Service Worker 更新修复
+
+- **`app.js`**：保存 SW registration 引用，刷新前发 `postMessage({action:'skipWaiting'})` 激活新 SW
+- **`service-worker.js`**：新增 `message` 事件监听处理 skipWaiting，`location.reload()` 后新版本真正生效
+
+### 文件变更
+
+| 文件                              | 变更                                                       |
+| --------------------------------- | ---------------------------------------------------------- |
+| `assets/Leaflet.GeoMarker.js`     | 🔄 全面重构，内联 SVG 图标 + 统一聚类工厂                  |
+| `assets/Leaflet.MarkersCanvas.js` | ➕ `iconImage`/`iconImages` 选项，`ctx.drawImage` 图标绘制 |
+| `assets/geojsonloader.js`         | 🔄 图标系统 + Canvas 多颜色 + 设置弹窗 + 缓存修复          |
+| `assets/geo-config.js`            | ➕ 图层 `icon`/`color` 配置字段                            |
+| `assets/geojsonloader.css`        | 🔄 弹窗高度自适应                                          |
+| `assets/app.js`                   | 🔄 SW skipWaiting 发送                                     |
+| `service-worker.js`               | ➕ message 事件监听，版本 v1.8.9                           |
+| `assets/dialog.css`               | 🔄 弹窗样式优化                                            |
+
+🔴 **已知问题**：Canvas 渲染下注册 SVG 图标（三角形/火山/火焰等）在 field 分色模式下不改色，仅默认圆形正常。见 Skill `canvas-icon-multicolor-bug`。
+
+---
 
 ### 地名搜索增强
 

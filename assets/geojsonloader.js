@@ -229,6 +229,9 @@
     const layerCache = {};
     const layerColorMap = {};
     const labelFieldMap = {}; // checkboxId → 自定义标签字段名（来自 geo-config.js）
+    const layerIconMap = {}; // checkboxId → 图标类型（来自 geo-config.js）
+    const layerIconSizeMap = {}; // checkboxId → 图标尺寸（px，仅外部文件图标）
+    const defaultIconMap = {}; // checkboxId → geo-config.js 默认图标（用于恢复默认）
     // ========== 颜色模式管理 ==========
     const colorMode = {};
     const fieldKey = {};
@@ -570,6 +573,11 @@
         fieldKey[checkboxId] = savedSettings.colorField;
       if (savedSettings.colorValue)
         layerColorMap[checkboxId] = savedSettings.colorValue;
+      // 用户自定义图标（如果有）：覆盖 geo-config.js 的 icon 配置
+      if (savedSettings.iconValue)
+        layerIconMap[checkboxId] = savedSettings.iconValue;
+      if (savedSettings.iconSize)
+        layerIconSizeMap[checkboxId] = Number(savedSettings.iconSize);
 
       // 标签字段：用户自定义 → geo-config.js 配置 → 默认 "Name"
       let labelField =
@@ -585,18 +593,12 @@
           layerDisplayName = cbEl.dataset.layerName;
       } catch (e) {}
 
-      const isVolcanoLayer = fileName === "volcanos.json";
-      const isHotspotLayer =
-        fileName === "hotspots.json" ||
-        fileName === "hydrothermal_vents.geojson";
+      const iconType = layerIconMap[checkboxId] || fileName;
 
       // 创建聚类组
       function createClusterGroup() {
         const layerColor = layerColorMap[checkboxId] || "#8B6914";
-        const isVolcanoCluster = fileName === "volcanos.json";
-        const isHotspotCluster =
-          fileName === "hotspots.json" ||
-          fileName === "hydrothermal_vents.geojson";
+        const layerIconType = layerIconMap[checkboxId];
 
         return L.markerClusterGroup({
           maxClusterRadius: 50,
@@ -606,18 +608,23 @@
           iconCreateFunction: function (cluster) {
             const count = cluster.getChildCount();
 
-            // 火山聚类：调用 L.GeoMarker 工厂
-            if (isVolcanoCluster) {
-              return L.GeoMarker.createVolcanoClusterIcon(layerColor, count);
+            // 统一通过 L.GeoMarker.getClusterIconForType 分发
+            // 内置类型（volcano/hotspot/star）→ 专用聚类工厂
+            // 内联SVG类型 → 自动提取SVG路径嵌入聚类圆
+            // 外部文件/数据URL → createCustomClusterIcon
+            // 未知/默认 → createDefaultClusterIcon
+            if (layerIconType && L.GeoMarker.isExternalPath(layerIconType)) {
+              return L.GeoMarker.createCustomClusterIcon(
+                layerIconType,
+                layerColor,
+                count,
+              );
             }
-
-            // 热点聚类：调用 L.GeoMarker 工厂
-            if (isHotspotCluster) {
-              return L.GeoMarker.createHotspotClusterIcon(layerColor, count);
-            }
-
-            // 默认聚类：调用 L.GeoMarker 工厂
-            return L.GeoMarker.createDefaultClusterIcon(layerColor, count);
+            return L.GeoMarker.getClusterIconForType(
+              layerIconType,
+              layerColor,
+              count,
+            );
           },
         });
       }
@@ -670,25 +677,107 @@
 
           // 大数据集：Canvas 渲染（零 DOM 节点，支持 45 万+ 点）
           // 用原始要素数判断，不受世界副本（×3）影响
+          // 自定义图标在 Canvas 上通过 drawImage 绘制
           if (originalCount > 3000) {
-            const canvasLayer = L.markersCanvas({ clustering: clusterEnabled });
+            // 预加载自定义图标
+            var iconType_ = layerIconMap[checkboxId];
+            var iconSize_ = layerIconSizeMap[checkboxId] || 20;
+            var iconImg = null;
+            var iconColorMap = null;
+            if (iconType_) {
+              if (L.GeoMarker.isExternalPath(iconType_)) {
+                iconImg = new Image();
+                iconImg.onload = function () {
+                  if (canvasLayer && canvasLayer._map)
+                    canvasLayer._redraw(true);
+                };
+                iconImg.src = iconType_;
+              } else {
+                var colorMode_ = colorMode[checkboxId] || "sequential";
+                if (colorMode_ === "field") {
+                  // 多颜色模式：也生成默认色的单色图作为兜底
+                  var fnFallback = L.GeoMarker.getIconFactory(
+                    iconType_,
+                    iconSize_,
+                  );
+                  if (fnFallback) {
+                    var fallbackColor = layerColorMap[checkboxId] || "#888";
+                    var fiDiv = fnFallback(fallbackColor);
+                    var fiHtml = fiDiv.options.html || "";
+                    if (fiHtml) {
+                      try {
+                        var fiData =
+                          "data:image/svg+xml;base64," +
+                          btoa(unescape(encodeURIComponent(fiHtml)));
+                        iconImg = new Image();
+                        iconImg.src = fiData;
+                      } catch (e) {}
+                    }
+                  }
+                } else {
+                  var iconFn = L.GeoMarker.getIconFactory(iconType_, iconSize_);
+                  if (iconFn) {
+                    var layerColor = layerColorMap[checkboxId] || "#888";
+                    var divIcon = iconFn(layerColor);
+                    var svgHtml = divIcon.options.html || "";
+                    if (svgHtml) {
+                      try {
+                        var svgData =
+                          "data:image/svg+xml;base64," +
+                          btoa(unescape(encodeURIComponent(svgHtml)));
+                        iconImg = new Image();
+                        iconImg.onload = function () {
+                          if (canvasLayer && canvasLayer._map)
+                            canvasLayer._redraw(true);
+                        };
+                        iconImg.src = svgData;
+                      } catch (e) {}
+                    }
+                  }
+                }
+              }
+            }
+
+            const canvasLayer = L.markersCanvas({
+              clustering: clusterEnabled,
+              iconImage: iconImg,
+              iconImages: iconColorMap,
+              iconSize: iconSize_,
+            });
 
             // 构建要素数组 [{ lat, lng, color, _idx }]
-            // 注意：不持有 _original 完整引用，否则 45 万点直接爆内存
-            const featuresArray = [];
-            for (let i = 0; i < features.length; i++) {
-              const f = features[i];
+            var featuresArray = [];
+            for (var i = 0; i < features.length; i++) {
+              var f = features[i];
               if (!f || !f.geometry || !f.geometry.coordinates) continue;
-              const c = f.geometry.coordinates;
-              const idx = f._featureIndex || i;
-              const color = getFeatureFillColor(f, checkboxId, fileName, idx);
+              var c = f.geometry.coordinates;
+              var idx = f._featureIndex || i;
+              var color = getFeatureFillColor(f, checkboxId, fileName, idx);
               featuresArray.push({
                 lat: c[1],
                 lng: c[0],
                 color: color,
                 _idx: idx,
-                properties: f.properties || null, // 弹窗需要 properties
+                properties: f.properties || null,
               });
+            }
+
+            // 多颜色模式 + 自定义图标：为每种颜色生成对应的 Image
+            if (
+              iconType_ &&
+              !L.GeoMarker.isExternalPath(iconType_) &&
+              (colorMode[checkboxId] || "sequential") === "field"
+            ) {
+              _loadCanvasIconColorMap(
+                featuresArray,
+                iconType_,
+                iconSize_,
+                checkboxId,
+                function (colorMap) {
+                  canvasLayer.options.iconImages = colorMap;
+                  if (canvasLayer._map) canvasLayer._redraw(true);
+                },
+              );
             }
 
             canvasLayer.setFeatures(featuresArray);
@@ -736,8 +825,8 @@
                   latlng,
                   color,
                   labelEnabled ? labelText : null,
-                  isVolcanoLayer,
-                  isHotspotLayer,
+                  iconType,
+                  layerIconSizeMap[checkboxId] || 20,
                 );
 
                 const content = window.GeoUtils.buildPopupContent(
@@ -798,8 +887,8 @@
                   latlng,
                   color,
                   labelEnabled ? labelText : null,
-                  isVolcanoLayer,
-                  isHotspotLayer,
+                  iconType,
+                  layerIconSizeMap[checkboxId] || 20,
                 );
                 marker.bindPopup(
                   window.GeoUtils.buildPopupContent(
@@ -835,8 +924,8 @@
                 latlng,
                 color,
                 labelEnabled ? labelText : null,
-                isVolcanoLayer,
-                isHotspotLayer,
+                iconType,
+                layerIconSizeMap[checkboxId] || 20,
               );
 
               marker.bindPopup(
@@ -959,6 +1048,8 @@
             } catch (e) {}
           });
         updateLayerItemStatus(checkboxId, "loaded");
+        var _cb = document.getElementById(checkboxId);
+        if (_cb) _cb.style.background = layerColorMap[checkboxId] || "#8B4513";
         if (fitBoundsAfterLoad) {
           try {
             const b = layerBoundsCache[checkboxId];
@@ -1028,6 +1119,9 @@
           } catch (e) {}
         }
         updateLayerItemStatus(checkboxId, "loaded");
+        var _cb2 = document.getElementById(checkboxId);
+        if (_cb2)
+          _cb2.style.background = layerColorMap[checkboxId] || "#8B4513";
 
         if (!searchIndexMap[checkboxId]) {
           const cb = document.getElementById(checkboxId);
@@ -1114,6 +1208,100 @@
         });
     }
 
+    // ========== Canvas 图标 Image 加载辅助 ==========
+    function _loadCanvasIconImage(iconType, iconSize, checkboxId, callback) {
+      if (L.GeoMarker.isExternalPath(iconType)) {
+        var extImg = new Image();
+        extImg.onload = function () {
+          if (callback) callback(extImg);
+        };
+        extImg.onerror = function () {
+          if (callback) callback(null);
+        };
+        extImg.src = iconType;
+      } else {
+        var iconFn = L.GeoMarker.getIconFactory(iconType, iconSize);
+        if (iconFn) {
+          var lColor = layerColorMap[checkboxId] || "#888";
+          var divIcon = iconFn(lColor);
+          var svgHtml = divIcon.options.html || "";
+          if (svgHtml) {
+            try {
+              var svgData =
+                "data:image/svg+xml;base64," +
+                btoa(unescape(encodeURIComponent(svgHtml)));
+              var svgImg = new Image();
+              svgImg.onload = function () {
+                if (callback) callback(svgImg);
+              };
+              svgImg.onerror = function () {
+                if (callback) callback(null);
+              };
+              svgImg.src = svgData;
+              return;
+            } catch (e) {}
+          }
+        }
+        if (callback) callback(null);
+      }
+    }
+
+    // 为多颜色模式生成 { colorHex → Image } 映射
+    function _loadCanvasIconColorMap(
+      features,
+      iconType,
+      iconSize,
+      checkboxId,
+      callback,
+    ) {
+      var iconFn = L.GeoMarker.getIconFactory(iconType, iconSize);
+      if (!iconFn) {
+        if (callback) callback(null);
+        return;
+      }
+      var colorSet = {};
+      for (var i = 0; i < features.length; i++) {
+        if (features[i] && features[i].color)
+          colorSet[features[i].color] = true;
+      }
+      var colors = Object.keys(colorSet);
+      if (!colors.length) {
+        if (callback) callback(null);
+        return;
+      }
+      var result = {};
+      var pending = colors.length;
+      for (var c = 0; c < colors.length; c++) {
+        (function (color) {
+          var divIcon = iconFn(color);
+          var svgHtml = divIcon.options.html || "";
+          if (!svgHtml) {
+            if (--pending <= 0) tryFinish();
+            return;
+          }
+          try {
+            var svgData =
+              "data:image/svg+xml;base64," +
+              btoa(unescape(encodeURIComponent(svgHtml)));
+            var img = new Image();
+            img.onload = function () {
+              result[color] = img;
+              tryFinish();
+            };
+            img.onerror = function () {
+              tryFinish();
+            };
+            img.src = svgData;
+          } catch (e) {
+            tryFinish();
+          }
+          function tryFinish() {
+            if (--pending <= 0 && callback) callback(result);
+          }
+        })(colors[c]);
+      }
+    }
+
     function reloadLayerWithNewMode(checkboxId, newMode, newColor, newField) {
       // 更新颜色模式
       colorMode[checkboxId] = newMode;
@@ -1137,6 +1325,55 @@
       if (canvasLayer) {
         // Canvas 图层：利用缓存中的 featuresArray 增量更新颜色
         var cachedFeatures = canvasFeaturesCache[checkboxId] || null;
+
+        var iconType_r = layerIconMap[checkboxId];
+        var iconSize_r = layerIconSizeMap[checkboxId] || 20;
+
+        // 颜色更新完成后的回调：刷新图标颜色映射 + 重绘
+        function afterColorUpdate() {
+          if (iconType_r) {
+            if (newMode === "field") {
+              _loadCanvasIconColorMap(
+                cachedFeatures,
+                iconType_r,
+                iconSize_r,
+                checkboxId,
+                function (colorMap) {
+                  canvasLayer.options.iconImages = colorMap;
+                  // 保留 iconImage 作为兜底（找不到对应颜色时使用）
+                  canvasLayer.options.iconSize = iconSize_r;
+                  if (canvasLayer._map) canvasLayer._redraw(true);
+                },
+              );
+              // 同时加载默认色的单色图作为兜底
+              _loadCanvasIconImage(
+                iconType_r,
+                iconSize_r,
+                checkboxId,
+                function (img) {
+                  if (img) canvasLayer.options.iconImage = img;
+                },
+              );
+            } else {
+              _loadCanvasIconImage(
+                iconType_r,
+                iconSize_r,
+                checkboxId,
+                function (img) {
+                  canvasLayer.options.iconImage = img;
+                  canvasLayer.options.iconImages = null;
+                  canvasLayer.options.iconSize = iconSize_r;
+                  if (canvasLayer._map) canvasLayer._redraw(true);
+                },
+              );
+            }
+          } else {
+            canvasLayer.options.iconImage = null;
+            canvasLayer.options.iconImages = null;
+            if (canvasLayer._map) canvasLayer._redraw(true);
+          }
+          updateColorBtnHint(checkboxId);
+        }
 
         if (cachedFeatures) {
           // 所有颜色模式均可增量更新：利用缓存中的 properties 重新计算颜色
@@ -1162,7 +1399,7 @@
                 requestAnimationFrame(processChunk);
               } else {
                 canvasLayer.updateColors();
-                updateColorBtnHint(checkboxId);
+                afterColorUpdate();
               }
             }
             requestAnimationFrame(processChunk);
@@ -1176,7 +1413,7 @@
               );
             }
             canvasLayer.updateColors();
-            updateColorBtnHint(checkboxId);
+            afterColorUpdate();
           }
           return;
         }
@@ -1669,12 +1906,18 @@
       return count;
     }
 
-    function getColorPanelHTML(checkboxId, fields, userLabelField) {
+    function getColorPanelHTML(
+      checkboxId,
+      fields,
+      userLabelField,
+      isPointLayer,
+    ) {
       const mode = colorMode[checkboxId] || "sequential";
       const currentField = fieldKey[checkboxId] || "";
       const currentColor = layerColorMap[checkboxId] || "#8B4513";
       const defaultLabelField =
         labelFieldMap[checkboxId] || DEFAULT_LABEL_FIELD;
+      const currentIconSize = layerIconSizeMap[checkboxId] || 20;
       const fieldOptions = fields
         .map(function (f) {
           return `<option value="${f}" ${f === currentField ? "selected" : ""}>${f}</option>`;
@@ -1726,6 +1969,36 @@
               <span id="dlgFieldCount" class="dlg-field-count" style="display:none;"></span>
             </div>
           </div>
+          ${
+            isPointLayer
+              ? `
+          <hr class="dlg-section-divider">
+          <div class="dlg-icon-section">
+            <label style="font-size:12px;color:#555;display:block;margin-bottom:6px;font-weight:600;">标记图标</label>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span id="dlgIconPreview" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;"></span>
+              <select id="dlgIconSelect" class="dlg-field-select" style="max-width:180px;">
+                <option value="">默认圆点</option>
+                <option value="volcano">三角形</option>
+                <option value="hotspot">同心圆</option>
+                <option value="star">五角形</option>
+                <option value="volcano-file">火山</option>
+                <option value="hotspot-file">火焰</option>
+                <option value="__custom__">自定义上传...</option>
+              </select>
+              <input type="file" id="dlgIconUpload" accept=".svg,.png,.ico,.jpg,.jpeg,.gif,.webp" style="display:none;">
+              <button class="dlg-btn dlg-btn-sm" id="dlgIconReset" title="恢复为默认图标">恢复默认</button>
+              <span id="dlgIconHint" style="font-size:11px;color:#999;">SVG/PNG/ICO</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+              <label style="font-size:12px;color:#555;">图标大小：</label>
+              <input type="number" id="dlgIconSize" value="${currentIconSize}" min="8" max="64" step="2" style="width:60px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+              <span style="font-size:11px;color:#999;">px</span>
+            </div>
+          </div>
+          `
+              : ""
+          }
         </div>`;
     }
 
@@ -1737,7 +2010,13 @@
       return '<div class="tab-placeholder"><span style="font-size:32px;">📊</span><p style="color:#888;margin-top:8px;">图表功能开发中，敬请期待</p></div>';
     }
 
-    function getLayerDialogHTML(checkboxId, layerName, fields, userLabelField) {
+    function getLayerDialogHTML(
+      checkboxId,
+      layerName,
+      fields,
+      userLabelField,
+      isPointLayer,
+    ) {
       return `
         <div class="layer-dialog-content">
           <div class="dialog-header">
@@ -1749,7 +2028,7 @@
             <button class="dlg-tab" data-tab="attr">📋 属性表</button>
             <button class="dlg-tab" data-tab="chart">📊 图表</button>
           </div>
-          <div class="dlg-tab-content" id="dlgTabColor">${getColorPanelHTML(checkboxId, fields, userLabelField)}</div>
+          <div class="dlg-tab-content" id="dlgTabColor">${getColorPanelHTML(checkboxId, fields, userLabelField, isPointLayer)}</div>
           <div class="dlg-tab-content" id="dlgTabAttr" style="display:none;">${getAttrTablePanelHTML()}</div>
           <div class="dlg-tab-content" id="dlgTabChart" style="display:none;">${getChartPanelHTML()}</div>
           <div class="dialog-footer">
@@ -1767,6 +2046,14 @@
       }
 
       function showDialog(fields, featuresData, userLabelField) {
+        // 判断是否为点要素图层（仅点图层显示图标设置）
+        var isPointLayer =
+          featuresData &&
+          featuresData.some(function (f) {
+            var t = ((f.geometry && f.geometry.type) || "").toLowerCase();
+            return t === "point" || t === "multipoint";
+          });
+
         _layerDialogData = {
           checkboxId: checkboxId,
           fileName: fileName,
@@ -1781,6 +2068,7 @@
           layerName,
           fields,
           userLabelField,
+          isPointLayer,
         );
         document.body.appendChild(dlg);
         _layerDialog = dlg;
@@ -1874,6 +2162,176 @@
           });
         }
 
+        // === 图标上传 ===
+        var iconUpload = document.getElementById("dlgIconUpload");
+        var iconPreview = document.getElementById("dlgIconPreview");
+        var iconReset = document.getElementById("dlgIconReset");
+        var _dlgIconSettings =
+          _layerDialogData && _layerDialogData.checkboxId
+            ? loadLayerSettings(_layerDialogData.checkboxId)
+            : {};
+        window._dlgIconValue =
+          _dlgIconSettings.iconValue ||
+          defaultIconMap[_layerDialogData.checkboxId] ||
+          "";
+
+        if (iconUpload && iconPreview) {
+          // 恢复已保存的图标预览（内置/文件图标由下方的初始化预览处理，这里只处理 dataURL）
+          if (
+            window._dlgIconValue &&
+            window._dlgIconValue.indexOf("data:") === 0
+          ) {
+            iconPreview.innerHTML =
+              '<img src="' +
+              window._dlgIconValue +
+              '" style="width:100%;height:100%;object-fit:contain;">';
+            iconPreview.dataset.iconValue = window._dlgIconValue;
+          }
+
+          iconUpload.addEventListener("change", function () {
+            var file = this.files && this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              var dataUrl = e.target.result;
+              window._dlgIconValue = dataUrl;
+              iconPreview.dataset.iconValue = dataUrl;
+              iconPreview.innerHTML =
+                '<img src="' +
+                dataUrl +
+                '" style="width:100%;height:100%;object-fit:contain;">';
+              // 切换到自定义模式
+              var sel = document.getElementById("dlgIconSelect");
+              if (sel) sel.value = "__custom__";
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+
+        if (iconReset) {
+          iconReset.addEventListener("click", function () {
+            // 恢复 geo-config 默认图标（如有），否则清空
+            var defaultIcon = defaultIconMap[_layerDialogData.checkboxId] || "";
+            window._dlgIconValue = defaultIcon;
+            iconPreview.dataset.iconValue = defaultIcon;
+            iconPreview.innerHTML = defaultIcon
+              ? '<img src="' +
+                defaultIcon +
+                '" style="width:100%;height:100%;object-fit:contain;">'
+              : "";
+            // 恢复默认尺寸 20px
+            var szEl = document.getElementById("dlgIconSize");
+            if (szEl) szEl.value = "20";
+            var s = loadLayerSettings(_layerDialogData.checkboxId) || {};
+            if (defaultIcon) s.iconValue = defaultIcon;
+            else delete s.iconValue;
+            saveLayerSettings(_layerDialogData.checkboxId, s);
+            if (defaultIcon)
+              layerIconMap[_layerDialogData.checkboxId] = defaultIcon;
+            else delete layerIconMap[_layerDialogData.checkboxId];
+          });
+        }
+
+        // === 图标选择下拉 ===
+        var iconSelect = document.getElementById("dlgIconSelect");
+        if (iconSelect && iconPreview) {
+          // 根据当前图标值设置选中项
+          var curVal = window._dlgIconValue;
+          if (!curVal || curVal === "point") {
+            iconSelect.value = "";
+            iconSelect.dataset._prevNonCustom = "";
+          } else if (
+            curVal === "volcano" ||
+            curVal === "hotspot" ||
+            curVal === "star" ||
+            curVal === "volcano-file" ||
+            curVal === "hotspot-file"
+          ) {
+            iconSelect.value = curVal;
+            iconSelect.dataset._prevNonCustom = curVal;
+          } else {
+            iconSelect.value = "__custom__";
+            iconSelect.dataset._prevNonCustom = "";
+          }
+
+          function updateIconPreviewFromSelect(val) {
+            var color = "#888";
+            try {
+              var cp = document.getElementById("dlgColorPicker");
+              if (cp) color = cp.value;
+            } catch (e) {}
+            if (!val) {
+              // 默认圆点
+              var dotIcon = L.GeoMarker.createPointIcon(color, 10);
+              iconPreview.innerHTML = dotIcon.options.html;
+              iconPreview.dataset.iconValue = "";
+              window._dlgIconValue = "";
+            } else if (val === "volcano") {
+              var vIcon = L.GeoMarker.createVolcanoIcon(color);
+              iconPreview.innerHTML = vIcon.options.html;
+              iconPreview.dataset.iconValue = "volcano";
+              window._dlgIconValue = "volcano";
+            } else if (val === "hotspot") {
+              var hIcon = L.GeoMarker.createHotspotIcon(color);
+              iconPreview.innerHTML = hIcon.options.html;
+              iconPreview.dataset.iconValue = "hotspot";
+              window._dlgIconValue = "hotspot";
+            } else if (val === "star") {
+              var sIcon = L.GeoMarker.createStarIcon(color);
+              iconPreview.innerHTML = sIcon.options.html;
+              iconPreview.dataset.iconValue = "star";
+              window._dlgIconValue = "star";
+            } else if (val === "volcano-file" || val === "hotspot-file") {
+              // 文件 SVG 图标：使用工厂函数生成带色的预览
+              var fIcon = L.GeoMarker.getIconFactory(val, 20);
+              if (fIcon) {
+                var fiDiv = fIcon(color);
+                iconPreview.innerHTML = fiDiv.options.html;
+                iconPreview.dataset.iconValue = val;
+                window._dlgIconValue = val;
+              }
+            }
+          }
+
+          iconSelect.addEventListener("change", function () {
+            var val = this.value;
+            if (val === "__custom__") {
+              // 触发文件上传
+              var up = document.getElementById("dlgIconUpload");
+              if (up) up.click();
+              // 保持上一次的非自定义值
+              this.value = iconSelect.dataset._prevNonCustom || "";
+              return;
+            }
+            iconSelect.dataset._prevNonCustom = val;
+            if (
+              val === "volcano" ||
+              val === "hotspot" ||
+              val === "star" ||
+              val === "volcano-file" ||
+              val === "hotspot-file"
+            ) {
+              updateIconPreviewFromSelect(val);
+            } else {
+              // 默认圆点
+              updateIconPreviewFromSelect("");
+            }
+          });
+          // 初始化预览
+          if (
+            curVal === "volcano" ||
+            curVal === "hotspot" ||
+            curVal === "star" ||
+            curVal === "volcano-file" ||
+            curVal === "hotspot-file"
+          ) {
+            updateIconPreviewFromSelect(curVal);
+          } else {
+            // 默认圆点
+            updateIconPreviewFromSelect("");
+          }
+        }
+
         // === 关闭与取消 ===
         dlg.querySelector("#dlgCloseBtn").onclick = function () {
           dlg.close();
@@ -1897,6 +2355,14 @@
           var newField = fs ? fs.value : "";
           var nameFieldSel = dlg.querySelector("#dlgNameFieldSelect");
           var nf = nameFieldSel ? nameFieldSel.value : "";
+          var newIcon = window._dlgIconValue || "";
+          var oldIcon = layerIconMap[cbId] || "";
+          var oldIconSize = layerIconSizeMap[cbId] || 20;
+          var iconChanged = newIcon !== oldIcon || newIconSize !== oldIconSize;
+          var iconSizeEl = dlg.querySelector("#dlgIconSize");
+          var newIconSize = iconSizeEl
+            ? parseInt(iconSizeEl.value, 10) || 20
+            : 20;
 
           // 统一写入持久化设置
           var s = {};
@@ -1904,8 +2370,17 @@
           s.colorValue = newColor;
           if (newField) s.colorField = newField;
           if (nf) s.labelField = nf;
+          if (newIcon) s.iconValue = newIcon;
+          else delete s.iconValue;
+          s.iconSize = newIconSize;
           saveLayerSettings(cbId, s);
 
+          // 更新图标映射
+          if (newIcon) layerIconMap[cbId] = newIcon;
+          else delete layerIconMap[cbId];
+          layerIconSizeMap[cbId] = newIconSize;
+
+          // 统一通过 reloadLayerWithNewMode 更新（Canvas 图标的 Image 在其中刷新）
           reloadLayerWithNewMode(cbId, newMode, newColor, newField);
           dlg.close();
         };
@@ -1923,7 +2398,8 @@
       function loadFieldsAndShow(data_) {
         var fields = window.GeoUtils.getAvailableFields(data_);
         var savedSettings = loadLayerSettings(checkboxId);
-        var userLabelField = savedSettings.labelField || "";
+        var userLabelField =
+          savedSettings.labelField || labelFieldMap[checkboxId] || "";
         showDialog(fields, data_.features || [], userLabelField);
       }
 
@@ -2066,14 +2542,14 @@
           var fullPath = window.geoJsonPrimaryPath + layerConfig.file;
           var fileName = layerConfig.file;
           var fixedColor =
-            fileName === "hotspots.json" ||
-            fileName === "volcanos.json" ||
-            fileName === "hydrothermal_vents.geojson"
-              ? "#FF3333"
-              : window.GeoUtils.getFixedColor(idx);
+            layerConfig.color || window.GeoUtils.getFixedColor(idx);
           layerColorMap[checkboxId] = fixedColor;
           if (layerConfig.labelField)
             labelFieldMap[checkboxId] = layerConfig.labelField;
+          if (layerConfig.icon) {
+            layerIconMap[checkboxId] = layerConfig.icon;
+            defaultIconMap[checkboxId] = layerConfig.icon;
+          }
 
           var layerItem = document.createElement("div");
           layerItem.className = "layer-item";
@@ -3943,7 +4419,7 @@
         showConfirm(
           "检测到上次访问时打开的图层。<br><br>" +
             "⚠️ 如果上次加载的图层数据较大导致页面运行缓慢或崩溃，请选择「不恢复」以避免自动重载。<br><br>" +
-            "您也可以在「地图设置」中关闭「记住图层」选项，",
+            "您也可以在「地图设置」中关闭「记住图层」选项。",
           {
             title: "恢复图层",
             confirmText: "恢复",

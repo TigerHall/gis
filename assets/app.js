@@ -472,6 +472,8 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   });
 
   // ========== SW 更新弹窗 ==========
+  var _swRegistration = null;
+
   window._showUpdateToast = function (newVersion) {
     var versionLabel = newVersion || _appVersion || "";
     var msg = versionLabel
@@ -481,6 +483,10 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       duration: 0,
       action: "刷新",
       onAction: function () {
+        // 先通知新 SW 激活（skipWaiting），再重新加载
+        if (_swRegistration && _swRegistration.waiting) {
+          _swRegistration.waiting.postMessage({ action: "skipWaiting" });
+        }
         location.reload();
       },
     });
@@ -493,6 +499,8 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       navigator.serviceWorker
         .register("service-worker.js")
         .then(function (registration) {
+          _swRegistration = registration;
+
           // 检测新版本：SW 文件变化时会触发 updatefound
           registration.addEventListener("updatefound", function () {
             var newWorker = registration.installing;

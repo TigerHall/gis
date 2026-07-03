@@ -45,6 +45,12 @@
  * file            |  是  | GeoJSON 文件名（自动补全路径和 gz 后缀）
  * labelField      |  否  | 标签/弹窗标题使用的属性字段名
  *                    （不设置则依次查找 Name → name → NAME → 第一个字段值）
+ * color           |  否  | 十六进制默认颜色（如 "#E63946"）
+ *                    不设置则由 getFixedColor 自动分配索引颜色
+ * icon            |  否  | 点要素图标类型或外部文件路径
+ *                    内置： "volcano" / "hotspot" / "star" / "point"
+ *                    外部： "./assets/images/xxx.svg"（支持 SVG/PNG/ICO）
+ *                    不设置或无法识别则使用默认圆形点兜底
  *
  * ==========================================================
  */
@@ -71,7 +77,11 @@
         },
         { name: "大陆板块 plate_cont", file: "plate_cont.geojson" },
         { name: "大洋板块 plate_ocean", file: "plate_ocean.geojson" },
-        { name: "洋中脊和转换断层 MOR&TF", file: "ridgenew.geojson" },
+        {
+          name: "洋中脊和转换断层 MOR&TF",
+          file: "ridgenew.geojson",
+          color: "#E63946",
+        },
         { name: "海沟 Trench", file: "Pb_trench.geojson" },
         {
           name: "其他板块边界 Other boundries",
@@ -102,7 +112,13 @@
     {
       groupName: "海底基础信息",
       layers: [
-        { name: "火山 volcanos", file: "volcanos.geojson", labelField: "NAME" },
+        {
+          name: "火山 volcanos",
+          file: "volcanos.geojson",
+          labelField: "NAME",
+          color: "#FF3333",
+          icon: "volcano",
+        },
         {
           name: "4.5级以上地震(2024-2026)",
           file: "EQ4_5_2024_2026.geojson",
@@ -119,6 +135,8 @@
           name: "热点 hotspots",
           file: "hotspots.geojson",
           labelField: "geodesc",
+          color: "#FF3333",
+          icon: "hotspot",
         },
         { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.geojson" },
         { name: "洋壳年龄30Ma间隔", file: "seafloor_age_30.geojson" },
@@ -143,6 +161,8 @@
           name: "热液喷口 HydrothermalVents(ISA)",
           file: "hydrothermal_vents.geojson",
           labelField: "Name ID",
+          color: "#FF3333",
+          icon: "hotspot",
         },
         { name: "多金属结核 Fe-MnNodule(NOAA)", file: "Fe_MnNodule.geojson" },
         { name: "富钴结壳 Co-richCrust(NOAA)", file: "Co-richCrust.geojson" },
