@@ -204,32 +204,32 @@
         },
         {
           name: "世界各国",
-          file: "all-countries-195.geojson",
+          file: "countries-all-195.geojson",
           labelField: "name_zh",
         },
         {
           name: "富裕国家",
-          file: "rich-countries-50K.geojson",
+          file: "countries-rich-50K.geojson",
           labelField: "name_zh",
         },
         {
           name: "贫穷国家",
-          file: "poor-countries-5K.geojson",
+          file: "countries-poor-5K.geojson",
           labelField: "name_zh",
         },
         {
           name: "人口大国",
-          file: "populous-countries.geojson",
+          file: "countries-populous.geojson",
           labelField: "name_zh",
         },
         {
           name: "经济强国",
-          file: "economic-powers.geojson",
+          file: "countries-economic-powers.geojson",
           labelField: "name_zh",
         },
         {
           name: "领土大国",
-          file: "large-territory-countries.geojson",
+          file: "countries-large-territory.geojson.geojson",
           labelField: "name_zh",
         },
       ],
