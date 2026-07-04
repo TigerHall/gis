@@ -1,4 +1,6 @@
 {
   "git.ignoreLimitWarning": true,
-  "liveServer.settings.port": 5502
+  "liveServer.settings.port": 5502,
+  "livePreview.defaultPreviewPath": "/index.html",
+  "livePreview.portNumber": 80
 }
