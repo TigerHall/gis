@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 压缩脚本所在目录的所有 .geojson 文件为 .gz
 #>
@@ -40,4 +40,4 @@ foreach ($file in $files) {
   }
 }
 
-Write-Host "`n🎉 全部完成！" -ForegroundColor Cyan
+Write-Host "`n🎉 全部完成" -ForegroundColor Cyan
