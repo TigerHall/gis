@@ -198,6 +198,11 @@
           labelField: "name_zh",
         },
         {
+          name: "2026世界杯16强",
+          file: "wc2026_round16_teams.geojson",
+          labelField: "name_zh",
+        },
+        {
           name: "世界各国",
           file: "all-countries-195.geojson",
           labelField: "name_zh",
