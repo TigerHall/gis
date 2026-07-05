@@ -17,15 +17,35 @@
     var uploadDiv = document.getElementById("pointDropAnchor");
     if (!uploadDiv) return;
 
-    // 投点按钮
+    // 🗺️ 坐标投点 — 插入到 pointDropAnchor 上方（独立一行）
     var btn = document.createElement("button");
     btn.id = "pointDropBtn";
-    btn.textContent = "📍 投点";
+    btn.textContent = "🗺️ 坐标投点";
     btn.title = "手动输入经纬度生成点位图层，支持粘贴 CSV / TXT / Excel 数据";
     btn.className = "pd-btn";
+    btn.style.marginBottom = "6px";
     btn.onclick = togglePointDropTable;
 
     uploadDiv.parentNode.insertBefore(btn, uploadDiv);
+
+    // 📍 现在的位置 — 插入到上传矢量按钮上方（坐标投点下面）
+    var locateBtn = document.createElement("button");
+    locateBtn.id = "geoLocateBtn";
+    locateBtn.textContent = "📍 现在的位置";
+    locateBtn.title = "获取设备 GPS 坐标，在地图上标记当前位置并记录备注与分类";
+    locateBtn.className = "pd-btn";
+    locateBtn.style.marginBottom = "6px";
+    locateBtn.onclick = function () {
+      if (typeof window.startGeoLocate === "function") {
+        window.startGeoLocate();
+      } else if (typeof window.showToast === "function") {
+        window.showToast("⏳ 定位功能加载中，请稍后再试", { duration: 2000 });
+      }
+    };
+    var uploadBtnRow = document.querySelector("#uploadArea .upload-btn-row");
+    if (uploadBtnRow) {
+      uploadBtnRow.parentNode.insertBefore(locateBtn, uploadBtnRow);
+    }
   }
 
   // ========== 显示/隐藏表格 ==========

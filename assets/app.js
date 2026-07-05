@@ -90,6 +90,11 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         category: "高级",
         items: [
           {
+            id: "isLocationTracking",
+            label: "显示位置",
+            desc: "开启后持续获取设备 GPS 位置，在地图上实时显示当前位置标记",
+          },
+          {
             id: "darkModeToggle",
             label: "深色模式",
             desc: "开启后切换为深色主题，适合弱光环境使用，减少屏幕眩光",
@@ -110,13 +115,6 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             label: "导出图片",
             icon: "📷",
             desc: "将当前地图截图导出为 PNG 图片",
-          },
-          {
-            type: "button",
-            id: "geoLocateBtn",
-            label: "定位当前位置",
-            icon: "📍",
-            desc: "获取设备 GPS 坐标，在地图上标记当前位置并记录备注与分类",
           },
         ],
       },
@@ -172,20 +170,6 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     if (exportBtn) {
       exportBtn.addEventListener("click", function () {
         exportMapImage();
-      });
-    }
-    var geoBtn = document.getElementById("geoLocateBtn");
-    if (geoBtn) {
-      geoBtn.addEventListener("click", function () {
-        if (typeof window.startGeoLocate === "function") {
-          window.startGeoLocate();
-        } else {
-          if (typeof window.showToast === "function") {
-            window.showToast("⏳ 定位功能加载中，请稍后再试", {
-              duration: 2000,
-            });
-          }
-        }
       });
     }
   })();
@@ -661,6 +645,76 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
 
   // 开关配置：cbId → { storageKey, control?, enable?, disable? }
   var toggleConfig = {
+    isLocationTracking: {
+      storageKey: TOGGLE_PREFIX + "isLocationTracking",
+      enable: function () {
+        if (!navigator.geolocation) {
+          window.showToast("❌ 设备不支持 GPS 定位", { duration: 2000 });
+          var cb = document.getElementById("isLocationTracking");
+          if (cb) cb.checked = false;
+          localStorage.setItem(TOGGLE_PREFIX + "isLocationTracking", "false");
+          return;
+        }
+        // 创建标记对象但不添加到地图（等待首次定位成功再显示）
+        var marker = L.circleMarker([0, 0], {
+          radius: 8,
+          color: "#1890ff",
+          fillColor: "#1890ff",
+          fillOpacity: 0.6,
+          weight: 2,
+          opacity: 0.8,
+        });
+        marker._isLiveLocation = true;
+
+        // 精度圈
+        var accuracyCircle = L.circle([0, 0], {
+          radius: 0,
+          color: "#1890ff",
+          fillColor: "#1890ff",
+          fillOpacity: 0.1,
+          weight: 1,
+          opacity: 0.3,
+        });
+        accuracyCircle._isLiveLocation = true;
+
+        var _locMarkersAdded = false;
+
+        window._locationWatchId = navigator.geolocation.watchPosition(
+          function (pos) {
+            var latlng = [pos.coords.latitude, pos.coords.longitude];
+            if (!_locMarkersAdded) {
+              marker.addTo(map);
+              accuracyCircle.addTo(map);
+              _locMarkersAdded = true;
+            }
+            marker.setLatLng(latlng);
+            accuracyCircle.setLatLng(latlng);
+            accuracyCircle.setRadius(pos.coords.accuracy || 10);
+          },
+          function (err) {
+            // 定位失败时不反复弹窗
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+        );
+
+        window._locationMarker = marker;
+        window._locationAccuracyCircle = accuracyCircle;
+      },
+      disable: function () {
+        if (window._locationWatchId != null) {
+          navigator.geolocation.clearWatch(window._locationWatchId);
+          window._locationWatchId = null;
+        }
+        if (window._locationMarker) {
+          map.removeLayer(window._locationMarker);
+          window._locationMarker = null;
+        }
+        if (window._locationAccuracyCircle) {
+          map.removeLayer(window._locationAccuracyCircle);
+          window._locationAccuracyCircle = null;
+        }
+      },
+    },
     darkModeToggle: {
       storageKey: TOGGLE_PREFIX + "darkMode",
       enable: function () {

@@ -1625,7 +1625,7 @@
                   map.removeLayer(layerCache[cb.id]);
                 } catch (e) {}
               }
-              // layerBoundsCache[uid] 存的是轻量 bounds 包装对象，不是地图图层，无需 removeLayer
+              // layerBoundsCache 存的是 L.latLngBounds，不是地图图层，无需 removeLayer
             } else {
               removeGeoJSONLayer(cb.id);
             }
@@ -3048,12 +3048,7 @@
         if (isFinite(minLat) && isFinite(maxLat)) {
           var b = L.latLngBounds([minLat, minLng], [maxLat, maxLng]);
           if (b.isValid()) {
-            // 存一个轻量包装对象，供 flyToLayer 调用 .getBounds()，无任何 DOM/Marker 开销
-            layerBoundsCache[uid] = {
-              getBounds: function () {
-                return b;
-              },
-            };
+            layerBoundsCache[uid] = b;
           }
         }
       } catch (e) {}
@@ -4405,7 +4400,8 @@
               typeof state.lat === "number" &&
               typeof state.lng === "number" &&
               typeof state.zoom === "number" &&
-              state.lat >= -85 && state.lat <= 85
+              state.lat >= -85 &&
+              state.lat <= 85
             ) {
               map.setView([state.lat, state.lng], state.zoom, {
                 animate: false,

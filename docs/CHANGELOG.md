@@ -12,6 +12,13 @@
 
 - **`fetch` 加防缓存**：`app.js` 中 `fetch("service-worker.js")` 改为 `fetch("service-worker.js?" + Date.now())`，确保每次加载都读到最新版本号
 
+### 位置功能重构：移动、拆分、添加实时定位
+
+- **移除 `geoLocateBtn`**：从 `app.js` 的 `TOGGLE_GROUPS` 和点击事件绑定中移除，不再显示在 ⚙️ 地图设置中
+- **投点区域新增两个功能按钮**：`pointdrop.js` 的 `initPointDropUI` 改为创建 `.pd-btn-row`，内含「📍 记录现在的位置」和「🗺️ 坐标投点」两个并排按钮
+- **新增 `.pd-btn-row` 样式**：`pointdrop.css` 中 flex 行布局，两个按钮等宽
+- **高级分类新增「显示当前位置」开关**：`app.js` 的 `TOGGLE_GROUPS` 和 `toggleConfig` 添加 `isLocationTracking`，开启后使用 `watchPosition` 持续跟踪，地图上显示蓝色圆点 + 精度圈
+
 ---
 
 ## 2026-07-03 v1.8.9 — 图标系统重构 + Canvas 图标自定义 + 聚类视觉统一
