@@ -4404,7 +4404,8 @@
             if (
               typeof state.lat === "number" &&
               typeof state.lng === "number" &&
-              typeof state.zoom === "number"
+              typeof state.zoom === "number" &&
+              state.lat >= -85 && state.lat <= 85
             ) {
               map.setView([state.lat, state.lng], state.zoom, {
                 animate: false,
@@ -4413,6 +4414,17 @@
           }
         } catch (e) {}
       }
+
+      // 清理 localStorage 中纬度越界的坏数据
+      try {
+        var raw = localStorage.getItem(MAP_STATE_KEY);
+        if (raw) {
+          var st = JSON.parse(raw);
+          if (typeof st.lat === "number" && (st.lat > 85 || st.lat < -85)) {
+            localStorage.removeItem(MAP_STATE_KEY);
+          }
+        }
+      } catch (e) {}
 
       // 图层恢复：检测到已保存的图层状态时，弹窗询问用户是否恢复
       if (isRememberLayerEnabled() && hasSavedLayerState()) {

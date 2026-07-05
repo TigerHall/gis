@@ -1,5 +1,15 @@
 # 更新记录
 
+## 2026-07-05 v1.9.3 — Bug 修复
+
+### 修复横屏模式地图卡死极北坐标
+
+- **移除 `maxBounds` 纬度约束**：删除 `index.html` 中的 `maxBounds: [[-89.8, -Infinity], [89.8, Infinity]]` 和 `maxBoundsViscosity: 1.0`，改用 Web Mercator 投影自然边界
+- **`restoreMapCenter()` 加纬度校验**：`geojsonloader.js` 中恢复地图中心前检查 `state.lat` 是否在 [-85, 85] 范围内，超出则不恢复
+- **自动清理 localStorage 坏数据**：页面初始化时自动删除 `dupal_map_state` 中纬度越界的条目
+
+---
+
 ## 2026-07-03 v1.8.9 — 图标系统重构 + Canvas 图标自定义 + 聚类视觉统一
 
 ### 图标系统架构重构
