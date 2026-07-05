@@ -194,7 +194,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   // 从 service-worker.js 读取 CACHE_NAME 保持版本同步
   // 版本号显示在图层面板底部，也用于 PWA 更新弹窗
   var _appVersion = "";
-  fetch("service-worker.js")
+  fetch("service-worker.js?" + Date.now())
     .then(function (r) {
       return r.text();
     })
