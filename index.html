@@ -352,7 +352,9 @@
       const tdtImgLayer = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
         {
-          maxZoom: 18,
+          minNativeZoom: 1,
+          maxNativeZoom: 18,
+          maxZoom: 22,
           crossOrigin: "anonymous",
           attribution:
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图影像</a>",
@@ -363,7 +365,9 @@
       const tdtVecLayer = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
         {
-          maxZoom: 18,
+          minNativeZoom: 1,
+          maxNativeZoom: 18,
+          maxZoom: 22,
           crossOrigin: "anonymous",
           attribution:
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图矢量</a>",
@@ -375,7 +379,9 @@
       const tdtTerLayer = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=ter_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
         {
-          maxZoom: 18,
+          minNativeZoom: 1,
+          maxNativeZoom: 18,
+          maxZoom: 22,
           crossOrigin: "anonymous",
           attribution:
             "<a href='https://www.tianditu.gov.cn/' target='_blank'>天地图地形</a>",
@@ -386,16 +392,16 @@
       // 天地图地名标注（独立叠加层，供多选图层使用）
       const tdtAnnoOverlay = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18, crossOrigin: "anonymous" },
+        { maxNativeZoom: 18, maxZoom: 22, crossOrigin: "anonymous" },
       );
       // 天地图影像标注 / 地形标注（更多底图中可切换对比）
       const tdtImgAnno = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18, crossOrigin: "anonymous" },
+        { maxNativeZoom: 18, maxZoom: 22, crossOrigin: "anonymous" },
       );
       const tdtTerAnno = L.tileLayer(
         `https://t0.tianditu.gov.cn/DataServer?T=cta_w&x={x}&y={y}&l={z}&tk=${TDT_TK}`,
-        { maxZoom: 18, crossOrigin: "anonymous" },
+        { maxNativeZoom: 18, maxZoom: 22, crossOrigin: "anonymous" },
       );
 
       // 3. ArcGIS影像底图
@@ -411,7 +417,8 @@
         const baseLayer = L.tileLayer(
           `${getFullServiceUrl(config.serviceName)}/tile/{z}/{y}/{x}`,
           {
-            maxZoom: config.maxZoom || 19,
+            maxNativeZoom: config.maxNativeZoom || 19,
+            maxZoom: config.maxZoom || 22,
             crossOrigin: "anonymous",
             attribution: `<a href='https://www.arcgis.com/' target='_blank'>ArcGIS Online ${config.name}</a>`,
           },
@@ -422,7 +429,11 @@
         if (config.labelServiceName) {
           const labelLayer = L.tileLayer(
             `${getFullServiceUrl(config.labelServiceName)}/tile/{z}/{y}/{x}`,
-            { maxZoom: config.maxZoom || 19, crossOrigin: "anonymous" },
+            {
+              maxNativeZoom: config.maxNativeZoom || 19,
+              maxZoom: config.maxZoom || 22,
+              crossOrigin: "anonymous",
+            },
           );
           layersToGroup.push(labelLayer);
         }
@@ -445,45 +456,63 @@
        * @param {Object} config - 底图配置项
        * @param {string} config.name - 底图名称（用于控件显示）
        * @param {string} config.serviceName - ArcGIS 服务名称（拼接前缀后得到完整地址）
-       * @param {number} config.maxZoom - 最大缩放层级
+       * @param {number} config.maxNativeZoom - 瓦片服务实际最大缩放层级（超过此层级用放大填充）
+       * @param {number} config.maxZoom - 地图允许的最大缩放层级（可超过 maxNativeZoom）
        * @param {Layer} boundaryLayer - 可选，叠加的境界图层（如 tdtIboLayer）
        * @param {string} config.labelServiceName - 可选，标注图层的服务名称
        * @returns {Object} { layerName: 图层名称, layer: 组合后的图层组 }
        */
       const arcgisBaseLayerConfigs = [
         // 影像底图
-        { name: "ArcGIS-影像", serviceName: "World_Imagery", maxZoom: 19 },
+        {
+          name: "ArcGIS-影像",
+          serviceName: "World_Imagery",
+          maxNativeZoom: 19,
+          maxZoom: 22,
+        },
         // 街道底图
         {
           name: "ArcGIS-街道",
           serviceName: "World_Street_Map",
+          maxNativeZoom: 19,
+          maxZoom: 22,
         },
         // 海洋底图
         {
           name: "ArcGIS-海洋",
           serviceName: "Ocean/World_Ocean_Base",
           labelServiceName: "Ocean/World_Ocean_Reference",
-          maxZoom: 10,
+          maxNativeZoom: 10,
+          maxZoom: 19,
         },
         // 物理地图
         {
           name: "ArcGIS-物理地图",
           serviceName: "World_Physical_Map",
+          maxNativeZoom: 19,
+          maxZoom: 22,
         },
         // 阴影地形图
         {
           name: "ArcGIS-山体阴影地形图",
           serviceName: "World_Shaded_Relief",
-          maxZoom: 13,
+          maxNativeZoom: 13,
+          maxZoom: 22,
         },
         // 世界地形底图
         {
           name: "ArcGIS-世界地形",
           serviceName: "World_Terrain_Base",
-          maxZoom: 19,
+          maxNativeZoom: 19,
+          maxZoom: 22,
         },
         // 地形底图
-        { name: "ArcGIS-地形", serviceName: "World_Topo_Map", maxZoom: 19 },
+        {
+          name: "ArcGIS-地形",
+          serviceName: "World_Topo_Map",
+          maxNativeZoom: 19,
+          maxZoom: 22,
+        },
       ];
 
       // ========== 4. 批量创建所有 ArcGIS 底图图层 ==========
@@ -496,14 +525,15 @@
       // 打底的 ArcGIS 影像（不是可切换的底图，仅用于 ETOPO 等高线叠加）
       const arcgisLayers = L.tileLayer(
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        { maxZoom: 19, crossOrigin: "anonymous" },
+        { maxNativeZoom: 19, maxZoom: 22, crossOrigin: "anonymous" },
       );
 
       // 4. OSM底图
       const osmLayer = L.tileLayer(
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
-          maxZoom: 19,
+          maxNativeZoom: 19,
+          maxZoom: 22,
           crossOrigin: "anonymous",
           attribution:
             "<a href='https://www.openstreetmap.org/' target='_blank'>OpenStreetMap</a>",
