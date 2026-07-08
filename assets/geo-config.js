@@ -188,6 +188,11 @@
       groupName: "社会热点专题",
       layers: [
         {
+          name: "2026世界杯8强",
+          file: "wc2026_round8_teams.geojson",
+          labelField: "name_zh",
+        },
+       {
           name: "2026世界杯16强",
           file: "wc2026_round16_teams.geojson",
           labelField: "name_zh",
