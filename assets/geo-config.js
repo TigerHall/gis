@@ -165,6 +165,18 @@
           file: "global_basins_Evenick2021.geojson",
         },
         { name: "盆地 (CGG)", file: "Sedimentary_CGG.geojson" },
+        {
+          name: "海底光缆 Submarine Cables",
+          file: "TeleGeography_Cables.geojson.gz",
+          labelField: "name",
+          color: "#00ACC1",
+        },
+        {
+          name: "光缆登陆点 Landing Points",
+          file: "TeleGeography_LandingPoints.geojson.gz",
+          labelField: "name",
+          color: "#00897B",
+        },
       ],
     },
     {
