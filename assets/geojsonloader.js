@@ -236,6 +236,9 @@
     const colorMode = {};
     const fieldKey = {};
     const fieldColorPalette = {};
+    // config 层默认值（geo-config.js 中设置，供首次加载 / 重置时回退）
+    const defaultColorModeMap = {};
+    const defaultColorFieldMap = {};
     // 高亮状态
     const highlightState = {};
     const layerBoundsCache = {};
@@ -569,8 +572,13 @@
       var savedSettings = loadLayerSettings(checkboxId);
       if (savedSettings.colorMode)
         colorMode[checkboxId] = savedSettings.colorMode;
+      else if (defaultColorModeMap[checkboxId])
+        colorMode[checkboxId] = defaultColorModeMap[checkboxId];
+
       if (savedSettings.colorField)
         fieldKey[checkboxId] = savedSettings.colorField;
+      else if (defaultColorFieldMap[checkboxId])
+        fieldKey[checkboxId] = defaultColorFieldMap[checkboxId];
       if (savedSettings.colorValue)
         layerColorMap[checkboxId] = savedSettings.colorValue;
       // 用户自定义图标（如果有）：覆盖 geo-config.js 的 icon 配置
@@ -1912,8 +1920,10 @@
       userLabelField,
       isPointLayer,
     ) {
-      const mode = colorMode[checkboxId] || "sequential";
-      const currentField = fieldKey[checkboxId] || "";
+      const mode =
+        colorMode[checkboxId] || defaultColorModeMap[checkboxId] || "sequential";
+      const currentField =
+        fieldKey[checkboxId] || defaultColorFieldMap[checkboxId] || "";
       const currentColor = layerColorMap[checkboxId] || "#8B4513";
       const defaultLabelField =
         labelFieldMap[checkboxId] || DEFAULT_LABEL_FIELD;
@@ -2546,6 +2556,10 @@
           layerColorMap[checkboxId] = fixedColor;
           if (layerConfig.labelField)
             labelFieldMap[checkboxId] = layerConfig.labelField;
+          if (layerConfig.colorMode)
+            defaultColorModeMap[checkboxId] = layerConfig.colorMode;
+          if (layerConfig.colorField)
+            defaultColorFieldMap[checkboxId] = layerConfig.colorField;
           if (layerConfig.icon) {
             layerIconMap[checkboxId] = layerConfig.icon;
             defaultIconMap[checkboxId] = layerConfig.icon;

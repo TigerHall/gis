@@ -166,6 +166,27 @@
         },
         { name: "多金属结核 Fe-MnNodule(NOAA)", file: "Fe_MnNodule.geojson" },
         { name: "富钴结壳 Co-richCrust(NOAA)", file: "Co-richCrust.geojson" },
+        {
+          name: "PMN 全球多金属结核勘探合同区",
+          file: "01_pmn_exploration_areas.geojson.gz",
+          labelField: "Contractor",
+          colorMode: "field",
+          colorField: "Contractor",
+        },
+        {
+          name: "PMS 多金属硫化物勘探合同区",
+          file: "02_pms_exploration_areas.geojson.gz",
+          labelField: "Contractor",
+          colorMode: "field",
+          colorField: "Contractor",
+        },
+        {
+          name: "CFC 富钴结壳勘探合同区",
+          file: "03_cfc_exploration_areas.geojson.gz",
+          labelField: "Contractor",
+          colorMode: "field",
+          colorField: "Contractor",
+        },
       ],
     },
     {
