@@ -296,6 +296,19 @@
           file: "countries-large-territory.geojson",
           labelField: "name_zh",
         },
+        {
+          name: "全球军事设施 Overseas Military Bases",
+          file: "OMB.geojson.gz",
+          labelField: "Name",
+          color: "#C62828",
+        },
+        {
+          name: "全球海盗事件 ASAM Piracy Events",
+          file: "All_ASAM_Events.geojson.gz",
+          labelField: "hostility_",
+          colorMode: "field",
+          colorField: "hostility_",
+        },
       ],
     },
     {

@@ -36,6 +36,7 @@
 - **洋壳年龄 30Ma** — 全球洋壳年龄格网
 - **盆地 (Evenick2021)** — Evenick et al., 2021 全球沉积盆地
 - **盆地 (CGG)** — CGG 沉积盆地数据
+- **海底光缆 & 光缆登陆点** — [TeleGeography](https://www.telegeography.com/) 全球海底光缆基础设施数据
 
 ### 大型异常区
 
@@ -53,6 +54,13 @@
 ### 海底矿产资源
 
 - 多金属结核、富钴结壳、热液喷口、热液硫化物
+- **PMN / PMS / CFC 勘探合同区** — ISA（国际海底管理局）公布的深海勘探合同区空间数据
+- **EBSA 海洋保护区** — Convention on Biological Diversity (CBD) 全球具有特殊生态意义海域（EBSA）与海洋保护区（MPA）
+
+### 社会热点专题
+
+- **全球军事设施** — Man (2021) 发布的 "Overseas Military Bases Dataset"（海外军事基地数据集），基于 OSINT 方法整合政府报告、新闻报道与卫星图像验证构建
+- **全球海盗事件** — Anti-Shipping Activity Messages (ASAM) 全球海盗与武装劫船事件数据库（美国国家地理空间情报局 NGA）
 
 ---
 
