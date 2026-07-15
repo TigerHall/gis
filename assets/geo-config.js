@@ -16,7 +16,16 @@
  *
  *    完整选项：
  *      { name: "图层名", file: "file.geojson",
- *        labelField: "字段名"   // ← 可选：指定标签和弹窗标题使用的字段
+ *        labelField: "字段名",   // ← 可选：指定标签和弹窗标题使用的字段
+ *        colorMode: "field",     // ← 可选：默认颜色模式（"sequential"/"field"/"single"）
+ *        colorField: "字段名",   // ← 可选：colorMode="field" 时使用的分色字段
+ *      }
+ *
+ *    示例 —— 按 Contractor 字段分色：
+ *      { name: "PMN 勘探合同区", file: "areas.geojson",
+ *        labelField: "Contractor",
+ *        colorMode: "field",
+ *        colorField: "Contractor",
  *      }
  *
  * 3. 如需添加新分组，在 geoJsonGroups 数组中新增一个对象：
@@ -51,6 +60,17 @@
  *                    内置： "volcano" / "hotspot" / "star" / "point"
  *                    外部： "./assets/images/xxx.svg"（支持 SVG/PNG/ICO）
  *                    不设置或无法识别则使用默认圆形点兜底
+ *
+ * colorMode       |  否  | 默认颜色模式（首次加载时生效，用户设置后不再覆盖）
+ *                    取值：
+ *                    - "sequential" —— 内部多颜色（每要素不同色，默认）
+ *                    - "field"      —— 按字段唯一值分色（需配合 colorField）
+ *                    - "single"     —— 全部要素单一颜色（需配合 color 字段）
+ *                    提示：省略此字段默认 sequential，用户可在图层面板自由切换
+ *
+ * colorField      |  否  | colorMode="field" 时使用的字段名
+ *                    指定后每个不同字段值自动分配独立颜色
+ *                    示例：{ colorMode: "field", colorField: "Contractor" }
  *
  * ==========================================================
  */
