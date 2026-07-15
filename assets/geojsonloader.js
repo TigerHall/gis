@@ -239,6 +239,7 @@
     // config 层默认值（geo-config.js 中设置，供首次加载 / 重置时回退）
     const defaultColorModeMap = {};
     const defaultColorFieldMap = {};
+    const layerOpacityMap = {}; // checkboxId → 不透明度 (0-1, 默认 0.8)
     // 高亮状态
     const highlightState = {};
     const layerBoundsCache = {};
@@ -466,12 +467,17 @@
         featureIndex,
       );
 
+      const layerOpacity =
+        layerOpacityMap[checkboxId] !== undefined
+          ? layerOpacityMap[checkboxId]
+          : 0.8;
+
       if (isLine) {
         return {
           color: featureColor,
           fillColor: featureColor,
           weight: 2.5,
-          opacity: 0.8,
+          opacity: layerOpacity,
           fillOpacity: 0,
         };
       }
@@ -482,8 +488,8 @@
           color: featureColor,
           fillColor: featureColor,
           weight: 1,
-          opacity: 0.8,
-          fillOpacity: 0.8,
+          opacity: layerOpacity,
+          fillOpacity: layerOpacity,
           radius: isVolcano ? 5 : 8,
         };
       }
@@ -492,8 +498,8 @@
         color: "#555",
         fillColor: featureColor,
         weight: 1,
-        opacity: 0.8,
-        fillOpacity: 0.45,
+        opacity: layerOpacity,
+        fillOpacity: Math.min(layerOpacity, 0.45),
       };
     }
 
@@ -586,6 +592,10 @@
         layerIconMap[checkboxId] = savedSettings.iconValue;
       if (savedSettings.iconSize)
         layerIconSizeMap[checkboxId] = Number(savedSettings.iconSize);
+
+      // 不透明度：用户设置 → 默认 0.8
+      if (savedSettings.opacity !== undefined)
+        layerOpacityMap[checkboxId] = Number(savedSettings.opacity);
 
       // 标签字段：用户自定义 → geo-config.js 配置 → 默认 "Name"
       let labelField =
@@ -1310,12 +1320,19 @@
       }
     }
 
-    function reloadLayerWithNewMode(checkboxId, newMode, newColor, newField) {
+    function reloadLayerWithNewMode(
+      checkboxId,
+      newMode,
+      newColor,
+      newField,
+      newOpacity,
+    ) {
       // 更新颜色模式
       colorMode[checkboxId] = newMode;
       if (newMode === "single" && newColor)
         layerColorMap[checkboxId] = newColor;
       if (newMode === "field") fieldKey[checkboxId] = newField;
+      if (newOpacity !== undefined) layerOpacityMap[checkboxId] = newOpacity;
 
       // 检测是否为 Canvas 渲染的图层（>10K 点）
       var cached = layerCache[checkboxId];
@@ -1474,7 +1491,42 @@
           updateColorBtnHint(checkboxId);
         }
       } else {
-        // 非 Canvas 图层：原有逻辑（清除缓存重建）
+        // 非 Canvas 图层
+        // 如果只是透明度变化（颜色模式未变），直接刷新已有图层样式，避免重建
+        var cached = layerCache[checkboxId];
+        if (
+          cached &&
+          typeof cached.eachLayer === "function" &&
+          newOpacity !== undefined
+        ) {
+          const op = newOpacity;
+          cached.eachLayer(function (gl) {
+            if (typeof gl.eachLayer === "function") {
+              gl.eachLayer(function (layer) {
+                if (typeof layer.setStyle === "function") {
+                  var style = {};
+                  if (layer.feature) {
+                    var gt = (layer.feature.geometry?.type || "").toLowerCase();
+                    var isLine =
+                      gt === "linestring" || gt === "multilinestring";
+                    style.opacity = op;
+                    style.fillOpacity = isLine ? 0 : op;
+                  } else {
+                    style.opacity = op;
+                    style.fillOpacity = op;
+                  }
+                  layer.setStyle(style);
+                }
+              });
+            } else if (typeof gl.setStyle === "function") {
+              gl.setStyle({ opacity: op, fillOpacity: op });
+            }
+          });
+          updateColorBtnHint(checkboxId);
+          return;
+        }
+
+        // 颜色模式变化：清除缓存重建
         var savedData = userLayerGeoJson[checkboxId] || null;
         clearHighlight(checkboxId);
         const oldState = highlightState[checkboxId];
@@ -1928,6 +1980,10 @@
       const defaultLabelField =
         labelFieldMap[checkboxId] || DEFAULT_LABEL_FIELD;
       const currentIconSize = layerIconSizeMap[checkboxId] || 20;
+      const currentOpacity =
+        layerOpacityMap[checkboxId] !== undefined
+          ? layerOpacityMap[checkboxId]
+          : 0.8;
       const fieldOptions = fields
         .map(function (f) {
           return `<option value="${f}" ${f === currentField ? "selected" : ""}>${f}</option>`;
@@ -2009,6 +2065,14 @@
           `
               : ""
           }
+          <hr class="dlg-section-divider">
+          <div class="dlg-opacity-section" style="margin-top:8px;">
+            <label style="font-size:12px;color:#555;display:block;margin-bottom:4px;font-weight:600;">
+              不透明度：<span id="dlgOpacityValue">${Math.round(currentOpacity * 100)}</span>%
+            </label>
+            <input type="range" id="dlgOpacitySlider" min="0" max="1" step="0.05" value="${currentOpacity}"
+              style="width:100%;cursor:pointer;">
+          </div>
         </div>`;
     }
 
@@ -2169,6 +2233,15 @@
               layerColorMap[_layerDialogData.checkboxId] = this.value;
               refreshLayerColors(_layerDialogData.checkboxId);
             }
+          });
+        }
+
+        // === 不透明度滑块 ===
+        var opSlider = document.getElementById("dlgOpacitySlider");
+        var opValue = document.getElementById("dlgOpacityValue");
+        if (opSlider && opValue) {
+          opSlider.addEventListener("input", function () {
+            opValue.textContent = Math.round(this.value * 100);
           });
         }
 
@@ -2373,11 +2446,14 @@
           var newIconSize = iconSizeEl
             ? parseInt(iconSizeEl.value, 10) || 20
             : 20;
+          var opSlider = dlg.querySelector("#dlgOpacitySlider");
+          var newOpacity = opSlider ? parseFloat(opSlider.value) : 0.8;
 
           // 统一写入持久化设置
           var s = {};
           s.colorMode = newMode;
           s.colorValue = newColor;
+          s.opacity = newOpacity;
           if (newField) s.colorField = newField;
           if (nf) s.labelField = nf;
           if (newIcon) s.iconValue = newIcon;
@@ -2389,9 +2465,10 @@
           if (newIcon) layerIconMap[cbId] = newIcon;
           else delete layerIconMap[cbId];
           layerIconSizeMap[cbId] = newIconSize;
+          layerOpacityMap[cbId] = newOpacity;
 
           // 统一通过 reloadLayerWithNewMode 更新（Canvas 图标的 Image 在其中刷新）
-          reloadLayerWithNewMode(cbId, newMode, newColor, newField);
+          reloadLayerWithNewMode(cbId, newMode, newColor, newField, newOpacity);
           dlg.close();
         };
 
