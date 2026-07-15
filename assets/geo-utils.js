@@ -112,13 +112,12 @@
     const keys = Object.keys(props);
     if (keys.length === 0) return null;
     const config = POPUP_FIELD_CONFIG[fileName] || POPUP_FIELD_CONFIG._default;
-    // 过滤空值和非数据字段（不跳过任何 key）
+    // 过滤空值（_featureIndex 保留在最后，object/array 用 JSON 字符串展示）
     const displayKeys = keys.filter(
       (k) =>
         props[k] !== undefined &&
         props[k] !== null &&
-        props[k] !== "" &&
-        typeof props[k] !== "object",
+        props[k] !== "",
     );
     if (displayKeys.length === 0) return null;
     // 标题行：优先用传入的 titleField，其次配置的 titleField，最后自动检测 Name 字段
@@ -140,6 +139,8 @@
         let val = props[k];
         if (typeof val === "number")
           val = Number.isInteger(val) ? val : val.toFixed(4);
+        else if (typeof val === "object" && val !== null)
+          val = JSON.stringify(val);
         return `<tr><td>${k}</td><td>${val}</td></tr>`;
       })
       .join("");
