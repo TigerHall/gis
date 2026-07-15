@@ -219,6 +219,12 @@
           colorMode: "field",
           colorField: "Contractor",
         },
+        {
+          name: "EBSA 海洋保护区&特殊生态区",
+          file: "EBSAs_4326_Vis.geojson.gz",
+          color: "#66BB6A",
+          colorMode: "single",
+        },
       ],
     },
     {
