@@ -3,6 +3,14 @@
   // 暂存：geoJSONLoader 尚未就绪时收到的文件（旧 PWA 入口备用）
   var _pendingFiles = [];
 
+  // ========== GZ 解压工具函数（使用浏览器原生 DecompressionStream）==========
+  function decompressGz(arrayBuffer) {
+    var blob = new Blob([arrayBuffer]);
+    var ds = new DecompressionStream("gzip");
+    var stream = blob.stream().pipeThrough(ds);
+    return new Response(stream).arrayBuffer();
+  }
+
   window.loadFileAsUserLayer = function loadFileAsUserLayer(file, autoShow) {
     var ext = (file.name.split(".").pop() || "").toLowerCase();
 
@@ -44,6 +52,51 @@
         alert("文件读取失败：" + (file.name || ""));
       };
       reader.readAsText(file);
+    } else if (/^gz$/i.test(ext)) {
+      // .gz 文件：解压后根据内部扩展名判断格式
+      window.showLoading("正在解压 GZ 文件...");
+      var readerGz = new FileReader();
+      readerGz.onload = function (ev) {
+        window.showLoading("正在解析数据...");
+        decompressGz(ev.target.result)
+          .then(function (decompressedBuf) {
+            var innerName = file.name.replace(/\.gz$/i, "");
+            var innerExt = (innerName.split(".").pop() || "").toLowerCase();
+            var blob = new Blob([decompressedBuf]);
+            if (/^(geojson|json)$/i.test(innerExt)) {
+              return blob.text().then(function (text) {
+                deliverToMap(JSON.parse(text), innerName, autoShow);
+              });
+            } else if (/^kml$/i.test(innerExt)) {
+              if (typeof toGeoJSON === "undefined") {
+                window.hideLoading();
+                alert("toGeoJSON 库尚未加载，请检查网络连接后刷新页面。");
+                return;
+              }
+              return blob.text().then(function (text) {
+                var parser = new DOMParser();
+                var xmlDoc = parser.parseFromString(text, "text/xml");
+                deliverToMap(toGeoJSON.kml(xmlDoc), innerName, autoShow);
+              });
+            } else {
+              window.hideLoading();
+              alert(
+                "GZ 内文件格式不支持：" +
+                  innerName +
+                  "\n支持：.geojson、.json、.kml",
+              );
+            }
+          })
+          .catch(function (err) {
+            window.hideLoading();
+            alert("GZ 解压失败：" + file.name + "\n" + err.message);
+          });
+      };
+      readerGz.onerror = function () {
+        window.hideLoading();
+        alert("文件读取失败：" + (file.name || ""));
+      };
+      readerGz.readAsArrayBuffer(file);
     } else if (/^(zip|kmz)$/i.test(ext)) {
       if (typeof JSZip === "undefined") {
         alert("JSZip 库尚未加载，请检查网络连接后刷新页面。");
@@ -62,6 +115,8 @@
               var geojsonFiles = [];
               var kmlFiles = [];
               var kmzFiles = [];
+              var geojsonGzFiles = [];
+              var kmlGzFiles = [];
               zip.forEach(function (relativePath, zipEntry) {
                 if (zipEntry.dir) return;
                 var name = relativePath.split("/").pop();
@@ -77,6 +132,16 @@
                   kmlFiles.push({ path: relativePath, name: name });
                 } else if (/^kmz$/i.test(e)) {
                   kmzFiles.push({ path: relativePath, name: name });
+                } else if (/^gz$/i.test(e)) {
+                  var innerName = name.replace(/\.gz$/i, "");
+                  var innerExt = (innerName.split(".").pop() || "").toLowerCase();
+                  if (/^(geojson|json)$/i.test(innerExt))
+                    geojsonGzFiles.push({
+                      path: relativePath,
+                      name: innerName,
+                    });
+                  else if (/^kml$/i.test(innerExt))
+                    kmlGzFiles.push({ path: relativePath, name: innerName });
                 }
               });
               var tasks = [];
@@ -186,10 +251,60 @@
                   );
                 });
               }
+              // ZIP 内 .geojson.gz / .json.gz 解压
+              geojsonGzFiles.forEach(function (item) {
+                tasks.push(
+                  zip
+                    .file(item.path)
+                    .async("arraybuffer")
+                    .then(function (buf) {
+                      return decompressGz(buf);
+                    })
+                    .then(function (decompressedBuf) {
+                      var blob = new Blob([decompressedBuf]);
+                      return blob.text();
+                    })
+                    .then(function (text) {
+                      deliverToMap(JSON.parse(text), item.name);
+                    })
+                    .catch(function (err) {
+                      console.warn(
+                        "GZ 内 GeoJSON 解析失败:",
+                        item.name,
+                        err,
+                      );
+                    }),
+                );
+              });
+              // ZIP 内 .kml.gz 解压
+              if (typeof toGeoJSON !== "undefined") {
+                kmlGzFiles.forEach(function (item) {
+                  tasks.push(
+                    zip
+                      .file(item.path)
+                      .async("arraybuffer")
+                      .then(function (buf) {
+                        return decompressGz(buf);
+                      })
+                      .then(function (decompressedBuf) {
+                        var blob = new Blob([decompressedBuf]);
+                        return blob.text();
+                      })
+                      .then(function (text) {
+                        var parser = new DOMParser();
+                        var xmlDoc = parser.parseFromString(text, "text/xml");
+                        deliverToMap(toGeoJSON.kml(xmlDoc), item.name);
+                      })
+                      .catch(function (err) {
+                        console.warn("GZ 内 KML 解析失败:", item.name, err);
+                      }),
+                  );
+                });
+              }
               if (tasks.length === 0) {
                 window.hideLoading();
                 alert(
-                  "ZIP 中未找到可识别的文件\n支持：.shp、.geojson、.json、.kml",
+                  "ZIP 中未找到可识别的文件\n支持：.shp、.geojson、.json、.kml、.kml.gz、.geojson.gz",
                 );
                 return;
               }
@@ -212,7 +327,7 @@
       alert(
         "不支持的文件格式：." +
           ext +
-          "\n支持格式：GeoJSON、JSON、KML、KMZ、ZIP",
+          "\n支持格式：GeoJSON、JSON、KML、KMZ、GZ、ZIP",
       );
     }
   };
@@ -319,7 +434,7 @@
         files.forEach(function (file) {
           fileMap[file.name.toLowerCase()] = file;
         });
-        var nonShpExts = ["kml", "kmz", "json", "geojson"];
+        var nonShpExts = ["kml", "kmz", "json", "geojson", "gz"];
         var nonShpFiles = [];
         files.forEach(function (file) {
           var ext = file.name.split(".").pop().toLowerCase();
@@ -336,7 +451,7 @@
         if (!nonShpFiles.length && !shpFileNames.length) {
           window.hideLoading();
           alert(
-            "文件夹中未找到支持的矢量文件\n支持：shp、kml、kmz、json、geojson",
+            "文件夹中未找到支持的矢量文件\n支持：shp、kml、kmz、json、geojson、gz",
           );
           return;
         }
@@ -452,7 +567,7 @@
       readEntriesRecursive();
     } else {
       Array.from(e.dataTransfer.files).forEach(function (file) {
-        if (/\.(geojson|json|zip|kml|kmz)$/i.test(file.name)) {
+        if (/\.(geojson|json|zip|kml|kmz|gz)$/i.test(file.name)) {
           loadFileAsUserLayer(file);
           var layerPanel = document.getElementById("layerPanel");
           if (layerPanel) layerPanel.classList.add("active");

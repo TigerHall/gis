@@ -83,6 +83,9 @@
         ],
         "application/vnd.google-earth.kmz": [
           ".kmz"
+        ],
+        "application/gzip": [
+          ".gz"
         ]
       }
     }
