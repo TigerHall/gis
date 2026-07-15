@@ -134,9 +134,8 @@
     if (titleKey && props[titleKey] != null && props[titleKey] !== "") {
       titleHtml = `<div class="feature-popup-title">${props[titleKey]}</div>`;
     }
-    // 字段行（排除已作为标题的字段）
+    // 字段行（不过滤标题字段，全部罗列）
     const rows = displayKeys
-      .filter((k) => !titleKey || k !== titleKey)
       .map((k) => {
         let val = props[k];
         if (typeof val === "number")
