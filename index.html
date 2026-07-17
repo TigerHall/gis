@@ -66,7 +66,10 @@
     <!-- 适配iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="#99cc99" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <meta name="apple-mobile-web-app-title" content="Dupal" />
     <!-- iOS 主屏幕图标（优先SVG，降级用PNG） -->
     <link
@@ -91,8 +94,14 @@
     />
     <!-- Windows 瓷砖配置 -->
     <meta name="msapplication-config" content="./browserconfig.xml" />
-    <!-- 主题色适配 -->
-    <meta name="theme-color" content="#99cc99" />
+    <!-- 主题色适配：日间默认值，深色模式由 app.js 动态更新 -->
+    <meta id="themeColorMeta" name="theme-color" content="#99cc99" />
+    <!-- 系统级深色偏好兜底（仅当用户未手动切换时生效） -->
+    <meta
+      name="theme-color"
+      content="#111111"
+      media="(prefers-color-scheme: dark)"
+    />
     <link rel="icon" href="./assets/images/icon.svg" type="image/svg+xml" />
   </head>
 

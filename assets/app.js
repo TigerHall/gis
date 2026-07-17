@@ -720,10 +720,12 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       enable: function () {
         document.documentElement.setAttribute("data-theme", "dark");
         document.documentElement.style.colorScheme = "dark";
+        syncThemeColorMeta();
       },
       disable: function () {
         document.documentElement.removeAttribute("data-theme");
         document.documentElement.style.colorScheme = "light";
+        syncThemeColorMeta();
       },
     },
     mouseCoordToggle: {
@@ -832,6 +834,18 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       },
     },
   };
+
+  // 同步 iOS/Android 状态栏与挖孔区（留白区）主题色：
+  // 读取当前主题下的 --c-statusbar 变量并写入 theme-color meta，
+  // 让深色模式下灵动岛/刘海/底部 Home 条区域也跟随变暗
+  function syncThemeColorMeta() {
+    var meta = document.getElementById("themeColorMeta");
+    if (!meta) return;
+    var color = getComputedStyle(document.documentElement)
+      .getPropertyValue("--c-statusbar")
+      .trim();
+    if (color) meta.setAttribute("content", color);
+  }
 
   // 初始化主题：仅置顶开关状态，由 initToggle 同时设置 data-theme
   (function initTheme() {

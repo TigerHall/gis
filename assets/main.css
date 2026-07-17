@@ -17,6 +17,10 @@
   --c-blue: #1890ff;
   --c-red: #e53935;
 
+  /* iOS/Android 状态栏与挖孔区（留白区）主题色：
+     由 theme-color meta 与 black-translucent 状态栏样式读取 */
+  --c-statusbar: #99cc99;
+
   /* ===== 语义别名 ===== */
   --panel-bg: var(--c-bg);
   --panel-border: var(--c-green);
@@ -74,6 +78,10 @@
   --c-yellow: #c89428;
   --c-blue: #5ab0ff;
   --c-red: #d44c44;
+  /* 深色模式下的状态栏/挖孔区颜色，与面板背景保持一致 */
+  --c-statusbar: #111111;
+  /* 声明深色配色，让滚动条/表单控件等系统 UI 同步变暗 */
+  color-scheme: dark;
 }
 
 /* 备案号悬浮条（固定右下角，合规要求） */
@@ -111,6 +119,10 @@ html {
 
 body {
   display: flex; /* 保留flex布局 */
+  /* 留白区（刘海/挖孔/灵动岛/底部 Home 条）背景随主题切换：
+     viewport-fit=cover 下 body 会铺满整屏并覆盖安全区，
+     此处背景即安全区可见部分，必须显式绑定主题色 */
+  background: var(--c-bg);
   /* 横竖屏 safe-area 自适应：取基础间距和系统安全区中的较大值
      - 竖屏 iOS：top ≈ 50px（灵动岛）、bottom ≈ 34px（Home 条）
      - 横屏 iOS：left/right ≈ 44px（齐刘海两侧）
