@@ -631,6 +631,132 @@
           '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
       });
 
+      // ========== 6b. GEBCO 2024(latest) 额外图层 ==========
+      // 以下图层来自主端点（基于 GEBCO_2024 latest 网格），均支持 EPSG:3857
+      const gebcoSubIceLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
+        layers: "GEBCO_LATEST_SUB_ICE_TOPO",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+      });
+      const gebcoFlatSubIceLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
+        layers: "GEBCO_LATEST_2_sub_ice_topo",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+      });
+      const gebcoObservedLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
+        layers: "GEBCO_LATEST_3",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+      });
+      const gebcoTidBlackLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
+        layers: "GEBCO_LATEST_TID",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+      });
+      const gebcoTidColorLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
+        layers: "GEBCO_LATEST_TID_2",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+      });
+
+      // ========== 6c. GEBCO 2025 网格（最新发布，独立端点） ==========
+      // 端点与主网格不同：https://wms.gebco.net/2025/mapserv?，同样支持 EPSG:3857
+      const gebco2025ShadedLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
+        layers: "GEBCO_2025",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+      });
+      const gebco2025FlatLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
+        layers: "GEBCO_2025_2",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+      });
+      const gebco2025ObservedLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
+        layers: "GEBCO_2025_3",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+      });
+      const gebco2025SubIceLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
+        layers: "GEBCO_2025_SUB_ICE_TOPO",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+      });
+      const gebco2025FlatSubIceLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
+        layers: "GEBCO_2025_2_sub_ice_topo",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+      });
+      const gebco2025TidBlackLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
+        layers: "GEBCO_2025_TID",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+      });
+      const gebco2025TidColorLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
+        layers: "GEBCO_2025_TID_2",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        maxZoom: 12,
+        crossOrigin: "anonymous",
+        attribution:
+          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+      });
+
       // ========== 7. EMODnet 水深 WMS ==========
       const emodnetLayer = L.tileLayer.wms(
         "https://ows.emodnet-bathymetry.eu/wms",
@@ -674,8 +800,23 @@
         arcgisBaseLayers,
       );
       // 水深/地质底图
-      allBaseLayers["GEBCO-水深地形"] = gebcoShadedLayer;
-      allBaseLayers["GEBCO-水深平面"] = gebcoFlatLayer;
+      // GEBCO 2024(latest) 主端点图层统一以 GEBCO2024- 前缀
+      allBaseLayers["GEBCO2024-水深地形"] = gebcoShadedLayer;
+      allBaseLayers["GEBCO2024-水深平面"] = gebcoFlatLayer;
+      // GEBCO 2024(latest) 额外图层
+      allBaseLayers["GEBCO2024-含冰下地形浮雕"] = gebcoSubIceLayer;
+      allBaseLayers["GEBCO2024-平面着色(含冰下)"] = gebcoFlatSubIceLayer;
+      allBaseLayers["GEBCO2024-仅实测数据"] = gebcoObservedLayer;
+      allBaseLayers["GEBCO2024-TID实测黑"] = gebcoTidBlackLayer;
+      allBaseLayers["GEBCO2024-TID分类着色"] = gebcoTidColorLayer;
+      // GEBCO 2025 网格（最新发布）
+      allBaseLayers["GEBCO2025-水深地形"] = gebco2025ShadedLayer;
+      allBaseLayers["GEBCO2025-水深平面"] = gebco2025FlatLayer;
+      allBaseLayers["GEBCO2025-仅实测数据"] = gebco2025ObservedLayer;
+      allBaseLayers["GEBCO2025-含冰下浮雕"] = gebco2025SubIceLayer;
+      allBaseLayers["GEBCO2025-平面着色(含冰下)"] = gebco2025FlatSubIceLayer;
+      allBaseLayers["GEBCO2025-TID实测黑"] = gebco2025TidBlackLayer;
+      allBaseLayers["GEBCO2025-TID着色"] = gebco2025TidColorLayer;
       allBaseLayers["EMODnet-多色水深"] = emodnetLayer;
       allBaseLayers["Macrostrat-全球地质"] = macrostratLayer;
       // OSM 放到最后
@@ -717,7 +858,7 @@
           "天地图地形",
           "ArcGIS-影像",
           "ArcGIS-海洋",
-          "GEBCO-水深地形",
+          "GEBCO2025-水深地形",
           "OpenStreetMap",
         ];
         keys.forEach(function (k) {
@@ -733,7 +874,7 @@
         return getDefaultBaseLayers();
       }
 
-      // 当前选中的底图名称
+      // 当前选中的底图名称（默认 ArcGIS-海洋，原始默认）
       var _currentBasemapName = "ArcGIS-海洋";
 
       // 重建底图控件
