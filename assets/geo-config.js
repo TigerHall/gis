@@ -337,6 +337,13 @@
           colorMode: "field",
           colorField: "hostility_",
         },
+        {
+          name: "中国县城名称 China County",
+          file: "ChinaCounty.geojson.gz",
+          labelField: "NAME",
+          color: "#1976D2",
+          searchPriority: true,
+        },
       ],
     },
     {
