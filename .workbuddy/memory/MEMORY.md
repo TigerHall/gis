@@ -20,9 +20,20 @@
 - `updateColors()` 增量改色（不重建 RBush）
 - **透明度**：`_redraw` 用 `ctx.globalAlpha = options.opacity||1`（options.opacity 由 geojsonloader 创建/更新时传入）；图层透明度滑杆在 `reloadLayerWithNewMode` 的 canvas 分支写 `canvasLayer.options.opacity` 并重绘
 
-## 点要素透明度（已知坑 + 修复）
-- **根因**：点要素经 `L.GeoMarker.createPointMarkerByType` 创建为 `L.Marker`+divIcon，**无 `setStyle`**，所以透明度滑杆更新循环（只对 `setStyle` 生效）和 `getGeoJsonStyle` 给点返回的 opacity 都对点无效 → 点始终全不透明。
-- **修复**：`createPointMarkerByType` 增 `opacity` 参数，把透明度烘焙进 divIcon 内层 `<div class="gm-op-wrap">`；滑杆更新循环对 marker 改 `.gm-op-wrap`（或外层）元素 opacity。线/面仍走 `setStyle`。聚类气泡（缩小时）透明度不随滑杆实时变（已知 minor 限制）。
+## 点要素标记 + 图标（Leaflet.GeoMarker.js，已知坑 + 修复）
+- 点要素经 `L.GeoMarker.createPointMarkerByType(map, feature, latlng, color, labelText, iconType, iconSize, opacity)` 创建为 `L.Marker`+divIcon。**无 `setStyle`**，透明度靠 divIcon 内层 `<div class="gm-op-wrap">` 或调用方 `wrapIconOpacity` 包裹（不要在 `getIconFactory` 内重复 wrapOpacity，否则双重淡出）。
+- **图标大小坑（已修）**：所有内置图标（volcano/hotspot/star/point + file 风格）工厂现接收 `size` 参数，`getIconFactory(iconType, iconSize)` 用闭包把 `iconSize` 绑定进工厂 → 图标随「图标大小」设置缩放。`createPointIcon` 的 size 表示**标记总直径**（默认 16），与三角形/星同尺度。
+- **致命参数错位（已修）**：原 `createPureIconMarker` 调 `wrapIconOpacity(createPointIcon, color, 8, opacity)` —— 第3参是 opacity 位、第4参是 size 位，结果把字面 `8` 当 opacity、把真实 `opacity`(0.35/0.8) 当圆形半径 → 默认点被画成 0.35px 几乎不可见。现改为 `(createPointIcon, color, opacity, iconSize||8)`。
+- 圆形点路径原来完全没把 `iconSize` 传入 `createPointMarkerByType` → 已补传第7参 `iconSize`。
+
+## 点图层透明度（聚类组根因 + 修复）
+- **现象**：透明度滑杆只有圆形响应、三角形/星/热点等图形不响应。
+- **根因**：点图层 ≤3000 走 DOM 且**默认开启聚类**（markerClusterGroup）。`markerClusterGroup.addLayer` 把单个 marker 存入 `_gridClusters/_gridUnclustered`，**不调用 `L.LayerGroup.addLayer`**，故 `clusterGroup.eachLayer`（遍历 `_layers`）只产出聚类气泡对象、遍历不到单个 marker。旧增量透明度循环只命中聚类气泡、够不到单个图形 marker → 不淡出。>3000 点的圆形图层走 Canvas（globalAlpha）正常淡出，造成不对称。
+- **修复**：新增递归 `applyLayerOpacity(layer, op)`——对 `L.MarkerClusterGroup` 额外调 `getAllChildMarkers()`（本地 leaflet.markercluster.js 已确认有该方法，递归遍历所有 cluster + `_markers`）遍历全部子 marker 设 DOM 透明度；同时保留 `eachLayer` 递归（矢量/嵌套组/聚类气泡）。非 Canvas 增量循环改为 `cached.eachLayer(gl => applyLayerOpacity(gl, op))`。
+
+## reloadLayerWithNewMode 重渲染坑（已修）
+- 非 Canvas 分支用 `newOpacity !== undefined` 判断"仅透明度变化"并提前 return（跳过重建）。但**设置保存始终传 newOpacity**，导致图标类型/大小（`iconType`/`iconSize`）变化被吞掉、不即时生效。
+- **修复**：函数增第6参 `forceRebuild`；设置保存段在 `iconChanged`（图标类型或大小变化）时传 `true`，跳过"仅透明度"短路、走重建分支（读最新 `layerIconMap`/`layerIconSizeMap`）。仅改透明度时 `forceRebuild` 为 false，保持增量更新性能。
 
 ## GeoJSON 加载/缓存
 - `Leaflet.GzIdbLoader.fetch()`：IndexedDB 缓存解压后 JSON（DB_VERSION=2），key=文件 URL

@@ -28,9 +28,10 @@
   }
 
   // ========== 内置图标：火山 ==========
-  function createVolcanoIcon(color) {
+  function createVolcanoIcon(color, size) {
+    size = size || 20;
     var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 20 20">' +
       '<polygon points="10,2 18,18 2,18" fill="' +
       color +
       '" fill-opacity="0.85" stroke="white" stroke-width="1.5" stroke-opacity="0.9"/>' +
@@ -41,16 +42,17 @@
     return L.divIcon({
       html: svg,
       className: "",
-      iconSize: [20, 20],
-      iconAnchor: [10, 18],
-      popupAnchor: [0, -18],
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size * 0.9],
+      popupAnchor: [0, -size * 0.9],
     });
   }
 
   // ========== 内置图标：热点 ==========
-  function createHotspotIcon(color) {
+  function createHotspotIcon(color, size) {
+    size = size || 18;
     var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 18 18">' +
       '<circle cx="9" cy="9" r="3.5" fill="' +
       color +
       '" fill-opacity="0.9" stroke="white" stroke-width="1.2"/>' +
@@ -64,16 +66,17 @@
     return L.divIcon({
       html: svg,
       className: "",
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
-      popupAnchor: [0, -9],
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -size / 2],
     });
   }
 
   // ========== 内置图标：五角星 ==========
-  function createStarIcon(color) {
+  function createStarIcon(color, size) {
+    size = size || 20;
     var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 20 20">' +
       '<polygon points="10,1 12.9,7.1 19.5,7.6 14.7,12 16.2,18.5 10,15 3.8,18.5 5.3,12 0.5,7.6 7.1,7.1"' +
       ' fill="' +
       color +
@@ -82,16 +85,17 @@
     return L.divIcon({
       html: svg,
       className: "",
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      popupAnchor: [0, -10],
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -size / 2],
     });
   }
 
   // ========== 内置图标：文件SVG风格的火山（山峰形）==========
-  function createVolcanoSvgIcon(color) {
+  function createVolcanoSvgIcon(color, size) {
+    size = size || 20;
     var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 1024 1024">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 1024 1024">' +
       '<path d="M512.5 510c-53.65 0-104.32-5.65-142.7-15.91C322.16 481.35 298 462.48 298 438c0-41.22 68.47-58.91 125.91-66.48 10.95-1.45 21 6.26 22.44 17.21 1.45 10.95-6.26 21-17.21 22.44-26.41 3.48-49.41 8.61-66.52 14.82-13.35 4.85-20.24 9.37-23.24 12.04 4.73 4.29 18.68 12.43 49.98 19.72 33.93 7.9 77.66 12.25 123.13 12.25s89.21-4.35 123.13-12.25c31.33-7.29 45.28-15.45 50-19.73-6.9-6.16-33.36-20.56-99.67-28.06-10.98-1.24-18.87-11.14-17.63-22.12 1.24-10.98 11.14-18.87 22.12-17.63 36.5 4.13 67.86 11.08 90.69 20.12 30.43 12.04 45.86 28.08 45.86 47.67 0 24.48-24.16 43.35-71.8 56.09-38.37 10.26-89.05 15.91-142.7 15.91z" fill="' +
       color +
       '" fill-opacity="0.9"/>' +
@@ -108,16 +112,17 @@
     return L.divIcon({
       html: svg,
       className: "",
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      popupAnchor: [0, -10],
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -size / 2],
     });
   }
 
   // ========== 内置图标：文件SVG风格的热点（火焰形）==========
-  function createHotspotSvgIcon(color) {
+  function createHotspotSvgIcon(color, size) {
+    size = size || 20;
     var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 1024 1024">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 1024 1024">' +
       '<path d="M555.09 139.19c76.01 87.19 157.62 256.24 161.24 447.17a78.69 78.69 0 0 0 125.87 61.68c3.86-2.91 18.12-13.78 36.39-30.88 1.26 56.71-12.52 119.26-41.2 179.2-20.8 43.4-47.42 80.27-75.62 106.5-15.83-36.79-44.43-61.2-72.86-82-12.68-9.29-23.71-17.33-32.85-27.41-13.55-14.97-43.87-56-33.71-113.43a78.69 78.69 0 0 0-115.63-82.7c-127.21 70.34-198.97 172.19-210.08 294.36-79.71-42.85-128.24-94.37-144.7-153.92-21.35-76.88 13.55-165.02 60.5-232.92a78.53 78.53 0 0 0 115.55 44.35c160.22-95.39 210.39-273.96 227.09-409.99M485.06 0c-3.62 153.13-23.95 378.25-197.4 481.52 5.83-90.66-9.22-138.4-31.35-186.37-11.11 59.08-36 75.07-75.62 121.78C63.25 555.33-72.08 919.69 485.06 1074.7c-39.23-156.51 19.85-271.36 159.35-348.48a212.83 212.83 0 0 0 52.78 180.07c53.88 59.55 123.59 55.93 88.54 177.7 190.07-14.73 359.74-376.36 219.53-581.16-22.13 76.09-110.67 142.1-110.67 142.1C789.5 291.52 614.24 23.95 485.06 0z" fill="' +
       color +
       '" fill-opacity="0.9"/>' +
@@ -125,32 +130,34 @@
     return L.divIcon({
       html: svg,
       className: "",
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      popupAnchor: [0, -10],
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -size / 2],
     });
   }
 
   // ========== 内置图标：普通点 ==========
+  // size 表示标记总直径（与其他图标尺寸字段语义一致），默认 16
   function createPointIcon(color, size) {
-    var r = size || 8;
-    var outline = r + 2;
+    var d = size || 16;
+    var r = Math.max(2, d / 2 - 1.5);
+    var c = d / 2;
     var svg =
       '<svg xmlns="http://www.w3.org/2000/svg" width="' +
-      outline * 2 +
+      d +
       '" height="' +
-      outline * 2 +
+      d +
       '" viewBox="0 0 ' +
-      outline * 2 +
+      d +
       " " +
-      outline * 2 +
+      d +
       '">' +
       '<circle cx="' +
-      outline +
+      c +
       '" cy="' +
-      outline +
+      c +
       '" r="' +
-      (outline - 1) +
+      r +
       '"' +
       ' fill="' +
       color +
@@ -159,9 +166,9 @@
     return L.divIcon({
       html: svg,
       className: "",
-      iconSize: [outline * 2, outline * 2],
-      iconAnchor: [outline, outline],
-      popupAnchor: [0, -(outline + 2)],
+      iconSize: [d, d],
+      iconAnchor: [c, c],
+      popupAnchor: [0, -c],
     });
   }
 
@@ -333,13 +340,14 @@
   }
 
   // ========== 创建带标签的圆形点标记 ==========
-  function createLabeledMarker(map, latlng, color, labelText, opacity) {
+  function createLabeledMarker(map, latlng, color, labelText, opacity, iconSize) {
     var showLabel = !!labelText;
+    var d = (iconSize || 8) * 2;
     var html =
       '<div class="station-marker-wrapper">' +
       '<span class="station-dot" style="background:' +
       color +
-      ';border-color:white;"></span>' +
+      ';border-color:white;width:' + d + 'px;height:' + d + 'px;"></span>' +
       '<span class="station-label' +
       (showLabel ? "" : " hidden") +
       '">' +
@@ -388,11 +396,11 @@
   }
 
   // ========== 创建无标签的纯图标标记 ==========
-  function createPureIconMarker(latlng, color, iconFn, opacity) {
+  function createPureIconMarker(latlng, color, iconFn, opacity, iconSize) {
     if (iconFn)
       return L.marker(latlng, { icon: wrapIconOpacity(iconFn, color, opacity) });
     return L.marker(latlng, {
-      icon: wrapIconOpacity(createPointIcon, color, 8, opacity),
+      icon: wrapIconOpacity(createPointIcon, color, opacity, iconSize || 8),
     });
   }
 
@@ -464,9 +472,9 @@
     } else {
       // 无图标工厂 → 默认圆形点兜底
       if (labelText) {
-        marker = createLabeledMarker(map, latlng, color, labelText, opacity);
+        marker = createLabeledMarker(map, latlng, color, labelText, opacity, iconSize);
       } else {
-        marker = createPureIconMarker(latlng, color, null, opacity);
+        marker = createPureIconMarker(latlng, color, null, opacity, iconSize);
       }
     }
     if (feature) marker.feature = feature;
@@ -481,8 +489,15 @@
    */
   function getIconFactory(iconType, iconSize) {
     if (!iconType) return null;
-    // 1. 查内置注册表
-    if (iconTypes[iconType]) return iconTypes[iconType];
+    // 1. 查内置注册表（把 iconSize 绑定进工厂，使图标随「图标大小」设置缩放）
+    //    注意：opacity 由调用方（wrapIconOpacity / createSvgLabeledMarker）统一包裹，
+    //    此处只绑定尺寸，避免透明度被重复应用。
+    if (iconTypes[iconType]) {
+      var base = iconTypes[iconType];
+      return function (color /*, opacity */) {
+        return base(color, iconSize || 20);
+      };
+    }
     // 2. 外部文件路径（PNG/ICO 等用 <img> 方式渲染）
     if (isExternalPath(iconType))
       return createExternalFileIcon(iconType, iconSize);

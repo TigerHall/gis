@@ -1335,12 +1335,64 @@
       }
     }
 
+    // ========== 递归应用图层不透明度 ==========
+    // 统一处理：矢量要素（setStyle）、点标记（L.Marker+divIcon，无 setStyle）、
+    // 嵌套组（featureGroup/geoJSON）、以及 markerClusterGroup。
+    // 关键：markerClusterGroup.eachLayer 只遍历当前可见的 cluster/marker，
+    // 拿不到被聚合隐藏的单个 marker；用 getAllChildMarkers() 遍历全部子 marker，
+    // 确保单个图形（三角形/星/热点等）也能即时响应透明度调整。
+    function applyLayerOpacity(layer, op) {
+      if (!layer) return;
+      // 1. 嵌套组：递归子层
+      if (typeof layer.eachLayer === "function") {
+        layer.eachLayer(function (child) {
+          applyLayerOpacity(child, op);
+        });
+      }
+      // 2. markerClusterGroup：补遍历所有子 marker（含已聚合隐藏的）
+      if (typeof layer.getAllChildMarkers === "function") {
+        try {
+          var cms = layer.getAllChildMarkers();
+          if (cms && cms.length) {
+            for (var i = 0; i < cms.length; i++) {
+              applyLayerOpacity(cms[i], op);
+            }
+          }
+        } catch (e) {}
+      }
+      // 3. 矢量要素（线/面）：setStyle
+      if (typeof layer.setStyle === "function") {
+        var style = { opacity: op, fillOpacity: op };
+        if (layer.feature) {
+          var gt = ((layer.feature.geometry || {}).type || "").toLowerCase();
+          if (gt === "linestring" || gt === "multilinestring") {
+            style.fillOpacity = 0;
+          }
+        }
+        layer.setStyle(style);
+        return;
+      }
+      // 4. 点标记（L.Marker + divIcon）：无 setStyle，直接改 DOM 透明度
+      if (typeof layer.getElement === "function") {
+        var el = layer.getElement();
+        if (el) {
+          // 优先改内层 .gm-op-wrap（创建时已烘焙的透明度容器），
+          // 否则回退到外层元素，确保滑杆调整能覆盖默认淡出值
+          var wrap = el.querySelector ? el.querySelector(".gm-op-wrap") : null;
+          if (wrap) wrap.style.opacity = op;
+          else el.style.opacity = op;
+          layer._layerOpacity = op;
+        }
+      }
+    }
+
     function reloadLayerWithNewMode(
       checkboxId,
       newMode,
       newColor,
       newField,
       newOpacity,
+      forceRebuild,
     ) {
       // 更新颜色模式
       colorMode[checkboxId] = newMode;
@@ -1517,46 +1569,13 @@
         if (
           cached &&
           typeof cached.eachLayer === "function" &&
-          newOpacity !== undefined
+          newOpacity !== undefined &&
+          !forceRebuild
         ) {
           const op = newOpacity;
+          // 递归应用透明度：覆盖矢量、点 marker、嵌套组、聚类组（getAllChildMarkers）
           cached.eachLayer(function (gl) {
-            if (typeof gl.eachLayer === "function") {
-              gl.eachLayer(function (layer) {
-                if (typeof layer.setStyle === "function") {
-                  var style = {};
-                  if (layer.feature) {
-                    var gt = (layer.feature.geometry?.type || "").toLowerCase();
-                    var isLine =
-                      gt === "linestring" || gt === "multilinestring";
-                    style.opacity = op;
-                    style.fillOpacity = isLine ? 0 : op;
-                  } else {
-                    style.opacity = op;
-                    style.fillOpacity = op;
-                  }
-                  layer.setStyle(style);
-                } else if (typeof layer.getElement === "function") {
-                  // 点要素标记（L.Marker + divIcon）无 setStyle，直接改 DOM 透明度
-                  var el = layer.getElement();
-                  if (el) {
-                    // 优先改内层的 gm-op-wrap（创建时已烘焙的透明度容器），
-                    // 否则回退到外层元素，确保滑杆调整能覆盖默认淡出值
-                    var wrap = el.querySelector
-                      ? el.querySelector(".gm-op-wrap")
-                      : null;
-                    if (wrap) wrap.style.opacity = op;
-                    else el.style.opacity = op;
-                    layer._layerOpacity = op;
-                  }
-                }
-              });
-            } else if (typeof gl.setStyle === "function") {
-              gl.setStyle({ opacity: op, fillOpacity: op });
-            } else if (typeof gl.getElement === "function") {
-              var gel = gl.getElement();
-              if (gel) gel.style.opacity = op;
-            }
+            applyLayerOpacity(gl, op);
           });
           updateColorBtnHint(checkboxId);
           return;
@@ -2504,7 +2523,8 @@
           layerOpacityMap[cbId] = newOpacity;
 
           // 统一通过 reloadLayerWithNewMode 更新（Canvas 图标的 Image 在其中刷新）
-          reloadLayerWithNewMode(cbId, newMode, newColor, newField, newOpacity);
+          // iconChanged（图标类型或大小变化）时强制重建图层，否则仅更新透明度即可
+          reloadLayerWithNewMode(cbId, newMode, newColor, newField, newOpacity, iconChanged);
           dlg.close();
         };
 
