@@ -249,6 +249,7 @@
     const canvasFieldValuesCache = {};
     const searchIndexMap = {}; // 倒排索引：{ checkboxId: { tokens: { tok: [idx, ...] }, features: [...] } }
     const featureCache = {}; // 要素数据缓存：{ checkboxId: features[] }，独立于索引，保证要素搜索始终可用
+    const layerSearchPriorityMap = {}; // 搜索优先图层（如海底地名集）：检索时优先返回，且未勾选也可被搜索
     let searchIndexingCount = 0; // 正在构建索引的图层数
 
     // 搜索辅助函数（提取 feature 所有属性为可搜索字符串）
@@ -613,6 +614,12 @@
 
       const iconType = layerIconMap[checkboxId] || fileName;
 
+      // 图层透明度（点要素标记渲染时透传，确保点也受不透明度控制）
+      const layerOpacity =
+        layerOpacityMap[checkboxId] !== undefined
+          ? layerOpacityMap[checkboxId]
+          : 0.8;
+
       // 创建聚类组
       function createClusterGroup() {
         const layerColor = layerColorMap[checkboxId] || "#8B6914";
@@ -761,6 +768,7 @@
               iconImage: iconImg,
               iconImages: iconColorMap,
               iconSize: iconSize_,
+              opacity: layerOpacity,
             });
 
             // 构建要素数组 [{ lat, lng, color, _idx }]
@@ -845,6 +853,7 @@
                   labelEnabled ? labelText : null,
                   iconType,
                   layerIconSizeMap[checkboxId] || 20,
+                  layerOpacity,
                 );
 
                 const content = window.GeoUtils.buildPopupContent(
@@ -907,6 +916,7 @@
                   labelEnabled ? labelText : null,
                   iconType,
                   layerIconSizeMap[checkboxId] || 20,
+                  layerOpacity,
                 );
                 marker.bindPopup(
                   window.GeoUtils.buildPopupContent(
@@ -944,6 +954,7 @@
                 labelEnabled ? labelText : null,
                 iconType,
                 layerIconSizeMap[checkboxId] || 20,
+                layerOpacity,
               );
 
               marker.bindPopup(
@@ -1141,6 +1152,12 @@
         if (_cb2)
           _cb2.style.background = layerColorMap[checkboxId] || "#8B4513";
 
+        // 要素计数后缀（N 点/线/面）：无条件更新，与搜索索引是否已预建无关。
+        // 先前该调用位于 if(!searchIndexMap) 分支内，导致带 searchPriority 的图层
+        // （如 Gazetteer_*）因启动即后台建索引而跳过计数渲染。
+        if (data_ && data_.features)
+          updateLayerCount(checkboxId, data_.features);
+
         if (!searchIndexMap[checkboxId]) {
           const cb = document.getElementById(checkboxId);
           const layerLabel = cb ? cb.dataset.layerName || fileName : fileName;
@@ -1151,6 +1168,7 @@
               groupName: cb ? cb.dataset.groupName || "" : "",
               checkboxId: checkboxId,
               fileName: fileName,
+              searchPriority: !!layerSearchPriorityMap[checkboxId],
             });
           }
           if (data_.features) {
@@ -1172,9 +1190,6 @@
               });
               // 搜索索引构建完成后触发回调
               fireLoadedCallback(checkboxId);
-              // 更新要素计数
-              if (data_ && data_.features)
-                updateLayerCount(checkboxId, data_.features);
             });
           } else {
             fireLoadedCallback(checkboxId);
@@ -1349,6 +1364,11 @@
 
       if (canvasLayer) {
         // Canvas 图层：利用缓存中的 featuresArray 增量更新颜色
+        // 不透明度：直接写入 options 并重绘（_redraw 内已用 globalAlpha 应用）
+        if (newOpacity !== undefined) {
+          canvasLayer.options.opacity = newOpacity;
+          if (canvasLayer._map) canvasLayer._redraw(true);
+        }
         var cachedFeatures = canvasFeaturesCache[checkboxId] || null;
 
         var iconType_r = layerIconMap[checkboxId];
@@ -1516,10 +1536,26 @@
                     style.fillOpacity = op;
                   }
                   layer.setStyle(style);
+                } else if (typeof layer.getElement === "function") {
+                  // 点要素标记（L.Marker + divIcon）无 setStyle，直接改 DOM 透明度
+                  var el = layer.getElement();
+                  if (el) {
+                    // 优先改内层的 gm-op-wrap（创建时已烘焙的透明度容器），
+                    // 否则回退到外层元素，确保滑杆调整能覆盖默认淡出值
+                    var wrap = el.querySelector
+                      ? el.querySelector(".gm-op-wrap")
+                      : null;
+                    if (wrap) wrap.style.opacity = op;
+                    else el.style.opacity = op;
+                    layer._layerOpacity = op;
+                  }
                 }
               });
             } else if (typeof gl.setStyle === "function") {
               gl.setStyle({ opacity: op, fillOpacity: op });
+            } else if (typeof gl.getElement === "function") {
+              var gel = gl.getElement();
+              if (gel) gel.style.opacity = op;
             }
           });
           updateColorBtnHint(checkboxId);
@@ -2654,6 +2690,18 @@
           checkbox.dataset.groupName = group.groupName || "";
           checkbox.style.setProperty("--layer-color", fixedColor);
 
+          // 默认透明度（geo-config 的 defaultOpacity）：未被用户设置覆盖时生效
+          if (
+            layerConfig.defaultOpacity !== undefined &&
+            layerOpacityMap[checkboxId] === undefined
+          ) {
+            layerOpacityMap[checkboxId] = Number(layerConfig.defaultOpacity);
+          }
+          // 搜索优先标记（如海底地名集）
+          if (layerConfig.searchPriority) {
+            layerSearchPriorityMap[checkboxId] = true;
+          }
+
           // 注册到搜索列表（即使图层尚未加载）
           if (
             !searchRegistry.find(function (e) {
@@ -2665,6 +2713,7 @@
               groupName: group.groupName || "",
               checkboxId: checkboxId,
               fileName: fileName,
+              searchPriority: !!layerConfig.searchPriority,
             });
           }
           checkbox.addEventListener("change", function () {
@@ -2745,6 +2794,30 @@
           layerContent.appendChild(children);
         }
       });
+
+      // 搜索优先图层的后台静默建索引：不渲染到地图，仅构建倒排索引，
+      // 使其即使未勾选也能被搜索（如海底地名集 Gazetteer_*）
+      function initPrioritySearchIndices() {
+        Object.keys(layerSearchPriorityMap).forEach(function (cbId) {
+          if (searchIndexMap[cbId]) return; // 已建好（如用户已勾选加载过）
+          var cb = document.getElementById(cbId);
+          if (!cb || !cb.value) return;
+          var filePath = cb.value;
+          var fileName = filePath.split("/").pop();
+          L.GzIdbLoader.fetch(filePath)
+            .then(function (geojsonData) {
+              var feats = geojsonData && geojsonData.features;
+              if (!feats || !feats.length) return;
+              featureCache[cbId] = feats;
+              buildSearchIndex(cbId, feats, fileName, function () {});
+            })
+            .catch(function (e) {
+              console.warn("[GeoJSONLoader] 优先图层索引构建失败:", cbId, e);
+            });
+        });
+      }
+      // 延迟启动，避免阻塞首屏渲染
+      setTimeout(initPrioritySearchIndices, 2000);
 
       // ====== 本地图层查看面板：事件绑定（骨架已在 HTML 中） ======
       // 帮助图标已通过 data-dialog 属性在 dialog.js 声明式绑定
@@ -3412,6 +3485,81 @@
         var results = [];
         var totalCount = 0;
 
+        // 要素属性匹配：返回命中的要素结果数组（最多 30 条），供各阶段复用
+        function matchLayerFeatures(entry, qLower) {
+          var si = searchIndexMap[entry.checkboxId];
+          var features =
+            si && si.features && si.features.length
+              ? si.features
+              : featureCache[entry.checkboxId] || null;
+          if (!features || !features.length) return [];
+          var matchedIndices = [];
+          if (si && si.tokens && typeof si.tokens === "object") {
+            var tokens = qLower.split(/[^a-z0-9\u4e00-\u9fff]+/).filter(Boolean);
+            if (tokens.length) {
+              var candidateSets = [];
+              for (var ti = 0; ti < tokens.length; ti++) {
+                var tok = tokens[ti];
+                var idxList = si.tokens[tok];
+                if (idxList && idxList.length > 0) {
+                  candidateSets.push(idxList);
+                } else {
+                  // 模糊搜索
+                  var merged = {};
+                  var keys = Object.keys(si.tokens);
+                  for (var ki = 0; ki < keys.length; ki++) {
+                    if (keys[ki].indexOf(tok) !== -1) {
+                      var arr = si.tokens[keys[ki]];
+                      for (var ai = 0; ai < arr.length; ai++) merged[arr[ai]] = true;
+                    }
+                  }
+                  var fuzzy = Object.keys(merged).map(Number);
+                  if (fuzzy.length > 0) candidateSets.push(fuzzy);
+                }
+              }
+              if (candidateSets.length >= tokens.length) {
+                matchedIndices = candidateSets[0];
+                for (var ci = 1; ci < candidateSets.length; ci++) {
+                  var set = candidateSets[ci];
+                  var next = [];
+                  for (var m2 = 0; m2 < matchedIndices.length; m2++) {
+                    if (set.indexOf(matchedIndices[m2]) !== -1)
+                      next.push(matchedIndices[m2]);
+                  }
+                  matchedIndices = next;
+                  if (!matchedIndices.length) break;
+                }
+              }
+            }
+          }
+          if (!matchedIndices || !matchedIndices.length) return [];
+          var limit = Math.min(matchedIndices.length, 30);
+          var out = [];
+          for (var k = 0; k < limit; k++) {
+            var f = features[matchedIndices[k]];
+            out.push({
+              type: "feature",
+              label: entry.layerLabel,
+              summary: buildSummary(f.properties),
+              tooltipText: buildTooltipText(f.properties),
+              feature: f,
+              checkboxId: entry.checkboxId,
+            });
+          }
+          return out;
+        }
+
+        // ===== 第零阶段：搜索优先图层（如海底地名集），未勾选也可搜，结果置顶 =====
+        var priorityResults = [];
+        searchRegistry.forEach(function (entry) {
+          if (!entry.searchPriority) return;
+          var hits = matchLayerFeatures(entry, q);
+          if (hits.length) {
+            priorityResults = priorityResults.concat(hits);
+            totalCount += hits.length;
+          }
+        });
+
         // ===== 第一阶段：搜索图层名和图层组名 =====
         var seenLayer = {};
         searchRegistry.forEach(function (entry) {
@@ -3460,6 +3608,8 @@
 
         // ===== 第二阶段：搜索要素属性（仅搜索已勾选的图层，使用倒排索引） =====
         searchRegistry.forEach(function (entry) {
+          // 搜索优先图层已在第零阶段处理（未勾选也可搜），此处跳过避免重复
+          if (entry.searchPriority) return;
           // 只搜索当前已勾选的图层（含内置图层和用户上传图层）
           var cb = document.getElementById(entry.checkboxId);
           if (!cb || !cb.checked) return;
@@ -3535,7 +3685,7 @@
             });
           }
         });
-        return { items: results, total: totalCount };
+        return { items: priorityResults.concat(results), total: totalCount };
       }
 
       function extractCoords(geom) {

@@ -330,6 +330,10 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
+      // 图层不透明度：通过 globalAlpha 让 Canvas 点/聚类整体淡出
+      var _savedAlpha = ctx.globalAlpha;
+      ctx.globalAlpha = this.options.opacity != null ? this.options.opacity : 1;
+
       for (var i = 0; i < drawUnits.length; i++) {
         var u = drawUnits[i];
 
@@ -404,6 +408,9 @@
           });
         }
       }
+
+      // 还原 globalAlpha，避免影响其他绘制
+      ctx.globalAlpha = _savedAlpha;
 
       this._hitTree = new RBush();
       this._hitTree.load(hitItems);

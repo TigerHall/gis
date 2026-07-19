@@ -324,8 +324,16 @@
     };
   }
 
+  // ========== 透明度包裹（让整个标记淡出，用于图层不透明度控制） ==========
+  function wrapOpacity(html, opacity) {
+    if (opacity != null && opacity < 1) {
+      return '<div class="gm-op-wrap" style="opacity:' + opacity + '">' + html + "</div>";
+    }
+    return html;
+  }
+
   // ========== 创建带标签的圆形点标记 ==========
-  function createLabeledMarker(map, latlng, color, labelText) {
+  function createLabeledMarker(map, latlng, color, labelText, opacity) {
     var showLabel = !!labelText;
     var html =
       '<div class="station-marker-wrapper">' +
@@ -338,6 +346,7 @@
       (labelText || "") +
       "</span>" +
       "</div>";
+    html = wrapOpacity(html, opacity);
     return L.marker(latlng, {
       icon: L.divIcon({
         html: html,
@@ -351,7 +360,7 @@
   }
 
   // ========== 创建带标签的 SVG 图标标记 ==========
-  function createSvgLabeledMarker(map, svgIconFn, latlng, color, labelText) {
+  function createSvgLabeledMarker(map, svgIconFn, latlng, color, labelText, opacity) {
     var showLabel = !!labelText;
     var svgStr = svgIconFn(color).options.html;
     var html =
@@ -365,6 +374,7 @@
       (labelText || "") +
       "</span>" +
       "</div>";
+    html = wrapOpacity(html, opacity);
     return L.marker(latlng, {
       icon: L.divIcon({
         html: html,
@@ -378,9 +388,24 @@
   }
 
   // ========== 创建无标签的纯图标标记 ==========
-  function createPureIconMarker(latlng, color, iconFn) {
-    if (iconFn) return L.marker(latlng, { icon: iconFn(color) });
-    return L.marker(latlng, { icon: createPointIcon(color, 8) });
+  function createPureIconMarker(latlng, color, iconFn, opacity) {
+    if (iconFn)
+      return L.marker(latlng, { icon: wrapIconOpacity(iconFn, color, opacity) });
+    return L.marker(latlng, {
+      icon: wrapIconOpacity(createPointIcon, color, 8, opacity),
+    });
+  }
+
+  // 给已有/待建的 divIcon 工厂套上透明度包裹
+  function wrapIconOpacity(iconFactoryOrFn, color, opacity, size) {
+    var di =
+      typeof iconFactoryOrFn === "function" && !iconFactoryOrFn.options
+        ? iconFactoryOrFn(color, size)
+        : iconFactoryOrFn(color);
+    if (di && di.options && di.options.html) {
+      di.options.html = wrapOpacity(di.options.html, opacity);
+    }
+    return di;
   }
 
   // ========== 判断是否为外部文件路径 ==========
@@ -417,6 +442,7 @@
     labelText,
     iconType,
     iconSize,
+    opacity,
   ) {
     var marker;
     var iconFn = getIconFactory(iconType, iconSize);
@@ -424,16 +450,23 @@
     if (iconFn) {
       // 有图标工厂函数 → 用 SVG 图标（含标签或不含）
       if (labelText) {
-        marker = createSvgLabeledMarker(map, iconFn, latlng, color, labelText);
+        marker = createSvgLabeledMarker(
+          map,
+          iconFn,
+          latlng,
+          color,
+          labelText,
+          opacity,
+        );
       } else {
-        marker = createPureIconMarker(latlng, color, iconFn);
+        marker = createPureIconMarker(latlng, color, iconFn, opacity);
       }
     } else {
       // 无图标工厂 → 默认圆形点兜底
       if (labelText) {
-        marker = createLabeledMarker(map, latlng, color, labelText);
+        marker = createLabeledMarker(map, latlng, color, labelText, opacity);
       } else {
-        marker = createPureIconMarker(latlng, color);
+        marker = createPureIconMarker(latlng, color, null, opacity);
       }
     }
     if (feature) marker.feature = feature;
