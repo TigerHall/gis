@@ -3480,6 +3480,16 @@
         return rows.join("\n");
       }
 
+      // 搜索结果数量与分页配置
+      var FEATURE_SEARCH_CAP = 200; // 每个图层每阶段最多返回的要素数（原 30）
+      var SEARCH_PAGE = 50; // 搜索结果初始展示条数
+      var SEARCH_PAGE_STEP = 50; // 点击「查看更多」每次追加条数
+      // 分页状态缓存（供「查看更多」复用最近一次完整结果列表）
+      var _lastSearchItems = [];
+      var _lastSearchQuery = "";
+      var _lastSearchTotal = 0;
+      var _searchShown = SEARCH_PAGE;
+
       function runSearch(query) {
         var q = query.toLowerCase().trim();
         var results = [];
@@ -3533,7 +3543,7 @@
             }
           }
           if (!matchedIndices || !matchedIndices.length) return [];
-          var limit = Math.min(matchedIndices.length, 30);
+          var limit = Math.min(matchedIndices.length, FEATURE_SEARCH_CAP);
           var out = [];
           for (var k = 0; k < limit; k++) {
             var f = features[matchedIndices[k]];
@@ -3672,7 +3682,7 @@
 
           if (!matchedIndices || !matchedIndices.length) return;
           totalCount += matchedIndices.length;
-          var limit = Math.min(matchedIndices.length, 30);
+          var limit = Math.min(matchedIndices.length, FEATURE_SEARCH_CAP);
           for (var k = 0; k < limit; k++) {
             var f = features[matchedIndices[k]];
             results.push({
@@ -4137,7 +4147,14 @@
 
       // ========== 通用要素计数更新（已前移至文件头部）==========
 
-      function renderResults(results, query, totalCount) {
+      function renderResults(results, query, totalCount, shownCount) {
+        // 缓存最近一次完整结果列表，供「查看更多」分页复用
+        _lastSearchItems = results;
+        _lastSearchQuery = query;
+        _lastSearchTotal = totalCount;
+        if (shownCount == null) shownCount = SEARCH_PAGE;
+        _searchShown = shownCount;
+
         resultsBox.innerHTML = "";
         if (results.length === 0) {
           resultsBox.innerHTML =
@@ -4150,8 +4167,7 @@
           resultsBox.classList.add("open");
           return;
         }
-        var MAX = 30;
-        var shown = results.slice(0, MAX);
+        var shown = results.slice(0, shownCount);
         // 移除旧的自定义 tooltip DOM（如有）
         var oldTip = document.getElementById("searchTooltip");
         if (oldTip && oldTip.parentNode) oldTip.parentNode.removeChild(oldTip);
@@ -4252,12 +4268,31 @@
           });
           resultsBox.appendChild(item);
         });
-        if (totalCount > MAX) {
+        // 「查看更多」分页：基于实际可用列表长度分页（results 已按 FEATURE_SEARCH_CAP 截断）
+        var remaining = results.length - shownCount;
+        if (remaining > 0) {
           var more = document.createElement("div");
-          more.className = "search-empty";
-          more.textContent =
-            "共 " + totalCount + " 条，已显示前 " + MAX + " 条，请精确关键词";
+          more.className = "search-loadmore";
+          more.textContent = "查看更多（还剩 " + remaining + " 条）";
+          more.addEventListener("click", function (e) {
+            e.stopPropagation();
+            renderResults(
+              _lastSearchItems,
+              _lastSearchQuery,
+              _lastSearchTotal,
+              _searchShown + SEARCH_PAGE_STEP,
+            );
+          });
           resultsBox.appendChild(more);
+        } else if (totalCount > results.length) {
+          // 已展示全部已加载结果，但底层命中更多（受单图层上限 FEATURE_SEARCH_CAP 限制）
+          var note = document.createElement("div");
+          note.className = "search-empty";
+          note.textContent =
+            "已显示全部 " +
+            results.length +
+            " 条；更多命中请缩小关键词范围";
+          resultsBox.appendChild(note);
         }
         resultsBox.classList.add("open");
       }
@@ -4266,74 +4301,65 @@
       // 高亮并定位到指定的要素（独立函数，供搜索结果点击使用）
       // ----------------------------------------------
       function highlightAndLocateFeature(cbId, feat) {
+        // 1) 始终基于要素真实几何坐标定位（对任意图层类型 / 加载状态 / 是否渲染都可靠）。
+        //    原先的非 Canvas 分支只靠 layer.feature._featureIndex === feat._featureIndex
+        //    跨对象匹配，而搜索结果的 feat 来自未渲染的原始 featureCache（_featureIndex 未赋值），
+        //    导致带 searchPriority 的图层及「点击后加载」的要素匹配失败、无法跳转。
+        var coords = [];
+        try {
+          if (feat && feat.geometry) coords = extractCoords(feat.geometry);
+        } catch (e) {}
+        var gtype = (
+          (feat && feat.geometry && feat.geometry.type) ||
+          ""
+        ).toLowerCase();
+        var isPoint = gtype === "point" || gtype === "multipoint";
+
+        // 2) 可选增强：在已渲染矢量图层中按 _featureIndex 找到对应要素，
+        //    触发其 dblclick（高亮 + 缩放 + 弹窗）。找不到则退回坐标定位。
+        var foundLayer = null;
         var state = highlightState[cbId];
-        // 判断是否为 Canvas 图层（有 setFeatures 则为 Canvas）
-        var isCanvasLayer =
-          state &&
-          state.geoLayers &&
-          state.geoLayers.some(function (gl) {
-            return typeof gl.setFeatures === "function";
-          });
-        if (state && state.geoLayers && !isCanvasLayer) {
-          state.geoLayers.forEach(function (gl) {
-            gl.eachLayer(function (layer) {
-              if (
-                layer.feature &&
-                layer.feature._featureIndex === feat._featureIndex
-              ) {
-                var center;
-                try {
-                  if (layer.getBounds) {
-                    var b = layer.getBounds();
-                    if (b.isValid()) center = b.getCenter();
-                  }
-                } catch (e) {}
-                if (!center && layer.getLatLng) center = layer.getLatLng();
-                if (!center && feat.geometry && feat.geometry.coordinates) {
-                  var coords = feat.geometry.coordinates;
-                  if (feat.geometry.type === "Point")
-                    center = L.latLng(coords[1], coords[0]);
+        if (state && state.geoLayers && feat && feat._featureIndex != null) {
+          for (var gi = 0; gi < state.geoLayers.length && !foundLayer; gi++) {
+            var gl = state.geoLayers[gi];
+            if (typeof gl.eachLayer === "function") {
+              gl.eachLayer(function (layer) {
+                if (
+                  !foundLayer &&
+                  layer.feature &&
+                  layer.feature._featureIndex === feat._featureIndex
+                ) {
+                  foundLayer = layer;
                 }
-                var dblclickEvent = {
-                  latlng: center || map.getCenter(),
-                  layer: layer,
-                  originalEvent: null,
-                };
-                layer.fire("dblclick", dblclickEvent, true);
-              }
-            });
-          });
-        } else {
-          // Canvas 大数据集：直接从 geometry 坐标定位
-          if (feat.geometry && feat.geometry.coordinates) {
-            var coords = feat.geometry.coordinates;
-            var gtype = feat.geometry.type;
-            if (gtype === "Point") {
-              map.panTo(L.latLng(coords[1], coords[0]), {
-                duration: 0.6,
               });
-            } else {
-              var corners = [];
-              (function collect(arr) {
-                if (!Array.isArray(arr)) return;
-                if (typeof arr[0] === "number") {
-                  corners.push([arr[1], arr[0]]);
-                } else {
-                  for (var i = 0; i < arr.length; i++) collect(arr[i]);
-                }
-              })(coords);
-              if (corners.length >= 2) {
-                var bounds = L.latLngBounds(corners);
-                if (bounds.isValid()) {
-                  map.flyToBounds(bounds, {
-                    padding: [40, 40],
-                    duration: 0.8,
-                  });
-                }
-              } else if (corners.length === 1) {
-                map.panTo(corners[0], { duration: 0.6 });
-              }
             }
+          }
+        }
+
+        if (foundLayer) {
+          var evt = {
+            latlng: foundLayer.getBounds
+              ? foundLayer.getBounds().getCenter()
+              : foundLayer.getLatLng
+                ? foundLayer.getLatLng()
+                : map.getCenter(),
+            layer: foundLayer,
+            originalEvent: null,
+          };
+          foundLayer.fire("dblclick", evt, true);
+        } else if (coords.length > 0) {
+          if (isPoint || coords.length === 1) {
+            map.setView(coords[0], Math.max(map.getZoom(), 8), {
+              animate: true,
+            });
+          } else {
+            var b = L.latLngBounds(coords);
+            if (b.isValid())
+              map.fitBounds(b, {
+                padding: [50, 50],
+                maxZoom: 14,
+                animate: true,
+              });
           }
         }
         resultsBox.classList.remove("open");

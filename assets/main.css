@@ -754,6 +754,21 @@ details.layer-section[open] > summary .layer-group-arrow {
   background: var(--content-hover-bg);
 }
 
+/* 搜索结果「查看更多」分页按钮 */
+.search-loadmore {
+  padding: 10px 12px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--accent, #2f9e7f);
+  cursor: pointer;
+  border-top: 1px solid var(--border-light);
+  transition: background 0.12s;
+  user-select: none;
+}
+.search-loadmore:hover {
+  background: var(--content-hover-bg);
+}
+
 /* 侧边栏右侧拖拽手柄（透明，hover 微绿） */
 .panel-resize-handle {
   position: absolute;

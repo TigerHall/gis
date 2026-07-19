@@ -29,6 +29,10 @@
 - 仅加载 .gz（gz-only，不回退 JSON）；COS 加速 `geoJsonCosPath` + `localFallback`
 - 搜索倒排索引存 IDB `searchIndex` store；**tokens 必须用 `Object.create(null)`**（普通 {} 遇 "constructor" 等原型键会 `push is not a function`）
 
+## 搜索结果定位（关键坑 + 修复）
+- **现象**：点击要素搜索结果不跳转。根因：原 `highlightAndLocateFeature` 非 Canvas 分支只靠 `layer.feature._featureIndex === feat._featureIndex` 匹配；但搜索结果的 `feat` 来自 `featureCache`（带 `searchPriority` 的图层由 initPrioritySearchIndices 用原始 fetch 填充、未渲染，`_featureIndex` 未赋值），跨对象匹配失败。
+- **修复原则**：要素定位**始终基于 `feat.geometry` 真实坐标**（`extractCoords` 返回 [lat,lng]），`_featureIndex` 仅作「找到已渲染矢量要素→触发 dblclick 高亮弹窗」的可选增强，找不到则退回坐标定位。`renderResults` 用 `FEATURE_SEARCH_CAP=200`(每图层每阶段) + `SEARCH_PAGE/STEP=50` 分页，「查看更多」按钮基于实际 results 长度分页。
+
 ## 反子午线（anti-meridian）
 - 三副本方案：`offsets=[-360,0,360]`；线/面始终三副本，点 ≤1万才做（防内存爆炸）。已移除 `fixAntimeridian`
 
