@@ -275,7 +275,9 @@
             var tok = parts[t];
             if (!tok) continue;
             if (!tokens[tok]) tokens[tok] = [];
-            tokens[tok].push(i);
+            // 同一要素若在同一 token 下重复出现（如多字段含相同值），
+            // 去重避免搜索结果中同一要素重复出现
+            if (tokens[tok].indexOf(i) === -1) tokens[tok].push(i);
           }
         }
         if (i < features.length) {
@@ -328,9 +330,25 @@
                 checkboxId,
               );
             } else {
-              // 缓存命中：直接使用
+              // 缓存命中：直接使用。
+              // 自修复历史索引中可能存在的重复要素索引（同值跨多字段导致），避免结果重复
+              var _ctok = cached.tokens;
+              for (var _ck in _ctok) {
+                if (!Object.prototype.hasOwnProperty.call(_ctok, _ck)) continue;
+                var _carr = _ctok[_ck];
+                if (!_carr || _carr.length < 2) continue;
+                var _cu = [];
+                var _cs = Object.create(null);
+                for (var _cj = 0; _cj < _carr.length; _cj++) {
+                  if (!_cs[_carr[_cj]]) {
+                    _cs[_carr[_cj]] = true;
+                    _cu.push(_carr[_cj]);
+                  }
+                }
+                _ctok[_ck] = _cu;
+              }
               searchIndexMap[checkboxId] = {
-                tokens: cached.tokens,
+                tokens: _ctok,
                 features: features,
               };
               console.log(
@@ -3574,6 +3592,20 @@
             }
           }
           if (!matchedIndices || !matchedIndices.length) return [];
+          // 去重：同一要素索引可能在同一 token 下重复出现
+          // （旧版索引缓存含重复项、或同值跨多字段），避免搜索结果同一要素重复
+          if (matchedIndices.length > 1) {
+            var _seen = Object.create(null);
+            var _dedup = [];
+            for (var _di = 0; _di < matchedIndices.length; _di++) {
+              var _idx = matchedIndices[_di];
+              if (!_seen[_idx]) {
+                _seen[_idx] = true;
+                _dedup.push(_idx);
+              }
+            }
+            matchedIndices = _dedup;
+          }
           var limit = Math.min(matchedIndices.length, FEATURE_SEARCH_CAP);
           var out = [];
           for (var k = 0; k < limit; k++) {
@@ -3712,6 +3744,20 @@
           }
 
           if (!matchedIndices || !matchedIndices.length) return;
+          // 去重：同一要素索引可能在同一 token 下重复出现
+          // （旧版索引缓存含重复项、或同值跨多字段），避免搜索结果同一要素重复
+          if (matchedIndices.length > 1) {
+            var _seen = Object.create(null);
+            var _dedup = [];
+            for (var _di = 0; _di < matchedIndices.length; _di++) {
+              var _idx = matchedIndices[_di];
+              if (!_seen[_idx]) {
+                _seen[_idx] = true;
+                _dedup.push(_idx);
+              }
+            }
+            matchedIndices = _dedup;
+          }
           totalCount += matchedIndices.length;
           var limit = Math.min(matchedIndices.length, FEATURE_SEARCH_CAP);
           for (var k = 0; k < limit; k++) {
