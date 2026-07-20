@@ -250,6 +250,7 @@
     const searchIndexMap = {}; // 倒排索引：{ checkboxId: { tokens: { tok: [idx, ...] }, features: [...] } }
     const featureCache = {}; // 要素数据缓存：{ checkboxId: features[] }，独立于索引，保证要素搜索始终可用
     const layerSearchPriorityMap = {}; // 搜索优先图层（如海底地名集）：检索时优先返回，且未勾选也可被搜索
+    const layerSourceMap = {}; // 图层级数据来源（geo-config 的 source）：注入要素属性后显示在弹窗「数据源」
     let searchIndexingCount = 0; // 正在构建索引的图层数
 
     // 搜索辅助函数（提取 feature 所有属性为可搜索字符串）
@@ -1095,6 +1096,12 @@
 
       function onDataLoaded(data) {
         const data_ = data;
+        // 图层级数据来源 → 要素属性「数据源」，弹窗/tooltip 中展示
+        if (layerSourceMap[checkboxId] && data_ && data_.features) {
+          data_.features.forEach(function (f) {
+            if (f && f.properties) f.properties.数据源 = layerSourceMap[checkboxId];
+          });
+        }
         console.log(
           `[DEBUG] ${fileName}: 加载成功, features: ${data_.features?.length || 0}`,
         );
@@ -2720,6 +2727,10 @@
           // 搜索优先标记（如海底地名集）
           if (layerConfig.searchPriority) {
             layerSearchPriorityMap[checkboxId] = true;
+          }
+          // 图层级数据来源（显示在要素弹窗「数据源」字段）
+          if (layerConfig.source) {
+            layerSourceMap[checkboxId] = layerConfig.source;
           }
 
           // 注册到搜索列表（即使图层尚未加载）

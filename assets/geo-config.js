@@ -61,6 +61,9 @@
  *                    外部： "./assets/images/xxx.svg"（支持 SVG/PNG/ICO）
  *                    不设置或无法识别则使用默认圆形点兜底
  *
+ * source          |  否  | 数据来源/版权说明，显示在要素弹窗的「数据源」字段
+ *                    例如： source: "浙江省交通运输厅 2026年5月公告"
+ *
  * colorMode       |  否  | 默认颜色模式（首次加载时生效，用户设置后不再覆盖）
  *                    取值：
  *                    - "sequential" —— 内部多颜色（每要素不同色，默认）
@@ -343,6 +346,39 @@
           labelField: "NAME",
           color: "#1976D2",
           searchPriority: true,
+        },
+        {
+          name: "浙江适飞区(2026-05-12)",
+          file: "浙江适飞区_20260512.geojson.gz",
+          source:
+            "浙江省交通运输厅 2026年5月12日 关于公布新版浙江省无人驾驶航空器适飞空域范围的公告",
+        },
+        {
+          name: "国家行政区 countries",
+          file: "countries.geojson.gz",
+          labelField: "NAME_ZH",
+          source: "https://www.naturalearthdata.com/",
+          searchPriority: true,
+        },
+        {
+          name: "海区 geography_marine_polys",
+          file: "geography_marine_polys.geojson.gz",
+          labelField: "name_zh",
+          source: "https://www.naturalearthdata.com/",
+          searchPriority: true,
+        },
+        {
+          name: "港口 ports",
+          file: "ports.geojson.gz",
+          labelField: "name",
+          source: "https://www.naturalearthdata.com/",
+          searchPriority: true,
+        },
+        {
+          name: "省级行政区 states_provinces",
+          file: "states_provinces.geojson.gz",
+          labelField: "name_zh",
+          source: "https://www.naturalearthdata.com/",
         },
       ],
     },
