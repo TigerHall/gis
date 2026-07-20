@@ -1,5 +1,50 @@
 # 更新记录
 
+## 2026-07-20 v1.9.6 — 高程读取插件 + 新增 5 图层 + 搜索去重修复
+
+### 高程读取插件（实验中）
+
+- **新增 `assets/Leaflet.ElevationQuery.js`**：标准 Leaflet 插件（`L.Class` + `L.Evented`），点击地图任意坐标查询高程/水深
+  - 数据源可配置：`source: 'gebco'`（默认，WMS GetFeatureInfo）｜自定义函数 `{ query(latlng, ctx) }`｜`{ type: 'wms', ... }`，运行时 `eq.setSource(...)` 切换（满足后续换高程源）
+  - 单例挂载 `map.elevationQuery({ source })`；API：`enable()/disable()/query(latlng)`；事件 `enable/disable/querystart/result/error`
+  - UI：底部居中信息栏 `.elev-query-bar` + 点击点弹窗 `.elev-popup`，复用站点绿色描边、圆角、`feature-popup` 表格式，CSS 变量自动深色
+- **配套样式 `assets/elevation-query.css`**
+- **设置开关**：地图设置 → 高级 → `读取高程🧪`（默认关闭），`app.js` 的 `TOGGLE_GROUPS` + `toggleConfig` 懒加载单例
+- **`index.html`**：引入 `elevation-query.css`（head）与 `Leaflet.ElevationQuery.js`（app.js 前）
+
+### 新增 5 个静态矢量图层
+
+- 全部归入「社会热点专题」分组
+- **`浙江适飞区_20260512.geojson.gz`**「浙江适飞区(2026-05-12)」— 浙江省交通运输厅 2026-05-12《关于公布新版浙江省无人驾驶航空器适飞空域范围的公告》
+- Natural Earth 数据（来源 <https://www.naturalearthdata.com/）：>
+  - **`countries.geojson.gz`**「国家行政区 countries」标注 NAME_ZH → 已加入默认搜索
+  - **`geography_marine_polys.geojson.gz`**「海区 geography_marine_polys」标注 name_zh → 已加入默认搜索
+  - **`ports.geojson.gz`**「港口 ports」标注 name → 已加入默认搜索
+  - **`states_provinces.geojson.gz`**「省级行政区 states_provinces」标注 name_zh（仅图层，未进默认搜索）
+- **新增图层配置项 `source`**：`geojsonloader.js` 新增 `layerSourceMap`，UI 构建时填充；`onDataLoaded` 把来源注入要素属性 `数据源`，弹窗/tooltip 展示版权出处
+
+### 修复 searchPriority 搜索结果重复
+
+- **现象**：searchPriority 图层（新增 Natural Earth 层、Gazetteer\_\* 等）同一要素在搜索结果中出现 2 次
+- **根因**：`tokenizeFeaturesAsync` 对单要素把同一 token 按出现次数重复 push 进倒排索引，Natural Earth 同值跨多字段（如 CONTINENT/REGION 同为 Asia）导致该要素索引重复
+- **修复（geojsonloader.js 三处）**：
+  1. `tokenizeFeaturesAsync` 推入索引前去重（根治新索引）
+  2. 缓存恢复分支遍历旧索引去重（自修复历史脏缓存）
+  3. `matchLayerFeatures`（第零阶段）与 第二阶段 forEach 各自对命中索引去重（结果层双保险）
+
+### 文件变更（v1.9.6）
+
+| 文件                               | 变更                                                |
+| ---------------------------------- | --------------------------------------------------- |
+| `assets/Leaflet.ElevationQuery.js` | 🆕 新建，高程/水深查询 Leaflet 插件                 |
+| `assets/elevation-query.css`       | 🆕 新建，插件样式                                   |
+| `assets/geo-config.js`             | ➕ 5 图层配置 + `source` 字段文档                   |
+| `assets/geojsonloader.js`          | 🔄 高程源注入 + `layerSourceMap` + 搜索去重三处修复 |
+| `assets/app.js`                    | ➕ `读取高程🧪` 开关                                |
+| `index.html`                       | ➕ 引入插件 css/js                                  |
+
+---
+
 ## 2026-07-05 v1.9.3 — Bug 修复
 
 ### 修复横屏模式地图卡死极北坐标
@@ -61,7 +106,7 @@
 - **`app.js`**：保存 SW registration 引用，刷新前发 `postMessage({action:'skipWaiting'})` 激活新 SW
 - **`service-worker.js`**：新增 `message` 事件监听处理 skipWaiting，`location.reload()` 后新版本真正生效
 
-### 文件变更
+### 文件变更（v1.8.9）
 
 | 文件                              | 变更                                                       |
 | --------------------------------- | ---------------------------------------------------------- |
@@ -170,7 +215,7 @@
 - **无结果时显示搜索按钮**：点击 `🔍 搜索地名「...」` 触发 API 请求
 - **结果显示**：`🗺️ 地名` 标签 + 名称地址 + `title` 完整信息，点击飞至该位置（`map.setView`）
 
-### 文件变更
+### 文件变更（v1.8.4）
 
 | 文件                                                | 变更                                              |
 | --------------------------------------------------- | ------------------------------------------------- |

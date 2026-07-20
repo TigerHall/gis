@@ -80,6 +80,11 @@
 - **人口大国** — 人口超过 1 亿的国家
 - **经济强国** — GDP 超过 1 万亿美元的国家
 - **领土大国** — 领土面积超过 100 万 km² 的国家
+- **浙江适飞区(2026-05-12)** — 浙江省交通运输厅 2026-05-12《关于公布新版浙江省无人驾驶航空器适飞空域范围的公告》
+- **国家行政区 countries** — Natural Earth（naturalearthdata.com），标注字段 NAME_ZH，已加入默认搜索
+- **海区 geography_marine_polys** — Natural Earth（naturalearthdata.com），标注字段 name_zh，已加入默认搜索
+- **港口 ports** — Natural Earth（naturalearthdata.com），标注字段 name，已加入默认搜索
+- **省级行政区 states_provinces** — Natural Earth（naturalearthdata.com），标注字段 name_zh（仅图层，未进默认搜索）
 
 ### 测试数据
 
