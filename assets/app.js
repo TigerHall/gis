@@ -95,13 +95,18 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             desc: "开启后持续获取设备 GPS 位置，在地图上实时显示当前位置标记",
           },
           {
+            id: "elevationReadToggle",
+            label: "读取高程🧪",
+            desc: "开启后点击地图任意位置，实时查询该坐标的高程/水深（数据源可切换，默认 GEBCO）",
+          },
+          {
             id: "darkModeToggle",
             label: "深色模式",
             desc: "开启后切换为深色主题，适合弱光环境使用，减少屏幕眩光",
           },
           {
             id: "premiumToggle",
-            label: "高级功能",
+            label: "高级功能🕹️",
             desc: "开启后进入激活流程，输入激活码解锁下载 GeoJSON 等高级功能",
           },
         ],
@@ -643,6 +648,16 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     removalMode: true,
   };
 
+  // 高程读取插件单例（懒加载，绑定到地图）
+  function ensureElevationQuery() {
+    if (!window._elevationQuery) {
+      window._elevationQuery = map.elevationQuery({
+        source: "gebco", // 默认 GEBCO WMS；后续换源改这里或调用 eq.setSource(...)
+      });
+    }
+    return window._elevationQuery;
+  }
+
   // 开关配置：cbId → { storageKey, control?, enable?, disable? }
   var toggleConfig = {
     isLocationTracking: {
@@ -831,6 +846,15 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           }
           return;
         }
+      },
+    },
+    elevationReadToggle: {
+      storageKey: TOGGLE_PREFIX + "elevationRead",
+      enable: function () {
+        ensureElevationQuery().enable();
+      },
+      disable: function () {
+        if (window._elevationQuery) window._elevationQuery.disable();
       },
     },
   };

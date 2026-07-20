@@ -1,0 +1,140 @@
+/* ========== 高程读取插件样式（与站点设计语言统一） ========== */
+/* 底部信息栏：绿色描边卡片，居中浮于地图上方，自动适配深色模式 */
+
+.elev-query-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%) translateY(10px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 92%;
+  padding: 9px 18px;
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  z-index: 1200;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.elev-query-bar.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.elev-query-bar.is-loading {
+  opacity: 0.75;
+}
+
+.elev-query-bar .elev-coord {
+  color: var(--text-dim);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.elev-query-bar .elev-sep {
+  color: var(--border-str);
+}
+
+.elev-query-bar .elev-value {
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* 水深（负值）：蓝色，呼应水体 */
+.elev-query-bar.is-depth .elev-value {
+  color: var(--c-blue);
+}
+
+/* 高程（正值）：橙色，深浅主题均保证可读 */
+.elev-query-bar.is-elev .elev-value {
+  color: #cf8a1a;
+}
+
+.elev-query-bar.is-error {
+  border-color: var(--status-error);
+}
+
+.elev-query-bar.is-error .elev-value {
+  color: var(--status-error);
+}
+
+[data-theme="dark"] .elev-query-bar.is-elev .elev-value {
+  color: #f0a93a;
+}
+
+/* ---------- 弹窗内容（复用要素弹窗的表格式设计语言） ---------- */
+.elev-query-popup .leaflet-popup-content {
+  margin: 10px 12px;
+}
+
+.elev-popup {
+  font-size: 12px;
+  line-height: 1.7;
+  min-width: 170px;
+  max-width: 260px;
+}
+
+.elev-popup-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--section-text);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 3px;
+  margin-bottom: 5px;
+}
+
+.elev-popup table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.elev-popup td {
+  padding: 2px 4px;
+  vertical-align: top;
+}
+
+.elev-popup td:first-child {
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.elev-popup td:last-child {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.elev-popup .elev-big {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.elev-popup.is-depth .elev-big {
+  color: var(--c-blue);
+}
+
+.elev-popup.is-elev .elev-big {
+  color: #cf8a1a;
+}
+
+.elev-popup.is-error {
+  color: var(--status-error);
+}
+
+[data-theme="dark"] .elev-popup.is-elev .elev-big {
+  color: #f0a93a;
+}

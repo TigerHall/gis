@@ -21,6 +21,8 @@
     <script src="./assets/Leaflet.MousePosition.js"></script>
     <!-- GeoJSON Loader 样式 -->
     <link rel="stylesheet" href="./assets/geojsonloader.css" />
+    <!-- 高程读取插件样式 -->
+    <link rel="stylesheet" href="./assets/elevation-query.css" />
     <!-- Leaflet-Geoman 测量插件 -->
     <link rel="stylesheet" href="./assets/leaflet-geoman.css" />
     <script src="./assets/leaflet-geoman.js"></script>
@@ -633,129 +635,165 @@
 
       // ========== 6b. GEBCO 2024(latest) 额外图层 ==========
       // 以下图层来自主端点（基于 GEBCO_2024 latest 网格），均支持 EPSG:3857
-      const gebcoSubIceLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
-        layers: "GEBCO_LATEST_SUB_ICE_TOPO",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
-      });
-      const gebcoFlatSubIceLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
-        layers: "GEBCO_LATEST_2_sub_ice_topo",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
-      });
-      const gebcoObservedLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
-        layers: "GEBCO_LATEST_3",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
-      });
-      const gebcoTidBlackLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
-        layers: "GEBCO_LATEST_TID",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
-      });
-      const gebcoTidColorLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv?", {
-        layers: "GEBCO_LATEST_TID_2",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
-      });
+      const gebcoSubIceLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/mapserv?",
+        {
+          layers: "GEBCO_LATEST_SUB_ICE_TOPO",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+        },
+      );
+      const gebcoFlatSubIceLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/mapserv?",
+        {
+          layers: "GEBCO_LATEST_2_sub_ice_topo",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+        },
+      );
+      const gebcoObservedLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/mapserv?",
+        {
+          layers: "GEBCO_LATEST_3",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+        },
+      );
+      const gebcoTidBlackLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/mapserv?",
+        {
+          layers: "GEBCO_LATEST_TID",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+        },
+      );
+      const gebcoTidColorLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/mapserv?",
+        {
+          layers: "GEBCO_LATEST_TID_2",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO</a>',
+        },
+      );
 
       // ========== 6c. GEBCO 2025 网格（最新发布，独立端点） ==========
       // 端点与主网格不同：https://wms.gebco.net/2025/mapserv?，同样支持 EPSG:3857
-      const gebco2025ShadedLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
-        layers: "GEBCO_2025",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
-      });
-      const gebco2025FlatLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
-        layers: "GEBCO_2025_2",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
-      });
-      const gebco2025ObservedLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
-        layers: "GEBCO_2025_3",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
-      });
-      const gebco2025SubIceLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
-        layers: "GEBCO_2025_SUB_ICE_TOPO",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
-      });
-      const gebco2025FlatSubIceLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
-        layers: "GEBCO_2025_2_sub_ice_topo",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
-      });
-      const gebco2025TidBlackLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
-        layers: "GEBCO_2025_TID",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
-      });
-      const gebco2025TidColorLayer = L.tileLayer.wms("https://wms.gebco.net/2025/mapserv?", {
-        layers: "GEBCO_2025_TID_2",
-        format: "image/png",
-        transparent: true,
-        version: "1.1.1",
-        maxZoom: 12,
-        crossOrigin: "anonymous",
-        attribution:
-          '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
-      });
+      const gebco2025ShadedLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/2025/mapserv?",
+        {
+          layers: "GEBCO_2025",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+        },
+      );
+      const gebco2025FlatLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/2025/mapserv?",
+        {
+          layers: "GEBCO_2025_2",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+        },
+      );
+      const gebco2025ObservedLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/2025/mapserv?",
+        {
+          layers: "GEBCO_2025_3",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+        },
+      );
+      const gebco2025SubIceLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/2025/mapserv?",
+        {
+          layers: "GEBCO_2025_SUB_ICE_TOPO",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+        },
+      );
+      const gebco2025FlatSubIceLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/2025/mapserv?",
+        {
+          layers: "GEBCO_2025_2_sub_ice_topo",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+        },
+      );
+      const gebco2025TidBlackLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/2025/mapserv?",
+        {
+          layers: "GEBCO_2025_TID",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+        },
+      );
+      const gebco2025TidColorLayer = L.tileLayer.wms(
+        "https://wms.gebco.net/2025/mapserv?",
+        {
+          layers: "GEBCO_2025_TID_2",
+          format: "image/png",
+          transparent: true,
+          version: "1.1.1",
+          maxZoom: 12,
+          crossOrigin: "anonymous",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+        },
+      );
 
       // ========== 7. EMODnet 水深 WMS ==========
       const emodnetLayer = L.tileLayer.wms(
@@ -1053,6 +1091,8 @@
       // toggleConfig + initToggle 已移至 assets/app.js
       // 外部文件处理（loadFileAsUserLayer / drag-drop / PWA launch）已移至 assets/geojsonloader.js
     </script>
+    <!-- 高程读取插件（点击地图查询高程，数据源可切换） -->
+    <script src="./assets/Leaflet.ElevationQuery.js"></script>
     <!-- 应用管理：版本号、清理菜单、导出图片 -->
     <script src="./assets/app.js"></script>
     <!-- 文件加载缓冲示意 -->
