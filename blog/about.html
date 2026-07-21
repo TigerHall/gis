@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>关于 · 地脉</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">地脉 · GIS Notes</a>
+      <nav class="nav">
+        <a href="index.html">文章</a>
+        <a href="about.html" class="active">关于</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="about">
+      <h1>关于「地脉」</h1>
+      <p class="lead">一个地理科学 / GIS 爱好者的边学边写之地。</p>
+
+      <div class="about-section">
+        <h2>这里写什么</h2>
+        <p>地图、数据、代码的交集。从怎么用 Leaflet 搭一张地图，到 GeoJSON、WMS、反子午线这些绕不开的坑，
+           再到我自己这些年学 GIS 的路线图。文章全部用 Markdown 书写，支持代码高亮。</p>
+      </div>
+
+      <div class="about-section">
+        <h2>关于我</h2>
+        <ul>
+          <li>坐标相关方向的自学者，常年和投影参数、瓦片、坐标系打交道；</li>
+          <li>喜欢把踩过的坑写成笔记，半年后自己还能看懂；</li>
+          <li>相信“看懂地图 → 读懂数据 → 动手写代码”这条路径。</li>
+        </ul>
+      </div>
+
+      <div class="about-section">
+        <h2>技术栈</h2>
+        <ul>
+          <li>静态站点：纯 HTML / CSS / JavaScript，零构建、零依赖后端；</li>
+          <li>Markdown 渲染：marked + DOMPurify + highlight.js（均已本地化）；</li>
+          <li>可部署到任意静态托管（GitHub Pages / 对象存储 / Nginx）。</li>
+        </ul>
+      </div>
+
+      <div class="about-section">
+        <h2>联系</h2>
+        <p>欢迎在 <a href="index.html">文章列表</a> 里挑一篇读，或直接在仓库里提 Issue 交流。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">© <span id="year"></span> 地脉 · GIS Notes · 用 Markdown 书写</div>
+  </footer>
+
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
