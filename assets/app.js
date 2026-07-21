@@ -1140,7 +1140,10 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     },
     linkJumpToggle: {
       storageKey: TOGGLE_PREFIX + "linkJump",
-      enable: function () {
+      enable: function (userInitiated) {
+        // 静默恢复（页面加载读取已保存状态）：协议已在浏览器注册过，
+        // 无需重注册、也不提示，避免无用户手势被浏览器拒绝
+        if (!userInitiated) return;
         try {
           if (!("registerProtocolHandler" in navigator)) {
             window.showToast("当前浏览器不支持自定义协议注册", {
@@ -1160,8 +1163,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             { duration: 3000 },
           );
         } catch (e) {
-          // 页面加载恢复（无用户手势）时浏览器会拒绝该调用，已被 catch 吞掉；
-          // 手动点击开关（处于用户手势栈内）则成功注册。
+          // 手动点击开关（处于用户手势栈内）通常成功注册，失败时静默忽略
         }
       },
     },
@@ -1200,8 +1202,9 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     cb.checked = checked;
 
     // 同步控件状态：勾选时创建（懒加载），未勾选时移除
+    // 恢复已保存状态用静默模式（userInitiated=false），避免每次进入都弹提示
     if (checked) {
-      if (cfg.enable) cfg.enable();
+      if (cfg.enable) cfg.enable(false);
       else if (cfg.control) cfg.control.addTo(map);
     } else {
       if (cfg.disable) cfg.disable();
@@ -1210,8 +1213,9 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
 
     cb.addEventListener("change", function () {
       localStorage.setItem(cfg.storageKey, String(this.checked));
+      // 用户主动拨动开关才视为 userInitiated，触发注册与提示
       if (this.checked) {
-        if (cfg.enable) cfg.enable();
+        if (cfg.enable) cfg.enable(true);
         else if (cfg.control) cfg.control.addTo(map);
       } else {
         if (cfg.disable) cfg.disable();
