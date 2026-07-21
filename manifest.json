@@ -70,24 +70,18 @@
     {
       "action": "./index.html",
       "accept": {
-        "application/geo+json": [
-          ".geojson",
-          ".json"
-        ],
-        "application/json": [
-          ".geojson",
-          ".json"
-        ],
-        "application/vnd.google-earth.kml+xml": [
-          ".kml"
-        ],
-        "application/vnd.google-earth.kmz": [
-          ".kmz"
-        ],
-        "application/gzip": [
-          ".gz"
-        ]
+        "application/geo+json": [".geojson", ".json"],
+        "application/json": [".geojson", ".json"],
+        "application/vnd.google-earth.kml+xml": [".kml"],
+        "application/vnd.google-earth.kmz": [".kmz"],
+        "application/gzip": [".gz"]
       }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+dupal",
+      "url": "https://dupal.cn/?proto=%s"
     }
   ]
 }

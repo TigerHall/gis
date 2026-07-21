@@ -213,6 +213,265 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     window.addEventListener("load", requestAppVersion);
   }
 
+  // ========== 深链 / 关键词跳转（web+dupal 协议 + hash 深链）==========
+  // 能力：focus/南海（curated bbox）、search/南海（复用现有搜索）、loc/23.5,119.8,6、bbox/0,105,25,122
+  // 来源：① web+dupal:// 协议（manifest protocol_handlers 注册，PWA 安装即生效）
+  //       ② #focus/南海 或 #focus=南海（hash 深链，分享友好）
+  // 检测端（浏览器插件 / 桌面 helper）只通过 url 或 postMessage 通信，不依赖地图内部实现。
+  (function () {
+    function getPlaceRegistry() {
+      return window.PLACE_REGISTRY || [];
+    }
+
+    // 解析地名注册表（精确名/别名 → 模糊包含）
+    function resolveRegion(name) {
+      var q = String(name || "")
+        .trim()
+        .toLowerCase();
+      if (!q) return null;
+      var list = getPlaceRegistry();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].name && list[i].name.toLowerCase() === q) return list[i];
+      }
+      for (var j = 0; j < list.length; j++) {
+        var aliases = list[j].aliases || [];
+        for (var a = 0; a < aliases.length; a++) {
+          if (aliases[a].toLowerCase() === q) return list[j];
+        }
+      }
+      for (var k = 0; k < list.length; k++) {
+        var hay = (list[k].name || "").toLowerCase();
+        if (hay && hay.indexOf(q) !== -1) return list[k];
+      }
+      return null;
+    }
+
+    function flyToRegion(name) {
+      var reg = resolveRegion(name);
+      if (!reg) return false;
+      var map = window.map;
+      if (!map) return false;
+      if (reg.center) {
+        map.setView(reg.center, reg.zoom || 6, { animate: true });
+      } else if (reg.bbox) {
+        map.fitBounds(reg.bbox, {
+          padding: [40, 40],
+          maxZoom: reg.zoom || 14,
+          animate: true,
+        });
+      } else {
+        return false;
+      }
+      return true;
+    }
+
+    // 复用现有搜索：取 top1 要素结果 → highlightAndLocateFeature（按真实坐标定位，无需图层已渲染）
+    // 搜索索引为异步构建，故带重试直到命中或超时
+    function focusFeature(name) {
+      return new Promise(function (resolve) {
+        if (!window.__OGV_search || !window.__OGV_highlight) {
+          resolve(false);
+          return;
+        }
+        var tries = 20; // 最多 ~8s 等索引就绪
+        var attempt = function () {
+          var res = window.__OGV_search(name);
+          var items = res && res.items ? res.items : [];
+          var featItem = null;
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].type === "feature" && items[i].feature) {
+              featItem = items[i];
+              break;
+            }
+          }
+          if (!featItem) {
+            for (var m = 0; m < items.length; m++) {
+              if (items[m].feature) {
+                featItem = items[m];
+                break;
+              }
+            }
+          }
+          if (featItem) {
+            window.__OGV_highlight(featItem.checkboxId, featItem.feature);
+            resolve(true);
+          } else if (tries-- > 0) {
+            setTimeout(attempt, 400);
+          } else {
+            resolve(false);
+          }
+        };
+        attempt();
+      });
+    }
+
+    function flyToBbox(bbox, zoom) {
+      var map = window.map;
+      if (!map || !bbox) return false;
+      var b = L.latLngBounds(bbox);
+      if (!b.isValid()) return false;
+      map.fitBounds(b, {
+        padding: [40, 40],
+        maxZoom: zoom || 14,
+        animate: true,
+      });
+      return true;
+    }
+
+    function flyToLoc(lat, lng, zoom) {
+      var map = window.map;
+      if (!map || isNaN(lat) || isNaN(lng)) return false;
+      map.setView([lat, lng], zoom || Math.max(map.getZoom(), 8), {
+        animate: true,
+      });
+      return true;
+    }
+
+    // 命令解析：path 式 focus/南海 与 param 式 #focus=南海 双支持
+    function parseCommand(str) {
+      if (!str) return null;
+      str = decodeURIComponent(str).trim();
+      if (str.indexOf("=") !== -1 && str.indexOf("/") === -1) {
+        var eq = str.indexOf("=");
+        return {
+          action: str.slice(0, eq).trim(),
+          arg: str.slice(eq + 1).trim(),
+        };
+      }
+      var slash = str.indexOf("/");
+      if (slash !== -1) {
+        return {
+          action: str.slice(0, slash).trim(),
+          arg: str.slice(slash + 1).trim(),
+        };
+      }
+      return { action: "focus", arg: str }; // 仅关键词则默认当区域
+    }
+
+    function execCommand(cmd) {
+      if (!cmd || !window.map) return Promise.resolve(false);
+      var arg = cmd.arg;
+      switch (cmd.action) {
+        case "focus":
+        case "region":
+          return Promise.resolve(flyToRegion(arg));
+        case "search":
+        case "feature":
+          return focusFeature(arg);
+        case "loc":
+        case "coords":
+        case "coord": {
+          var p = arg.split(",").map(Number);
+          return Promise.resolve(flyToLoc(p[0], p[1], p[2]));
+        }
+        case "bbox": {
+          var b = arg.split(",").map(Number);
+          return Promise.resolve(
+            flyToBbox(
+              [
+                [b[0], b[1]],
+                [b[2], b[3]],
+              ],
+              b[4],
+            ),
+          );
+        }
+        default:
+          return focusFeature(arg); // 未知 action 退化搜索
+      }
+    }
+
+    function sendAck(e, ok, name) {
+      try {
+        if (e.source && e.origin)
+          e.source.postMessage(
+            { type: "OGV_FOCUS_ACK", ok: ok, name: name },
+            e.origin,
+          );
+      } catch (err) {}
+    }
+
+    // 对外程序化 API（插件 / 桌面 / 控制台可用）
+    window.OGV = {
+      flyToRegion: flyToRegion,
+      focusFeature: focusFeature,
+      flyToBbox: flyToBbox,
+      flyToLoc: flyToLoc,
+      resolveRegion: resolveRegion,
+      listPlaces: function () {
+        return getPlaceRegistry().map(function (r) {
+          return { name: r.name, aliases: r.aliases || [] };
+        });
+      },
+      exec: execCommand,
+      parse: parseCommand,
+    };
+
+    // postMessage 桥：已开标签页平滑跳转（不刷新），优先 region 后 feature
+    window.addEventListener("message", function (e) {
+      var d = e.data;
+      if (!d || d.type !== "OGV_FOCUS") return;
+      var mode = d.mode || "auto";
+      var name = d.name;
+      if (mode === "region") {
+        sendAck(e, flyToRegion(name), name);
+      } else if (mode === "feature") {
+        focusFeature(name).then(function (v) {
+          sendAck(e, v, name);
+        });
+      } else {
+        if (flyToRegion(name)) sendAck(e, true, name);
+        else
+          focusFeature(name).then(function (v) {
+            sendAck(e, v, name);
+          });
+      }
+    });
+
+    // 命令来源：优先 web+dupal 协议参数，其次 hash
+    function getCommandSource() {
+      try {
+        var proto = new URLSearchParams(window.location.search).get("proto");
+        if (proto && proto.indexOf("web+dupal://") === 0) {
+          return { raw: proto.slice("web+dupal://".length), fromProto: true };
+        }
+      } catch (err) {}
+      if (window.location.hash && window.location.hash.length > 1) {
+        return { raw: window.location.hash.slice(1), fromProto: false };
+      }
+      return null;
+    }
+
+    function runDeepLink() {
+      var src = getCommandSource();
+      if (!src || !src.raw) return;
+      var cmd = parseCommand(src.raw);
+      execCommand(cmd).then(function (ok) {
+        if (ok === false && window.showToast) {
+          window.showToast("未找到：" + (cmd ? cmd.arg : src.raw));
+        }
+        // 协议来源：规范化成 hash，使刷新/分享可复现；replaceState 不会触发 hashchange
+        if (src.fromProto && cmd) {
+          try {
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname + "#" + cmd.action + "/" + cmd.arg,
+            );
+          } catch (err) {}
+        }
+      });
+    }
+
+    // 地图为同步创建，load 时延 600ms 确保图层/索引开始加载；search 类命令内部自带重试
+    window.addEventListener("load", function () {
+      setTimeout(runDeepLink, 600);
+    });
+    window.addEventListener("hashchange", function () {
+      setTimeout(runDeepLink, 0);
+    });
+  })();
+
   // ========== 版号点击 → 清理菜单 ==========
   (function () {
     var el = document.getElementById("appVersion");

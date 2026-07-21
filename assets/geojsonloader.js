@@ -1117,7 +1117,8 @@
         // 图层级数据来源 → 要素属性「数据源」，弹窗/tooltip 中展示
         if (layerSourceMap[checkboxId] && data_ && data_.features) {
           data_.features.forEach(function (f) {
-            if (f && f.properties) f.properties.数据源 = layerSourceMap[checkboxId];
+            if (f && f.properties)
+              f.properties.数据源 = layerSourceMap[checkboxId];
           });
         }
         console.log(
@@ -2053,7 +2054,9 @@
       isPointLayer,
     ) {
       const mode =
-        colorMode[checkboxId] || defaultColorModeMap[checkboxId] || "sequential";
+        colorMode[checkboxId] ||
+        defaultColorModeMap[checkboxId] ||
+        "sequential";
       const currentField =
         fieldKey[checkboxId] || defaultColorFieldMap[checkboxId] || "";
       const currentColor = layerColorMap[checkboxId] || "#8B4513";
@@ -2549,7 +2552,14 @@
 
           // 统一通过 reloadLayerWithNewMode 更新（Canvas 图标的 Image 在其中刷新）
           // iconChanged（图标类型或大小变化）时强制重建图层，否则仅更新透明度即可
-          reloadLayerWithNewMode(cbId, newMode, newColor, newField, newOpacity, iconChanged);
+          reloadLayerWithNewMode(
+            cbId,
+            newMode,
+            newColor,
+            newField,
+            newOpacity,
+            iconChanged,
+          );
           dlg.close();
         };
 
@@ -3554,7 +3564,9 @@
           if (!features || !features.length) return [];
           var matchedIndices = [];
           if (si && si.tokens && typeof si.tokens === "object") {
-            var tokens = qLower.split(/[^a-z0-9\u4e00-\u9fff]+/).filter(Boolean);
+            var tokens = qLower
+              .split(/[^a-z0-9\u4e00-\u9fff]+/)
+              .filter(Boolean);
             if (tokens.length) {
               var candidateSets = [];
               for (var ti = 0; ti < tokens.length; ti++) {
@@ -3569,7 +3581,8 @@
                   for (var ki = 0; ki < keys.length; ki++) {
                     if (keys[ki].indexOf(tok) !== -1) {
                       var arr = si.tokens[keys[ki]];
-                      for (var ai = 0; ai < arr.length; ai++) merged[arr[ai]] = true;
+                      for (var ai = 0; ai < arr.length; ai++)
+                        merged[arr[ai]] = true;
                     }
                   }
                   var fuzzy = Object.keys(merged).map(Number);
@@ -4366,9 +4379,7 @@
           var note = document.createElement("div");
           note.className = "search-empty";
           note.textContent =
-            "已显示全部 " +
-            results.length +
-            " 条；更多命中请缩小关键词范围";
+            "已显示全部 " + results.length + " 条；更多命中请缩小关键词范围";
           resultsBox.appendChild(note);
         }
         resultsBox.classList.add("open");
@@ -4442,6 +4453,11 @@
         resultsBox.classList.remove("open");
         input.blur();
       }
+
+      // ========== 深链复用入口（供 app.js 的 window.OGV 调用）==========
+      // 暴露搜索与要素定位原语，避免复制搜索逻辑；二者均为本 IIFE 内的函数声明，可安全暴露
+      window.__OGV_search = runSearch; // (query) -> { items, total }
+      window.__OGV_highlight = highlightAndLocateFeature; // (cbId, feat) -> 定位
 
       function escapeHtml(str) {
         return str

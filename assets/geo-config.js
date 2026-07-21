@@ -282,7 +282,7 @@
           file: "wc2026_round8_teams.geojson",
           labelField: "name_zh",
         },
-       {
+        {
           name: "2026世界杯16强",
           file: "wc2026_round16_teams.geojson",
           labelField: "name_zh",
@@ -389,6 +389,73 @@
     {
       groupName: null,
       layers: [{ name: "Dupal异常区", file: "DupalOcean.geojson" }],
+    },
+  ];
+
+  // ========== 地名注册表（深链 / 关键词跳转用）==========
+  // focus/<name> 会先查这里（curated，即时、无需搜索）；未命中再退化为搜索。
+  // bbox: [[minLat, minLng], [maxLat, maxLng]]；center+zoom 与 bbox 二选一，center 优先。
+  // 坐标为近似示意，实施时建议按真实范围校准。
+  window.PLACE_REGISTRY = [
+    {
+      name: "南海",
+      aliases: ["South China Sea", "南海海域", "南中国海", "南海诸岛"],
+      bbox: [
+        [0, 105],
+        [25, 122],
+      ],
+      center: [12, 113],
+      zoom: 5,
+    },
+    {
+      name: "东海",
+      aliases: ["East China Sea", "东中国海"],
+      bbox: [
+        [24, 118],
+        [41, 131],
+      ],
+      center: [31, 126],
+      zoom: 5,
+    },
+    {
+      name: "黄海",
+      aliases: ["Yellow Sea", "黄东海"],
+      bbox: [
+        [31, 119],
+        [40, 127],
+      ],
+      center: [35, 123],
+      zoom: 6,
+    },
+    {
+      name: "渤海",
+      aliases: ["Bohai Sea", "渤黄海"],
+      bbox: [
+        [37, 117],
+        [41, 122],
+      ],
+      center: [39, 119.5],
+      zoom: 7,
+    },
+    {
+      name: "台湾海峡",
+      aliases: ["Taiwan Strait", "台海"],
+      bbox: [
+        [22, 118],
+        [25.5, 122],
+      ],
+      center: [23.8, 119.5],
+      zoom: 7,
+    },
+    {
+      name: "巴士海峡",
+      aliases: ["Luzon Strait", "巴士海峡"],
+      bbox: [
+        [19, 119],
+        [22, 122],
+      ],
+      center: [20.5, 121],
+      zoom: 7,
     },
   ];
 })();
