@@ -343,19 +343,20 @@
             });
           }
         } else if (type === "polygon" || type === "multipolygon") {
-          var rings = type === "polygon" ? c : c[0];
-          if (rings && rings[0] && typeof rings[0][0] === "number") {
-            // Polygon with single ring
-            rings.forEach(function (p) {
-              extendByPoint(p[0], p[1]);
-            });
-          } else {
-            rings.forEach(function (ring) {
+          // Polygon:     coords = [ring, ring, ...]
+          // MultiPolygon: coords = [ [ring, ring], [ring, ring], ... ]
+          // 注意：MultiPolygon 必须遍历全部子多边形，否则只会框住第一个子面
+          var polygons = type === "polygon" ? [c] : c;
+          polygons.forEach(function (poly) {
+            if (!poly || !poly.length) return;
+            poly.forEach(function (ring) {
+              if (!ring || !ring.length) return;
               ring.forEach(function (p) {
-                extendByPoint(p[0], p[1]);
+                if (p && typeof p[0] === "number" && typeof p[1] === "number")
+                  extendByPoint(p[0], p[1]);
               });
             });
-          }
+          });
         }
       }
 
