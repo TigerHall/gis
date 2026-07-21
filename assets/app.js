@@ -180,22 +180,38 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   })();
 
   // ========== 版本号显示 ==========
-  // 从 service-worker.js 读取 CACHE_NAME 保持版本同步
-  // 版本号显示在图层面板底部，也用于 PWA 更新弹窗
+  // 版号 = 当前真正控制页面的 Service Worker 的版本。
+  // 由页面主动向 controlling SW 请求（GET_VERSION），SW 回传其 CACHE_NAME，
+  // 保证 div 显示的是「正在运行的版本」，而不是将来才生效的新版本。
   var _appVersion = "";
-  fetch("service-worker.js?" + Date.now())
-    .then(function (r) {
-      return r.text();
-    })
-    .then(function (src) {
-      var m = src.match(/CACHE_NAME\s*=\s*["']([^"']+)["']/);
-      if (m) {
-        _appVersion = m[1];
-        var el = document.getElementById("appVersion");
-        if (el) el.textContent = m[1];
+  // 用户点了弹窗刷新后才置 true，避免首次访问被 controllerchange 误触发 reload
+  var _needsReload = false;
+  function setAppVersion(v) {
+    if (!v) return;
+    _appVersion = v;
+    var el = document.getElementById("appVersion");
+    if (el) el.textContent = v;
+  }
+  function requestAppVersion() {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: "GET_VERSION" });
+    }
+  }
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", function (e) {
+      if (e.data && e.data.type === "SW_VERSION") setAppVersion(e.data.version);
+    });
+    // 新 SW 接管页面（点击刷新触发 skipWaiting 之后）才会进入这里
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      requestAppVersion();
+      if (_needsReload) {
+        _needsReload = false;
+        location.reload();
       }
-    })
-    .catch(function () {});
+    });
+    // 页面加载且 SW 已控制时，主动问一次版本
+    window.addEventListener("load", requestAppVersion);
+  }
 
   // ========== 版号点击 → 清理菜单 ==========
   (function () {
@@ -472,11 +488,12 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       duration: 0,
       action: "刷新",
       onAction: function () {
-        // 先通知新 SW 激活（skipWaiting），再重新加载
+        // 通知新 SW 激活；真正 reload 由 controllerchange 在接管页面后执行，
+        // 保证 reload 时已经由新 SW 控制、能拉到新资源（geojsonloader 等）
+        _needsReload = true;
         if (_swRegistration && _swRegistration.waiting) {
           _swRegistration.waiting.postMessage({ action: "skipWaiting" });
         }
-        location.reload();
       },
     });
   };

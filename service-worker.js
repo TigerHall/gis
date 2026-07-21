@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v1.9.7";
+const CACHE_NAME = "v1.9.8";
 
 // 只需要预缓存核心静态资源（小文件，快速）
 const STATIC_ASSETS = [
@@ -73,10 +73,18 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// 消息处理：接收页面发来的 skipWaiting 指令
+// 消息处理：接收页面发来的 skipWaiting 指令 / 版本查询
 self.addEventListener("message", (event) => {
   if (event.data && event.data.action === "skipWaiting") {
     self.skipWaiting();
+  } else if (event.data && event.data.type === "GET_VERSION") {
+    // 页面主动询问当前控制它的 SW 版本 → 回传 CACHE_NAME
+    var reply = { type: "SW_VERSION", version: CACHE_NAME };
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage(reply);
+    } else if (event.source) {
+      event.source.postMessage(reply);
+    }
   }
 });
 
@@ -108,38 +116,39 @@ self.addEventListener("fetch", (event) => {
   // 跳过跨域请求
   if (!url.startsWith(self.location.origin)) return;
 
+  // 只在当前版本缓存里匹配，避免从旧版本缓存命中到过期的 JS/CSS（如 geojsonloader.js）
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // 命中缓存
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(event.request).then((cachedResponse) => {
+        // 命中当前版本缓存
+        if (cachedResponse) {
+          return cachedResponse;
+        }
 
-      // 未命中，请求网络
-      return fetch(event.request)
-        .then((networkResponse) => {
-          // 动态缓存：只缓存静态资源，跳过 .gz 数据文件（由 GzIdbLoader 管理）
-          const isGzFile = /\.gz$/.test(url);
-          if (networkResponse.ok && !isGzFile) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
+        // 未命中，请求网络
+        return fetch(event.request)
+          .then((networkResponse) => {
+            // 动态缓存：只缓存静态资源，跳过 .gz 数据文件（由 GzIdbLoader 管理）
+            const isGzFile = /\.gz$/.test(url);
+            if (networkResponse.ok && !isGzFile) {
+              const responseToCache = networkResponse.clone();
               cache.put(event.request, responseToCache);
               console.log("动态缓存：", url.split("/").pop());
-            });
-          }
+            }
 
-          return networkResponse;
-        })
-        .catch(() => {
-          // 离线兜底：如果是页面请求，返回首页缓存
-          if (url.endsWith(".html") || url.endsWith("/")) {
-            return caches.match("./index.html");
-          }
-          return new Response("离线状态，无法加载: " + url, {
-            status: 503,
-            headers: { "Content-Type": "text/plain" },
+            return networkResponse;
+          })
+          .catch(() => {
+            // 离线兜底：如果是页面请求，返回首页缓存
+            if (url.endsWith(".html") || url.endsWith("/")) {
+              return cache.match("./index.html");
+            }
+            return new Response("离线状态，无法加载: " + url, {
+              status: 503,
+              headers: { "Content-Type": "text/plain" },
+            });
           });
-        });
-    }),
+      }),
+    ),
   );
 });
