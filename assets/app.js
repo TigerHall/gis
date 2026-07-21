@@ -109,6 +109,11 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             label: "高级功能🕹️",
             desc: "开启后进入激活流程，输入激活码解锁下载 GeoJSON 等高级功能",
           },
+          {
+            id: "linkJumpToggle",
+            label: "链接跳转🧪",
+            desc: "开启后注册 web+dupal 协议，可从地址栏 / 网页链接 / Win+R 直接打开 web+dupal://focus/南海 并自动聚焦对应区域（仅 Chrome/Edge 有效，且需在 https 下）",
+          },
         ],
       },
       {
@@ -1131,6 +1136,33 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       },
       disable: function () {
         if (window._elevationQuery) window._elevationQuery.disable();
+      },
+    },
+    linkJumpToggle: {
+      storageKey: TOGGLE_PREFIX + "linkJump",
+      enable: function () {
+        try {
+          if (!("registerProtocolHandler" in navigator)) {
+            window.showToast("当前浏览器不支持自定义协议注册", {
+              duration: 2500,
+            });
+            return;
+          }
+          // handler 必须与当前页面 origin 同源，故用 location.origin 动态拼接
+          // （避免硬编码 dupal.cn 在 localhost / 其他域名下测试报 "document's origin" 错误）
+          navigator.registerProtocolHandler(
+            "web+dupal",
+            location.origin + "/?proto=%s",
+            "Dupal地图",
+          );
+          window.showToast(
+            "✅ 已启用链接跳转：可用 web+dupal://focus/南海 直接打开并聚焦",
+            { duration: 3000 },
+          );
+        } catch (e) {
+          // 页面加载恢复（无用户手势）时浏览器会拒绝该调用，已被 catch 吞掉；
+          // 手动点击开关（处于用户手势栈内）则成功注册。
+        }
       },
     },
   };

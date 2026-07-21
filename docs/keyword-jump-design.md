@@ -273,18 +273,19 @@ span.addEventListener("click", async () => {
 
 ### 4.2 两种注册路径（关键区别）
 
-既然你**已经注册了 PWA**，最佳路径是直接在 `manifest.json` 里加 `protocol_handlers`——安装/更新 PWA 时浏览器自动注册，无需写原生代码、无需用户点授权按钮。
+⚠️ **重要坑（已踩）**：`manifest.json` 的 `protocol_handlers` 在 **Chrome / Edge 稳定版不会自动注册**自定义协议（该字段 Chromium 默认不生效，需 flag）。所以仅写 manifest 字段，系统注册表里没有 `web+dupal`，地址栏 / Win+R 都找不到应用。
 
-- **A. 纯 Web 注册（零安装，推荐先做）**
-  - 方式一（已安装 PWA 用户）：manifest 声明，安装即生效：
-    ```json
-    "protocol_handlers": [
-      { "protocol": "web+dupal", "url": "https://dupal.cn/?proto=%s" }
-    ]
+**正确主方案 = 运行时 `navigator.registerProtocolHandler()` + 用户手势**：浏览器规定注册必须在用户点击等手势栈内调用，否则被拒绝。
+
+- **A. 纯 Web 注册（零原生代码，已实施）**
+  - 已做成「⚙️ 地图设置 → 高级」分类下的开关 **「链接跳转🧪」**（与深色模式同款 toggle：TOGGLE_GROUPS 渲染 + toggleConfig 行为，由 initToggle 自动绑定 change）。开启即调用：
+    ```js
+    navigator.registerProtocolHandler('web+dupal', location.origin + '/?proto=%s', 'Dupal 地图');
     ```
-  - 方式二（未安装 PWA 的访客）：页面内调用 `navigator.registerProtocolHandler('web+dupal', 'https://dupal.cn/?proto=%s', 'Dupal 地图')`（需用户手势触发一次）。
-  - 两者都要求 scheme 以 `web+` 开头 → 用 `web+dupal`。`%s` 会被替换为完整 URL（`web+dupal://focus/南海`），应用在 `load` 时读 `proto` 参数、解码并剥离 `web+dupal://` 前缀得到 `focus/南海`，再走 §2 逻辑。
-  - **支持范围**：目前主要是 Chromium 系（Chrome / Edge 的已安装 PWA）；Firefox / Safari（尤其 iOS）支持有限或没有。若用户多在 Chrome/Edge，这条路最省事。
+    handler 用 `location.origin` 动态拼接（**不可硬编码域名**，否则 localhost / 非 dupal.cn 下报 "Can only register custom handler in the document's origin"）。成功后 `web+dupal` 写入系统，地址栏 / 网页链接 / Win+R 都能调起并聚焦。
+  - `manifest.json` 的 `protocol_handlers` 字段**保留作 Firefox 等补充**（Firefox 安装 PWA 时可能自动注册），但 Chrome/Edge 不依赖它。
+  - 两者都要求 scheme 以 `web+` 开头 → 用 `web+dupal`。`%s` 会被替换为完整 URL（`web+dupal://focus/南海`），应用在 `load` 时读 `proto` 参数、剥离 `web+dupal://` 前缀得到 `focus/南海`，再走 §2 逻辑。
+  - **支持范围**：Chromium 系（Chrome / Edge）注册后可用；Firefox 注册的协议**不写系统注册表**，仅浏览器内点击链接生效、Win+R 用不了；Safari / iOS 基本不支持。
 
 - **B. 原生 OS 注册（桌面全域、跨浏览器，需小助手）**
   在系统层（Windows 注册表 / macOS Info.plist / Linux .desktop）注册 `dupal://`，指向一个极小的本地 helper。helper 把 `dupal://focus/南海` 直接重写为 `https://dupal.cn/#focus=南海` 并拉起浏览器——**应用只看到干净的 hash**。可从任意桌面程序/链接触发、且不依赖 Chromium，但需分发/安装/签名该 helper。
@@ -295,7 +296,7 @@ span.addEventListener("click", async () => {
 
 ### 4.4 建议
 
-你有 PWA，直接上 **A 的 manifest `protocol_handlers`（`web+dupal`）**——加一个 manifest 字段 + 应用内解析 `proto` 参数即可，零原生代码，对 Chrome/Edge 用户立即生效；等需要桌面全域/非 Chromium 支持时再补 **B（`dupal://` + helper）**。应用侧 `#focus=南海` 逻辑不变。
+先上 **A 的运行时注册（web+dupal）+ 设置面板「启用」按钮**——已实现，用户点一次即生效，零原生代码；等需要桌面全域 / 非 Chromium 覆盖时再补 **B（`dupal://` + helper）**。应用侧 `#focus=南海` 逻辑不变。
 
 ---
 
