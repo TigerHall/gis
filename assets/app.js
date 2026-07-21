@@ -30,7 +30,18 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             label: "显示标签",
             desc: "开启后在地图上显示各点要素的名称标签，便于识别站位和热点位置",
           },
-        ],
+          {
+            id: "centerCrossToggle",
+            label: "中心十字",
+            desc: "开启后在地图正中心渲染十字标记，帮助直观定位当前地图中心位置；关闭时移除",
+          },
+          {
+            id: "optimizeSearchToggle",
+            label: "优化搜索",
+            desc: "开启后点击搜索结果缩放至目标时，仅突出显示该目标（隐藏同图层其他目标、淡化其他图层），移动或缩放地图后自动恢复",
+            checked: true,
+          },
+      ],
       },
       {
         category: "控件",
@@ -1165,6 +1176,51 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         } catch (e) {
           // 手动点击开关（处于用户手势栈内）通常成功注册，失败时静默忽略
         }
+      },
+    },
+    centerCrossToggle: {
+      storageKey: TOGGLE_PREFIX + "centerCross",
+      enable: function () {
+        if (window._centerCross) return;
+        var wrap = document.createElement("div");
+        wrap.className = "map-center-cross";
+        wrap.setAttribute("aria-hidden", "true");
+        wrap.style.cssText =
+          "position:absolute;left:50%;top:50%;width:24px;height:24px;" +
+          "transform:translate(-50%,-50%);pointer-events:none;z-index:650;";
+        var hLine = document.createElement("div");
+        hLine.style.cssText =
+          "position:absolute;left:0;top:50%;width:100%;height:2px;" +
+          "transform:translateY(-50%);background:#9c9;" +
+          "box-shadow:0 0 0 1px rgba(0,0,0,.45);";
+        var vLine = document.createElement("div");
+        vLine.style.cssText =
+          "position:absolute;top:0;left:50%;height:100%;width:2px;" +
+          "transform:translateX(-50%);background:#9c9;" +
+          "box-shadow:0 0 0 1px rgba(0,0,0,.45);";
+        wrap.appendChild(hLine);
+        wrap.appendChild(vLine);
+        map.getContainer().appendChild(wrap);
+        window._centerCross = wrap;
+      },
+      disable: function () {
+        if (window._centerCross) {
+          window._centerCross.remove();
+          window._centerCross = null;
+        }
+      },
+    },
+    optimizeSearchToggle: {
+      storageKey: TOGGLE_PREFIX + "optimizeSearch",
+      enable: function () {
+        window.OGV_OPT_SEARCH = window.OGV_OPT_SEARCH || {};
+        window.OGV_OPT_SEARCH.enabled = true;
+      },
+      disable: function () {
+        window.OGV_OPT_SEARCH = window.OGV_OPT_SEARCH || {};
+        window.OGV_OPT_SEARCH.enabled = false;
+        // 关闭开关时若正处于隔离态，立即恢复全部目标显示
+        if (window.__OGV_restoreIsolation) window.__OGV_restoreIsolation();
       },
     },
   };

@@ -4387,8 +4387,142 @@
 
       // ----------------------------------------------
       // 高亮并定位到指定的要素（独立函数，供搜索结果点击使用）
+      // 「优化搜索」：点击搜索结果后隔离显示单个目标要素
+      //   - 关闭【所有】图层（含被搜索的目标图层），走侧边栏标准开关路径
+      //   - 新建一个只含被搜索要素的临时图层来显示该目标
+      //   - 用户移动/缩放地图后：销毁临时图层，并把隔离前已勾选的图层全部恢复
+      //     （被搜索图层若隔离前未勾选，则不在恢复集合内，保持关闭）
+      //   - 完全走标准 load/remove，无半透明对象，避免“关不掉”问题
       // ----------------------------------------------
+      var _isoActive = false;
+      var _isoRestoreSet = []; // 隔离前处于“已勾选”状态的图层 cbId 列表（恢复目标）
+      var _isoTempLayer = null; // 临时单要素图层
+      var _isoMoveBound = false;
+
+      // 程序化设置图层开关：直接复用各图层既有的 change 处理逻辑
+      // （内置图层走 loadGeoJSONLayer/removeGeoJSONLayer，用户图层走 map.add/removeLayer）
+      function _setLayerChecked(cbId, on) {
+        var cb = document.getElementById(cbId);
+        if (!cb) return false;
+        if (cb.checked === on) return true; // 已是目标状态则跳过，避免重复 load/remove
+        cb.checked = on;
+        cb.dispatchEvent(new Event("change"));
+        return true;
+      }
+
+      // 取得所有图层复选框（内置层 #dataLayerContent + 用户层 #userLayerGroup 的 .layer-item）
+      function _allLayerCheckboxes() {
+        return Array.prototype.slice.call(
+          document.querySelectorAll(
+            '#dataLayerContent .layer-item input[type="checkbox"], ' +
+              '#userLayerGroup .layer-item input[type="checkbox"]',
+          ),
+        );
+      }
+
+      function _destroyTempLayer() {
+        if (_isoTempLayer) {
+          try {
+            map.removeLayer(_isoTempLayer);
+          } catch (e) {}
+          _isoTempLayer = null;
+        }
+      }
+
+      function _onUserMapInteract() {
+        _restoreFromSearch();
+      }
+
+      function _restoreFromSearch() {
+        if (!_isoActive) return;
+        _destroyTempLayer();
+        _isoRestoreSet.forEach(function (id) {
+          _setLayerChecked(id, true);
+        });
+        _isoActive = false;
+        _isoRestoreSet = [];
+        _isoMoveBound = false;
+        map.off("movestart", _onUserMapInteract);
+      }
+
+      function _isolateToLayer(cbId, feat) {
+        // 已处于隔离态时先恢复，保证从干净状态重新记录（支持连续搜索结果点击）
+        if (_isoActive) _restoreFromSearch();
+
+        // 记录隔离前所有已勾选的图层（恢复目标集合）
+        var onSet = [];
+        _allLayerCheckboxes().forEach(function (cb) {
+          if (cb.checked) onSet.push(cb.id);
+        });
+
+        // 关闭【所有】图层（含被搜索的目标图层）——走标准开关路径，侧边栏状态真实
+        _allLayerCheckboxes().forEach(function (cb) {
+          _setLayerChecked(cb.id, false);
+        });
+
+        // 新建只含被搜索要素的临时图层来显示目标
+        if (feat && feat.geometry) {
+          var color = layerColorMap[cbId] || "#e64a19";
+          _isoTempLayer = L.geoJSON(
+            {
+              type: "Feature",
+              geometry: feat.geometry,
+              properties: feat.properties || {},
+            },
+            {
+              style: {
+                color: color,
+                weight: 3,
+                fillColor: color,
+                fillOpacity: 0.35,
+              },
+              pointToLayer: function (f, ll) {
+                return L.circleMarker(ll, {
+                  radius: 7,
+                  color: "#fff",
+                  weight: 2,
+                  fillColor: color,
+                  fillOpacity: 1,
+                });
+              },
+            },
+          ).addTo(map);
+        }
+
+        _isoRestoreSet = onSet;
+        _isoActive = true;
+
+        // 等本次定位动画结束后再绑定“用户移动/缩放即恢复”，避免定位自身误触发
+        map.once("moveend", function () {
+          map.once("movestart", _onUserMapInteract);
+          _isoMoveBound = true;
+        });
+        // 兜底：若目标已在视野中心、setView 未产生移动导致 moveend 不触发，仍绑定恢复
+        setTimeout(function () {
+          if (_isoActive && !_isoMoveBound) {
+            map.once("movestart", _onUserMapInteract);
+            _isoMoveBound = true;
+          }
+        }, 700);
+      }
+
+      // 暴露给 app.js（开关关闭时立即恢复）
+      window.__OGV_restoreIsolation = _restoreFromSearch;
+
+      function _isOptSearchOn() {
+        if (window.OGV_OPT_SEARCH && typeof window.OGV_OPT_SEARCH.enabled === "boolean") {
+          return window.OGV_OPT_SEARCH.enabled;
+        }
+        // 兜底：直接读开关 DOM 状态（兼容初始化顺序）
+        var cb = document.getElementById("optimizeSearchToggle");
+        return !!(cb && cb.checked);
+      }
+
       function highlightAndLocateFeature(cbId, feat) {
+        // 优化搜索：点击结果后关闭全部图层，并新建临时单要素图层显示目标
+        if (_isOptSearchOn()) {
+          _isolateToLayer(cbId, feat);
+        }
         // 1) 始终基于要素真实几何坐标定位（对任意图层类型 / 加载状态 / 是否渲染都可靠）。
         //    原先的非 Canvas 分支只靠 layer.feature._featureIndex === feat._featureIndex
         //    跨对象匹配，而搜索结果的 feat 来自未渲染的原始 featureCache（_featureIndex 未赋值），

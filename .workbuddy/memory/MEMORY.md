@@ -48,6 +48,7 @@
 - 三副本方案：`offsets=[-360,0,360]`；线/面始终三副本，点 ≤1万才做（防内存爆炸）。已移除 `fixAntimeridian`
 
 ## UI 约定
+- **主题色 `#9c9`**（= `#99cc99` 浅青绿）：界面自定义标记（如地图中心十字）默认用此色，配合 `box-shadow:0 0 0 1px rgba(0,0,0,.45)` 描边保证浅色底图可见
 - 图层组用 `<details>`+`<summary>`（原生折叠，无需 JS）；`.layer-panel{font-size:0}`+`>.layer-panel>*{font-size:13px}` 消除 flex 匿名项间隙
 - 地图控制面板 toggle-section 点击外部自动折叠，持久化 localStorage
 - 标签系统：`labelEnabled` 全局开关；聚类 `clusterEnabled` 仅点图层
