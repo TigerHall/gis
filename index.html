@@ -9,6 +9,8 @@
     <title>海底地质一张图</title>
     <!-- Leaflet核心库 -->
     <script src="./assets/leaflet.js"></script>
+    <!-- Esri Leaflet 插件（ArcGIS MapServer 矢量加载） -->
+    <script src="./assets/esri-leaflet.js"></script>
     <link rel="stylesheet" href="./assets/leaflet.css" />
     <!-- 纯函数工具（无外部依赖） -->
     <script src="./assets/geo-utils.js"></script>
@@ -866,10 +868,57 @@
         天地图全球境界: tdtIboLayer,
         天地图地名标注: tdtAnnoOverlay,
       };
+      // 全球海岛 FeatureLayer 工厂函数
+      function createIslandLayer(layerId, displayName, defaultOpacity) {
+        var ly = L.esri.featureLayer({
+          url: 'https://data-gis.unep-wcmc.org/server/rest/services/Global_Islands/MapServer/' + layerId,
+          style: function () {
+            return {
+              color: '#3388ff',
+              weight: 1,
+              opacity: 0.8,
+              fillOpacity: 0.25,
+            };
+          },
+        });
+        ly.bindPopup(function (layer) {
+          try {
+            if (window.GeoUtils && typeof window.GeoUtils.buildPopupContent === 'function')
+              return window.GeoUtils.buildPopupContent(layer.feature, displayName, null, displayName);
+          } catch (e) {}
+          // 兜底弹窗：属性表
+          var props = layer.feature && layer.feature.properties;
+          if (!props) return '';
+          var html = '<div class="geo-popup-content" style="font-size:13px;line-height:1.6;max-height:300px;overflow-y:auto;">';
+          html += '<div class="feature-popup-title" style="font-weight:bold;font-size:14px;margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:4px;">' + displayName + '</div>';
+          html += '<table style="width:100%;border-collapse:collapse;">';
+          for (var k in props) {
+            if (props[k] == null || props[k] === '') continue;
+            html += '<tr><td style="padding:2px 6px;color:#666;white-space:nowrap;vertical-align:top;">' + k + '</td>'
+                  + '<td style="padding:2px 6px;">' + props[k] + '</td></tr>';
+          }
+          html += '</table></div>';
+          return html;
+        });
+        ly.on('load', function () { console.log('[island] ✅ ' + displayName + ' 加载完成'); });
+        ly.on('error', function (err) { console.error('[island] ❌ ' + displayName + ' 加载出错:', err); });
+        return ly;
+      }
+
+      var island_0_verysmall = createIslandLayer(0, '全球海岛-超小岛');
+      var island_1_small     = createIslandLayer(1, '全球海岛-小岛');
+      var island_2_big       = createIslandLayer(2, '全球海岛-大岛');
+      var island_3_continents= createIslandLayer(3, '全球海岛-大陆');
+
       const moreOverlays = {
         // 仅在"更多底图"开启时出现
         天地图影像标注: tdtImgAnno,
         天地图地形标注: tdtTerAnno,
+        // UNEP-WCMC 全球岛屿（Esri featureLayer，矢量视口按需加载）
+        '全球海岛-超小岛': island_0_verysmall,
+        '全球海岛-小岛': island_1_small,
+        '全球海岛-大岛': island_2_big,
+        '全球海岛-大陆': island_3_continents,
       };
 
       // 获取当前可见覆盖层集合
