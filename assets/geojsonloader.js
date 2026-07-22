@@ -2606,8 +2606,26 @@
 
     // ========== 生成分组图层面板 ==========
     let globalLayerIndex = 0;
+    var _seenLayerIds = {}; // 用于 makeLayerStableId 去重
 
     function generateLayerItems() {
+      // 重置跨图层去重表（每轮面板生成清空，保证名称相同才冲突）
+      _seenLayerIds = {};
+
+      // 基于图层名生成稳定 checkboxId（不再依赖 globalLayerIndex 顺序序号）
+      function makeLayerStableId(layerName, fallback) {
+        var base = (layerName || fallback || "layer")
+          .toLowerCase()
+          .replace(/[^a-z0-9一-鿿]+/g, "_")
+          .replace(/_+/g, "_")
+          .replace(/^_+|_+$/g, "");
+        if (!base) base = "layer";
+        var id = base, n = 2;
+        while (_seenLayerIds[id]) { id = base + "_" + n; n++; }
+        _seenLayerIds[id] = true;
+        return id;
+      }
+
       // ====== 数据图层区：子组填充 ======
       var layerContent = document.getElementById("dataLayerContent");
 
@@ -2716,7 +2734,8 @@
 
         group.layers.forEach(function (layerConfig) {
           var idx = globalLayerIndex++;
-          var checkboxId = "layer_" + idx;
+          var stableName = makeLayerStableId(layerConfig.name, layerConfig.file || layerConfig.url);
+          var checkboxId = "layer_" + stableName;
           var fullPath = window.geoJsonPrimaryPath + layerConfig.file;
           var fileName = layerConfig.file;
           var fixedColor =

@@ -868,7 +868,7 @@
         天地图全球境界: tdtIboLayer,
         天地图地名标注: tdtAnnoOverlay,
       };
-      // 全球海岛 FeatureLayer 工厂函数
+      // 全球海岛（ArcGIS UNEP-WCMC）FeatureLayer 工厂函数
       function createIslandLayer(layerId, displayName, defaultOpacity) {
         var ly = L.esri.featureLayer({
           url: 'https://data-gis.unep-wcmc.org/server/rest/services/Global_Islands/MapServer/' + layerId,
@@ -905,20 +905,20 @@
         return ly;
       }
 
-      var island_0_verysmall = createIslandLayer(0, '全球海岛-超小岛');
-      var island_1_small     = createIslandLayer(1, '全球海岛-小岛');
-      var island_2_big       = createIslandLayer(2, '全球海岛-大岛');
-      var island_3_continents= createIslandLayer(3, '全球海岛-大陆');
+      var island_0_verysmall = createIslandLayer(0, 'ArcGIS全球超小海岛');
+      var island_1_small     = createIslandLayer(1, 'ArcGIS全球小海岛');
+      var island_2_big       = createIslandLayer(2, 'ArcGIS全球大海岛');
+      var island_3_continents= createIslandLayer(3, 'ArcGIS全球大陆');
 
       const moreOverlays = {
         // 仅在"更多底图"开启时出现
         天地图影像标注: tdtImgAnno,
         天地图地形标注: tdtTerAnno,
         // UNEP-WCMC 全球岛屿（Esri featureLayer，矢量视口按需加载）
-        '全球海岛-超小岛': island_0_verysmall,
-        '全球海岛-小岛': island_1_small,
-        '全球海岛-大岛': island_2_big,
-        '全球海岛-大陆': island_3_continents,
+        'ArcGIS全球超小海岛': island_0_verysmall,
+        'ArcGIS全球小海岛': island_1_small,
+        'ArcGIS全球大海岛': island_2_big,
+        'ArcGIS全球大陆': island_3_continents,
       };
 
       // 获取当前可见覆盖层集合

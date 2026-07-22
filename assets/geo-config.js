@@ -129,7 +129,7 @@
           name: "全球陆壳 GlobalContinentalCrust",
           file: "global_continental_crust.geojson",
         },
-        { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.geojson" },
+        // { name: "0作用域边界 RDboundary", file: "RD_plgn1_5.geojson" },
       ],
     },
     {
@@ -353,13 +353,13 @@
           source:
             "浙江省交通运输厅 2026年5月12日 关于公布新版浙江省无人驾驶航空器适飞空域范围的公告",
         },
-        {
-          name: "国家行政区 countries",
-          file: "countries.geojson.gz",
-          labelField: "NAME_ZH",
-          source: "https://www.naturalearthdata.com/",
-          searchPriority: true,
-        },
+        // {
+        //   name: "国家行政区 countries",
+        //   file: "countries.geojson.gz",
+        //   labelField: "NAME_ZH",
+        //   source: "https://www.naturalearthdata.com/",
+        //   searchPriority: true,
+        // },
         {
           name: "海区 geography_marine_polys",
           file: "geography_marine_polys.geojson.gz",
@@ -374,12 +374,12 @@
           source: "https://www.naturalearthdata.com/",
           searchPriority: true,
         },
-        {
-          name: "省级行政区 states_provinces",
-          file: "states_provinces.geojson.gz",
-          labelField: "name_zh",
-          source: "https://www.naturalearthdata.com/",
-        },
+        // {
+        //   name: "省级行政区 states_provinces",
+        //   file: "states_provinces.geojson.gz",
+        //   labelField: "name_zh",
+        //   source: "https://www.naturalearthdata.com/",
+        // },
       ],
     },
     {
