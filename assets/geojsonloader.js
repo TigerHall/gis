@@ -4099,6 +4099,283 @@
         resultsBox.classList.add("open");
       }
 
+      // ========== UNEP-WCMC 全球海岛搜索 ==========
+      var _unepCache = {}; // { query: [feat, ...] }
+
+      function unepwcmcSearch(query, callback) {
+        if (_unepCache[query]) {
+          callback(_unepCache[query]);
+          return;
+        }
+
+        var layerConfigs = [
+          { id: 0, name: "超小海岛" },
+          { id: 1, name: "小海岛" },
+          { id: 2, name: "大海岛" },
+        ];
+        var completed = 0;
+        var allResults = [];
+
+        layerConfigs.forEach(function (cfg) {
+          var where =
+            "UPPER(name_usgso) LIKE UPPER('%25" +
+            encodeURIComponent(query).replace(/%20/g, "+") +
+            "%25')";
+          var url =
+            "https://data-gis.unep-wcmc.org/server/rest/services/Global_Islands/MapServer/" +
+            cfg.id +
+            "/query?where=" +
+            where +
+            "&outFields=name_usgso,plate,islandarea,name_wcmci,name_local" +
+            "&returnGeometry=true&f=geojson&resultRecordCount=15&outSR=4326";
+
+          fetch(url)
+            .then(function (r) {
+              return r.json();
+            })
+            .then(function (data) {
+              if (data && data.features && data.features.length > 0) {
+                data.features.forEach(function (f) {
+                  f._layerName = cfg.name;
+                  f._layerId = cfg.id;
+                  allResults.push(f);
+                });
+              }
+              completed++;
+              if (completed === layerConfigs.length) {
+                var seen = Object.create(null);
+                var deduped = [];
+                allResults.forEach(function (f) {
+                  var key =
+                    f.properties && f.properties.objectid_1 != null
+                      ? String(f.properties.objectid_1)
+                      : f.id != null
+                        ? String(f.id)
+                        : Math.random().toString();
+                  if (seen[key]) return;
+                  seen[key] = true;
+                  deduped.push(f);
+                });
+                _unepCache[query] = deduped;
+                callback(deduped);
+              }
+            })
+            .catch(function () {
+              completed++;
+              if (completed === layerConfigs.length) callback(allResults);
+            });
+        });
+      }
+
+      function unepPolygonCenter(feature) {
+        var coords = null;
+        if (feature.geometry.type === "Polygon") {
+          coords = feature.geometry.coordinates[0];
+        } else if (feature.geometry.type === "MultiPolygon") {
+          coords = feature.geometry.coordinates[0][0];
+        }
+        if (!coords || coords.length === 0) return null;
+        var sumLng = 0,
+          sumLat = 0;
+        for (var i = 0; i < coords.length; i++) {
+          sumLng += coords[i][0];
+          sumLat += coords[i][1];
+        }
+        return [sumLat / coords.length, sumLng / coords.length];
+      }
+
+      function unepPolygonBounds(feature) {
+        var coords = null;
+        if (feature.geometry.type === "Polygon") {
+          coords = feature.geometry.coordinates[0];
+        } else if (feature.geometry.type === "MultiPolygon") {
+          coords = feature.geometry.coordinates[0][0];
+        }
+        if (!coords || coords.length === 0) return null;
+        var minLat = Infinity,
+          maxLat = -Infinity,
+          minLng = Infinity,
+          maxLng = -Infinity;
+        for (var i = 0; i < coords.length; i++) {
+          var lng = coords[i][0],
+            lat = coords[i][1];
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+        }
+        return [
+          [minLat, minLng],
+          [maxLat, maxLng],
+        ];
+      }
+
+      var _unepSearchFeatures = [];
+      var _unepSearchLayerId = null;
+      var _unepSessionId = Date.now().toString(36);
+      var _unepPersistentId = "unep_" + _unepSessionId;
+      var _UNEP_LAYER_NAME =
+        "🏝️ 海岛记录 " + new Date().toLocaleString("zh-CN");
+
+      function addUnepFeatureToLayer(feature, displayName) {
+        var props = feature.properties || {};
+        // 保留原始多边形几何，仅重命名属性为中文友好
+        var enriched = JSON.parse(JSON.stringify(feature));
+        enriched.properties = {
+          Name: displayName || props.name_usgso || "(无名海岛)",
+          板块: props.plate || "",
+          面积_km2: props.islandarea
+            ? parseFloat(props.islandarea).toFixed(4)
+            : "",
+          数据源: "UNEP-WCMC Global Islands v3",
+          岛屿分类: feature._layerName || "",
+        };
+        _unepSearchFeatures.push(enriched);
+        rebuildUnepLayer();
+      }
+
+      function rebuildUnepLayer() {
+        var fc = {
+          type: "FeatureCollection",
+          features: _unepSearchFeatures,
+        };
+
+        if (_unepSearchLayerId) {
+          try {
+            map.removeLayer(layerCache[_unepSearchLayerId]);
+          } catch (e) {}
+          delete layerCache[_unepSearchLayerId];
+          delete userLayerGeoJson[_unepSearchLayerId];
+          delete layerBoundsCache[_unepSearchLayerId];
+          delete colorMode[_unepSearchLayerId];
+          delete fieldKey[_unepSearchLayerId];
+          var oldCb = document.getElementById(_unepSearchLayerId);
+          if (oldCb) {
+            var oldBar = oldCb.closest(".layer-item");
+            if (oldBar) oldBar.remove();
+          }
+        }
+
+        addUserLayer(fc, _UNEP_LAYER_NAME, true, _unepPersistentId);
+
+        if (isRememberLayerEnabled()) {
+          L.GzIdbLoader.setCache("user_geo_" + _unepPersistentId, fc);
+          saveUserLayerMeta(_unepPersistentId, _UNEP_LAYER_NAME);
+        }
+
+        var allUserLayers = document.querySelectorAll(
+          '#userLayerGroup .layer-item input[type="checkbox"]',
+        );
+        if (allUserLayers.length > 0) {
+          _unepSearchLayerId = allUserLayers[allUserLayers.length - 1].id;
+        }
+
+        var cb = _unepSearchLayerId
+          ? document.getElementById(_unepSearchLayerId)
+          : null;
+        if (cb) {
+          cb.checked = true;
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+
+      window.__unepwcmcSearch = function (query) {
+        var inp = document.getElementById("searchInput");
+        if (inp) inp.value = query;
+        unepwcmcSearch(query, function (features) {
+          renderUnepResults(features, query);
+        });
+      };
+
+      function renderUnepResults(features, query) {
+        resultsBox.innerHTML = "";
+        if (!features || features.length === 0) {
+          resultsBox.innerHTML =
+            '<div class="search-empty">🏝️ UNEP-WCMC 未找到匹配海岛</div>';
+          resultsBox.classList.add("open");
+          return;
+        }
+
+        var title = document.createElement("div");
+        title.className = "search-empty";
+        title.style.cssText =
+          "font-size:11px;color:var(--text-dim);padding-bottom:4px;";
+        title.textContent =
+          "🏝️ 全球海岛（UNEP-WCMC）共 " + features.length + " 条";
+        resultsBox.appendChild(title);
+
+        features.forEach(function (feat) {
+          var props = feat.properties || {};
+          var name =
+            props.name_usgso && props.name_usgso.trim()
+              ? props.name_usgso.trim()
+              : "(无名海岛)";
+          var plate = props.plate || "";
+          var area = props.islandarea
+            ? parseFloat(props.islandarea).toFixed(2) + " km²"
+            : "";
+          var layerName = feat._layerName || "";
+
+          var item = document.createElement("div");
+          item.className = "search-result-item";
+
+          var tag = document.createElement("span");
+          tag.className = "search-result-tag";
+          tag.textContent = "🏝️ " + layerName;
+
+          var text = document.createElement("span");
+          text.className = "search-result-text";
+          var display = name;
+          if (plate) display += "  " + plate;
+          if (area) display += "  " + area;
+          text.textContent = display;
+          item.appendChild(tag);
+          item.appendChild(text);
+
+          var tip = [];
+          tip.push("名称: " + name);
+          if (plate) tip.push("板块: " + plate);
+          if (area) tip.push("面积: " + area);
+          if (props.name_wcmci && props.name_wcmci.trim())
+            tip.push("WCMC名称: " + props.name_wcmci.trim());
+          if (props.name_local && props.name_local.trim())
+            tip.push("本地名称: " + props.name_local.trim());
+          item.title = tip.join("\n");
+
+          (function (feat_, name_) {
+            item.addEventListener("click", function () {
+              // 尝试 fitBounds 到多边形范围，fallback 到质心
+              var bounds = unepPolygonBounds(feat_);
+              if (bounds) {
+                map.fitBounds(bounds, {
+                  padding: [30, 30],
+                  animate: true,
+                });
+              } else {
+                var center = unepPolygonCenter(feat_);
+                if (center) {
+                  map.setView(center, Math.max(map.getZoom(), 8), {
+                    animate: true,
+                  });
+                }
+              }
+              addUnepFeatureToLayer(feat_, name_);
+              if (typeof window.showToast === "function") {
+                window.showToast(
+                  "🏝️ 已添加「" + name_ + "」到海岛记录图层",
+                  { duration: 2000 },
+                );
+              }
+              resultsBox.classList.remove("open");
+            });
+          })(feat, name);
+
+          resultsBox.appendChild(item);
+        });
+
+        resultsBox.classList.add("open");
+      }
+
       // ========== GPS 定位 ==========
       var _geoPoints = [];
       var _geoLayerId = null;
@@ -4271,6 +4548,11 @@
             '<div class="tdt-search-btn" onclick="window.__tiandituSearch(\'' +
             query.replace(/\\/g, "\\\\").replace(/'/g, "\\'") +
             "')\">🔍 搜索地名「" +
+            query.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+            "」</div>" +
+            '<div class="tdt-search-btn" onclick="window.__unepwcmcSearch(\'' +
+            query.replace(/\\/g, "\\\\").replace(/'/g, "\\'") +
+            "')\" style=\"margin-left:6px;\">🏝️ 搜索海岛名「" +
             query.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
             "」</div></div>";
           resultsBox.classList.add("open");
