@@ -617,18 +617,82 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
 
     // ----- iOS 检测（必须放在 getDisplayMedia 前面）-----
     // iOS 16.4+ 也有了 getDisplayMedia，但唤起的是屏幕录制而不是标签页选择器，
-    // 不符合我们的截图需求，强制走降级方案。
+    // 不符合我们的截图需求。iOS 先用 html-to-image 截取地图区域（避免系统截图
+    // 包含手机界面元素），失败时降级到系统截图指引。
     var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                 (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-    if (isIOS || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-      // ----- 降级方案（iOS / 不支持 getDisplayMedia）-----
-      var hint = isIOS
-        ? "📱 请使用系统截图（电源键+音量上）后移动或缩放地图恢复"
-        : "📸 请使用系统截图后缩放或移动地图恢复";
+    if (isIOS) {
+      // ----- iOS 方案：html-to-image 截取地图区域 -----
+      if (!window.htmlToImage) {
+        showToast("❌ 截图库未加载", { duration: 3000 });
+        restoreUI();
+        return;
+      }
 
-      showToast(hint, { duration: 0 });
+      // 注入临时样式：禁用瓦片过渡/淡入动画
+      var tempStyleId = "_export_disable_tile_transition";
+      var tempStyle = document.getElementById(tempStyleId);
+      if (!tempStyle) {
+        tempStyle = document.createElement("style");
+        tempStyle.id = tempStyleId;
+        tempStyle.textContent =
+          ".leaflet-tile-pane img.leaflet-tile { transition: none !important; animation: none !important; opacity: 1 !important; }" +
+          ".leaflet-tile-pane { transition: none !important; animation: none !important; }";
+        document.head.appendChild(tempStyle);
+      }
 
+      // 等两帧让 UI 隐藏 + 瓦片稳定
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          htmlToImage
+            .toPng(mapEl, {
+              backgroundColor: "#fff",
+              pixelRatio: Math.min(window.devicePixelRatio || 2, 3),
+              filter: function (node) {
+                if (!node || !node.classList) return true;
+                if (node.closest) {
+                  return !node.closest(
+                    ".leaflet-control-container, .leaflet-control, .leaflet-popup",
+                  );
+                }
+                return true;
+              },
+            })
+            .then(function (dataUrl) {
+              if (tempStyle && tempStyle.parentNode) tempStyle.parentNode.removeChild(tempStyle);
+              restoreUI();
+              var now = new Date();
+              var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
+                .map(function (n) { return String(n).padStart(2, "0"); })
+                .join("");
+              var a = document.createElement("a");
+              a.download = "OGV_" + ts + ".png";
+              a.href = dataUrl;
+              a.click();
+              showToast("✅ 导出成功", { duration: 3000 });
+            })
+            .catch(function () {
+              // html-to-image 失败 → 降级到系统截图指引
+              if (tempStyle && tempStyle.parentNode) tempStyle.parentNode.removeChild(tempStyle);
+              showToast("📱 请使用系统截图（电源键+音量上）后移动地图恢复", { duration: 0 });
+              map.once("movestart zoomstart", function () {
+                restoreUI();
+                if (window._exportToast) {
+                  closeToast(window._exportToast);
+                  window._exportToast = null;
+                }
+                showToast("✅ 已恢复界面", { duration: 2000 });
+              });
+            });
+        });
+      });
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      // ----- 降级方案（不支持 getDisplayMedia 的非 iOS 平台）-----
+      showToast("📸 请使用系统截图后缩放或移动地图恢复", { duration: 0 });
       map.once("movestart zoomstart", function () {
         restoreUI();
         if (window._exportToast) {
