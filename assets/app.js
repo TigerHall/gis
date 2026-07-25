@@ -615,6 +615,31 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     if (trigger) trigger.style.display = "none";
     if (controlContainer) controlContainer.style.display = "none";
 
+    // ----- iOS 检测（必须放在 getDisplayMedia 前面）-----
+    // iOS 16.4+ 也有了 getDisplayMedia，但唤起的是屏幕录制而不是标签页选择器，
+    // 不符合我们的截图需求，强制走降级方案。
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+    if (isIOS || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      // ----- 降级方案（iOS / 不支持 getDisplayMedia）-----
+      var hint = isIOS
+        ? "📱 请使用系统截图（电源键+音量上）后移动或缩放地图恢复"
+        : "📸 请使用系统截图后缩放或移动地图恢复";
+
+      showToast(hint, { duration: 0 });
+
+      map.once("movestart zoomstart", function () {
+        restoreUI();
+        if (window._exportToast) {
+          closeToast(window._exportToast);
+          window._exportToast = null;
+        }
+        showToast("✅ 已恢复界面", { duration: 2000 });
+      });
+      return;
+    }
+
     // ----- 主方案：getDisplayMedia（桌面浏览器）-----
     if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
       // 等两帧让 UI 隐藏
@@ -698,26 +723,6 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       });
       return;
     }
-
-    // ----- 降级方案（iOS / 不支持 getDisplayMedia）-----
-    // 检测平台给出不同的截图指引
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    var hint = isIOS
-      ? "📱 请使用系统截图（电源键+音量上）后移动地图恢复"
-      : "📸 请使用系统截图后缩放或移动地图恢复";
-
-    showToast(hint, { duration: 0 });
-
-    // 用户移动或缩放地图 → 认为截图已完成，恢复 UI
-    map.once("movestart zoomstart", function () {
-      restoreUI();
-      if (window._exportToast) {
-        closeToast(window._exportToast);
-        window._exportToast = null;
-      }
-      showToast("✅ 已恢复界面", { duration: 2000 });
-    });
   }
 
   // 辅助：dataURL → Blob（用于降级）
