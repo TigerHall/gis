@@ -1,5 +1,25 @@
 # 更新记录
 
+## 2026-07-25 v1.9.7 — 修复导出图片 + 面要素标签
+
+### 导出图片终版（第三次迭代）
+
+经三次迭代最终定稿：
+
+| 迭代 | 方案 | 问题 |
+|------|------|------|
+| 旧版 | transform 摊平(`offsetLeft`) + `toPng` | `offsetLeft` 整数截断 → 平移后瓦片错乱 |
+| v1 | 手动加载瓦片(`crossOrigin`) + `toCanvas` | 天地图不支持 CORS → 底图全白、标注丢失 |
+| v2 | 不做摊平直接用 `toPng` | html-to-image 对 `translate3d` 的 SVG 序列化精度不一致 → 平移后错乱 |
+| **终版** | **`getBoundingClientRect` 摊平 + 保留 tooltip** | ✅ 瓦片正确、标注可见 |
+
+**终版核心变更**（`assets/app.js` `exportMapImage()`）：
+1. 用 `getBoundingClientRect()` **子像素精度**计算 pane 位置，清空 transform 改 left/top — 解决 `offsetLeft` 整数截断
+2. **filter 移除 `.leaflet-tooltip`** — 面要素标签用 `bindTooltip(permanent:true)` 实现，排除就丢失了
+3. 保留瓦片动画禁用 `<style>`、两帧等待、成功/失败恢复逻辑
+
+**后续需求**：经纬度网格、图例等额外元素可通过截图前在 map 容器临时注入来实现
+
 ## 2026-07-20 v1.9.6 — 高程读取插件 + 新增 5 图层 + 搜索去重修复
 
 ### 高程读取插件（实验中）

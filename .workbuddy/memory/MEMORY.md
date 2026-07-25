@@ -59,3 +59,19 @@
 
 ## 文档约定
 - MD 弹窗内**不用表格**（移动端差），数据用 "**名** — 说明" 单行；`#_mdBody > p` 首行缩进 2em，blockquote 不缩进
+
+## 导出图片（2026-07-25 终版）
+- **方案**：DOM 截图 + `getBoundingClientRect` 子像素摊平 transform + 禁用瓦片动画。
+  `exportMapImage()` 在 `app.js` 中，流程：
+  1. 隐藏侧边栏
+  2. 注入 `<style>` 禁用 `.leaflet-tile` 的 CSS transition/animation（`opacity:1 !important`）
+  3. 等两帧，然后遍历 `.leaflet-pane`，用 `getBoundingClientRect()` 子像素精度计算位置（相对 `#map`），清空 transform 改 left/top
+  4. `htmlToImage.toPng(mapEl, {backgroundColor, pixelRatio, filter})`
+  5. filter 只排除 `.leaflet-control-container, .leaflet-control, .leaflet-popup` — **不排除 `.leaflet-tooltip`**（面要素永久标签是 tooltip）
+  6. 成功后恢复 transform + 清理 style + 下载 PNG
+- **关键教训**：
+  - `offsetLeft` 返回整数，丢失子像素 → 平移后瓦片错乱。改用 `getBoundingClientRect` 修正
+  - `.leaflet-tooltip` 在 filter 中排除会导致面要素永久标签丢失
+  - 天地图不支持 `crossOrigin` 重加载，不能走 canvas 手动绘制瓦片
+- **调用入口**：导出按钮、版本菜单、Ctrl+E/Cmd+E
+- **后续扩展**：用户需要经纬度网格、图例等额外元素。当前架构可用同一 pipeline — 截图前在 map 容器内临时注入这些元素，截图后清除

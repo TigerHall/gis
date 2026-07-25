@@ -576,171 +576,159 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     });
   })();
 
-  // ========== 导出地图图片（html-to-image 截图）==========
+  // ========== 导出地图图片 ==========
+  // 主方案：navigator.mediaDevices.getDisplayMedia() 系统屏幕截图。
+  //   截图前隐藏侧边栏/控件，从视频帧裁剪到地图区域，统一 scale 防拉伸。
+  // 降级方案（iOS / 不支持 getDisplayMedia 的平台）：
+  //   隐藏 UI → 显示系统截图指引 → 用户自行截图后移动/缩放地图恢复。
   function exportMapImage() {
-    if (!window.map || !window.htmlToImage) return;
-    // 先关掉上一次的导出提示
+    if (!window.map) return;
+    // 关掉已有 toast
     if (window._exportToast) {
       closeToast(window._exportToast);
       window._exportToast = null;
     }
-    window._exportToast = showToast(
-      "⏳ 正在导出地图图片，图层复杂时可能较慢，请勿操作…",
-      { duration: 0 },
-    );
+
     var mapEl = document.getElementById("map");
     var panel = document.getElementById("layerPanel");
     var trigger = document.getElementById("layerTrigger");
+    var controlContainer = document.querySelector(".leaflet-control-container");
 
-    // 控制节点通过 toPng 的 filter 回调排除，无需移出 DOM
-
-    // 隐藏侧边栏
+    // 记录原始状态用于恢复
     var panelWasActive = panel && panel.classList.contains("active");
+    var panelOrigDisplay = panel ? panel.style.display : null;
+
+    // ----- 辅助：恢复 UI -----
+    function restoreUI() {
+      if (panel) panel.style.display = panelOrigDisplay || "";
+      if (panelWasActive && panel) panel.classList.add("active");
+      if (trigger) trigger.style.display = "";
+      if (controlContainer) controlContainer.style.display = "";
+      map.invalidateSize();
+      // 移除降级监听（如果有）
+      map.off("movestart zoomstart", restoreUI);
+    }
+
+    // 隐藏侧边栏 + 触发按钮 + 地图控件
     if (panelWasActive) panel.classList.remove("active");
+    if (panel) panel.style.display = "none";
     if (trigger) trigger.style.display = "none";
+    if (controlContainer) controlContainer.style.display = "none";
 
-    // 等一帧 + 等瓦片加载完，再截图，避免底图错位
-    requestAnimationFrame(function () {
-      var tileLayers = [];
-      map.eachLayer(function (layer) {
-        if (layer instanceof L.TileLayer && layer._map) {
-          tileLayers.push(layer);
-        }
-      });
+    // ----- 主方案：getDisplayMedia（桌面浏览器）-----
+    if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+      // 等两帧让 UI 隐藏
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          var now = new Date();
+          var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
+            .map(function (n) { return String(n).padStart(2, "0"); })
+            .join("");
 
-      // 等待所有瓦片加载完成（最多等 3 秒）
-      var waitTiles = function (cb) {
-        if (tileLayers.length === 0) {
-          cb();
-          return;
-        }
-        var loaded = 0;
-        var done = false;
-        tileLayers.forEach(function (ly) {
-          if (ly._loading) {
-            ly.once("load", function () {
-              loaded++;
-              if (!done && loaded >= tileLayers.length) {
-                done = true;
-                cb();
-              }
-            });
-          } else {
-            loaded++;
-          }
-        });
-        if (!done && loaded >= tileLayers.length) {
-          cb();
-          return;
-        }
-        // 超时保护
-        setTimeout(function () {
-          if (!done) {
-            done = true;
-            cb();
-          }
-        }, 3000);
-      };
-
-      waitTiles(function () {
-        // 摊平 Leaflet pane 的 transform，避免 html-to-image 处理 translate3d 出错
-        // 原理：读取 pane 的 translate3d(x, y, z)，改成 left/top 定位，清空 transform
-        var savedPanes = [];
-        var panes = mapEl.querySelectorAll(".leaflet-pane");
-        panes.forEach(function (pane) {
-          var st = window.getComputedStyle(pane);
-          var tx = st.transform;
-          if (!tx || tx === "none") return;
-          // 解析 matrix/matrix3d
-          var mat = tx.match(/matrix(?:3d)?\(([^)]+)\)/);
-          if (!mat) return;
-          var vals = mat[1].split(",").map(parseFloat);
-          var px = 0,
-            py = 0;
-          if (tx.indexOf("matrix3d") === 0) {
-            px = vals[12];
-            py = vals[13];
-          } else {
-            px = vals[4];
-            py = vals[5];
-          }
-          if (Math.abs(px) < 0.5 && Math.abs(py) < 0.5) return;
-          var pos =
-            pane.style.position || window.getComputedStyle(pane).position;
-          savedPanes.push({
-            el: pane,
-            transform: pane.style.transform,
-            left: pane.style.left,
-            top: pane.style.top,
-            position: pane.style.position,
-          });
-          pane.style.transform = "";
-          pane.style.position = "absolute";
-          pane.style.left = pane.offsetLeft + px + "px";
-          pane.style.top = pane.offsetTop + py + "px";
-        });
-
-        htmlToImage
-          .toPng(mapEl, {
-            backgroundColor: "#fff",
-            pixelRatio: Math.min(window.devicePixelRatio || 2, 3),
-            filter: function (node) {
-              if (!node || !node.classList) return true;
-              if (node.closest) {
-                return !node.closest(
-                  ".leaflet-control-container, .leaflet-control, .leaflet-popup, .leaflet-tooltip",
-                );
-              }
-              return true;
-            },
+          navigator.mediaDevices.getDisplayMedia({
+            preferCurrentTab: true,
+            video: { width: { ideal: 99999 }, height: { ideal: 99999 } },
           })
-          .then(function (dataUrl) {
-            // 恢复 pane 的 transform
-            savedPanes.forEach(function (item) {
-              item.el.style.transform = item.transform;
-              item.el.style.left = item.left;
-              item.el.style.top = item.top;
-              item.el.style.position = item.position;
-            });
-            if (panelWasActive && panel) panel.classList.add("active");
-            if (trigger) trigger.style.display = "";
-            map.invalidateSize();
+            .then(function (stream) {
+              var video = document.createElement("video");
+              video.srcObject = stream;
+              video.onloadedmetadata = function () {
+                video.play().then(function () {
+                  if (window._exportToast) {
+                    closeToast(window._exportToast);
+                    window._exportToast = null;
+                  }
 
-            var now = new Date();
-            var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
-              .map(function (n) {
-                return String(n).padStart(2, "0");
-              })
-              .join("");
-            var a = document.createElement("a");
-            a.download = "OGV_" + ts + ".png";
-            a.href = dataUrl;
-            a.click();
-            if (window._exportToast) {
-              closeToast(window._exportToast);
-              window._exportToast = null;
-            }
-            showToast("✅ 导出成功", { duration: 3000 });
-          })
-          .catch(function () {
-            // 恢复 pane 的 transform
-            savedPanes.forEach(function (item) {
-              item.el.style.transform = item.transform;
-              item.el.style.left = item.left;
-              item.el.style.top = item.top;
-              item.el.style.position = item.position;
+                  requestAnimationFrame(function () {
+                    var mr = mapEl.getBoundingClientRect();
+                    var vw = video.videoWidth;
+                    var vh = video.videoHeight;
+                    var scale = vw / window.innerWidth;
+                    var pixelRatio = Math.min(window.devicePixelRatio || 2, 3);
+
+                    var canvas = document.createElement("canvas");
+                    canvas.width = mr.width * pixelRatio;
+                    canvas.height = mr.height * pixelRatio;
+                    var ctx = canvas.getContext("2d");
+
+                    ctx.drawImage(
+                      video,
+                      mr.left * scale, mr.top * scale,
+                      mr.width * scale, mr.height * scale,
+                      0, 0,
+                      canvas.width, canvas.height,
+                    );
+
+                    stream.getTracks().forEach(function (t) { t.stop(); });
+
+                    canvas.toBlob(function (blob) {
+                      if (!blob) {
+                        var dataUrl = canvas.toDataURL("image/png");
+                        if (dataUrl && dataUrl.indexOf("data:image") === 0) {
+                          blob = dataURLToBlob(dataUrl);
+                        }
+                      }
+                      if (blob) {
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement("a");
+                        a.download = "OGV_" + ts + ".png";
+                        a.href = url;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        showToast("✅ 导出成功", { duration: 3000 });
+                      } else {
+                        showToast("❌ 导出失败", { duration: 3000 });
+                      }
+                      restoreUI();
+                    });
+                  });
+                });
+              };
+              video.onerror = function () {
+                stream.getTracks().forEach(function (t) { t.stop(); });
+                showToast("❌ 截图失败", { duration: 3000 });
+                restoreUI();
+              };
+            })
+            .catch(function () {
+              // 用户取消
+              restoreUI();
             });
-            if (panelWasActive && panel) panel.classList.add("active");
-            if (trigger) trigger.style.display = "";
-            map.invalidateSize();
-            if (window._exportToast) {
-              closeToast(window._exportToast);
-              window._exportToast = null;
-            }
-            showToast("❌ 导出失败", { duration: 3000 });
-          });
+        });
       });
+      return;
+    }
+
+    // ----- 降级方案（iOS / 不支持 getDisplayMedia）-----
+    // 检测平台给出不同的截图指引
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var hint = isIOS
+      ? "📱 请使用系统截图（电源键+音量上）后移动地图恢复"
+      : "📸 请使用系统截图后缩放或移动地图恢复";
+
+    showToast(hint, { duration: 0 });
+
+    // 用户移动或缩放地图 → 认为截图已完成，恢复 UI
+    map.once("movestart zoomstart", function () {
+      restoreUI();
+      if (window._exportToast) {
+        closeToast(window._exportToast);
+        window._exportToast = null;
+      }
+      showToast("✅ 已恢复界面", { duration: 2000 });
     });
+  }
+
+  // 辅助：dataURL → Blob（用于降级）
+  function dataURLToBlob(dataUrl) {
+    var parts = dataUrl.split(",");
+    var mime = parts[0].match(/:(.*?);/)[1];
+    var bstr = atob(parts[1]);
+    var n = bstr.length;
+    var u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new Blob([u8arr], { type: mime });
   }
 
   // Ctrl+E 快捷键导出图片
