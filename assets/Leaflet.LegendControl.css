@@ -1,0 +1,269 @@
+/**
+ * Leaflet.LegendControl.css
+ * 图例控件样式 — 点/线/面几何符号 + 字段分色可展开
+ */
+
+.leaflet-legend-control {
+  background: var(--panel-bg, #fff);
+  border: 1px solid var(--border-light, #ddd);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  padding: 0;
+  max-width: 240px;
+  max-height: 55vh;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-main, #333);
+  margin-bottom: 28px;
+}
+
+/* ========== 标题行 ========== */
+.legend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border-light, #eee);
+  position: sticky;
+  top: 0;
+  background: var(--panel-bg, #fff);
+  z-index: 2;
+  border-radius: 5px 5px 0 0;
+}
+
+.legend-title {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.legend-count {
+  font-size: 10px;
+  color: var(--text-dim, #999);
+  background: var(--bg-hover, #f0f0f0);
+  border-radius: 8px;
+  padding: 0 6px;
+  line-height: 18px;
+}
+
+/* ========== 图例项列表 ========== */
+.legend-items {
+  padding: 3px 0;
+}
+
+/* ========== 通用行样式 ========== */
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  min-height: 22px;
+}
+
+.legend-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+/* ========== 几何符号（SVG 内联） ========== */
+.legend-sym {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.legend-sym-sm {
+  width: 10px;
+  height: 10px;
+}
+
+/* ========== 色块（面要素） ========== */
+.legend-swatch {
+  flex-shrink: 0;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  display: inline-block;
+}
+
+.legend-swatch-sm {
+  width: 7px;
+  height: 7px;
+}
+
+/* ========== 图标 ========== */
+.legend-icon-emoji {
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: 1;
+  width: 14px;
+  text-align: center;
+}
+
+.legend-icon-img {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* ========== 模式标记 badge ========== */
+.legend-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: var(--text-dim, #999);
+  background: var(--bg-faint, #eaeaea);
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* ========== 可展开项（<details> 字段分色） ========== */
+.legend-expandable {
+  border-bottom: 1px solid var(--border-faint, #f4f4f4);
+}
+
+.legend-expand-row {
+  cursor: pointer;
+  user-select: none;
+  list-style: none; /* 隐藏默认三角 */
+}
+
+.legend-expand-row::-webkit-details-marker {
+  display: none;
+}
+
+.legend-expand-row::-moz-list-bullet {
+  list-style-type: none;
+}
+
+/* 展开箭头 */
+.legend-expand-arrow {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.legend-expand-arrow::before {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 4px solid var(--text-dim, #999);
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+}
+
+details[open] > .legend-expand-row .legend-expand-arrow {
+  transform: rotate(90deg);
+}
+
+/* 子项列表 */
+.legend-sub-items {
+  padding: 1px 0 4px 26px;
+}
+
+.legend-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 0;
+  font-size: 10px;
+}
+
+.legend-sub-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim, #888);
+  font-size: 10px;
+}
+
+.legend-sub-more {
+  font-size: 9px;
+  color: var(--text-faint, #bbb);
+  padding: 1px 0 1px 16px;
+  font-style: italic;
+}
+
+/* ========== 多色标记 ========== */
+.legend-item-sequential .legend-badge {
+  color: #9c27b0;
+  background: rgba(156, 39, 176, 0.08);
+}
+
+/* ========== 折叠提示 ========== */
+.legend-more {
+  font-size: 10px;
+  color: var(--text-dim, #999);
+  text-align: center;
+  padding: 4px 10px;
+  font-style: italic;
+}
+
+/* ========== 深色主题 ========== */
+[data-theme="dark"] .leaflet-legend-control {
+  background: var(--panel-bg, #1a1a2e);
+  border-color: var(--border-light, #333);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .legend-header {
+  background: var(--panel-bg, #1a1a2e);
+  border-color: var(--border-light, #333);
+}
+
+[data-theme="dark"] .legend-count {
+  background: var(--bg-hover, #2a2a3e);
+}
+
+[data-theme="dark"] .legend-swatch {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .legend-icon-img {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .legend-badge {
+  background: var(--bg-faint, #2a2a3e);
+}
+
+[data-theme="dark"] .legend-item-sequential .legend-badge {
+  background: rgba(156, 39, 176, 0.12);
+}
+
+[data-theme="dark"] .legend-expandable {
+  border-color: var(--border-faint, #252535);
+}
+
+/* ========== 响应式：移动端收窄 ========== */
+@media (max-width: 640px) {
+  .leaflet-legend-control {
+    max-width: 170px;
+    font-size: 11px;
+  }
+  .legend-header {
+    padding: 4px 8px;
+  }
+  .legend-row {
+    padding: 3px 8px;
+    gap: 4px;
+  }
+  .legend-name {
+    font-size: 10px;
+  }
+  .legend-sub-items {
+    padding-left: 22px;
+  }
+}

@@ -366,12 +366,26 @@
     return bounds;
   }
 
+  // ========== 获取字段颜色调色板（供图例等外部组件使用）==========
+  function getFieldColorPalette(fk) {
+    if (!fk || !_fieldColorPalette[fk]) return {};
+    // 返回浅拷贝，防止外部修改内部状态
+    var copy = {};
+    for (var k in _fieldColorPalette[fk]) {
+      if (_fieldColorPalette[fk].hasOwnProperty(k)) {
+        copy[k] = _fieldColorPalette[fk][k];
+      }
+    }
+    return copy;
+  }
+
   // ========== 暴露公共 API ==========
   window.GeoUtils = {
     createFixedSeededRandom,
     getFixedColor,
     getFeatureColorByIndex,
     getFeatureColorByField,
+    getFieldColorPalette,
     detectMainGeomType,
     buildPopupContent,
     buildHighlightStyle,

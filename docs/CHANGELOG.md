@@ -1,5 +1,52 @@
 # 更新记录
 
+## 2026-07-26 — 新增图例控件（v2: 几何符号 + 可展开）
+
+### 图例 v2 — 几何符号差异化 + 可展开字段分色
+
+- **`assets/Leaflet.LegendControl.js` 重写**：
+  - `_renderGeomSymbol()` 按几何类型显示不同符号：点→SVG 圆形、线→横线、面→方块色块
+  - 字段分色图层用 `<details>` + `<summary>` 原生折叠，▶ 箭头 CSS 旋转动画
+  - sequential 图层标记「多色」badge，field 图层标记「N 色」badge
+  - 所有图层（不论颜色模式）均出现在 legend 中
+- **`assets/Leaflet.LegendControl.css` 重写**：增加 `.legend-expandable`、`.legend-expand-arrow`、`.legend-badge`、`.legend-sym` 等
+- **`assets/geojsonloader.js`**：`_buildLegendData()` 为每项添加 `geomType`（从 `_geomTypeCache` 或 `featureCache` 快速检测）和 `mode` 字段
+
+### 图例 v1 — 初始实现
+
+- **新增 `assets/Leaflet.LegendControl.js`**：标准 Leaflet 图例控件插件
+- **新增 `assets/Leaflet.LegendControl.css`**：CSS 变量主题适配
+- **`assets/geo-utils.js`**：`getFieldColorPalette(fk)` 公开方法
+- **`assets/geojsonloader.js`**：`_buildLegendData()` / `_refreshLegend()` / `scheduleLegendRefresh()`，7 处钩子
+- **`assets/app.js`**：`legendToggle` 开关（默认开启）
+- **`index.html`**：引入 CSS + JS
+
+- **新增 `assets/Leaflet.LegendControl.js`**：标准 Leaflet 图例控件插件（`L.Control.Legend`），支持三种图层类型的图例展示：
+  - **单色图层**：色块 + 图层名
+  - **字段分色图层**：色块 + 图层名 + 所有唯一字段值的子色块列表（实测 PMN/PMS/CFC 等勘探合同区；字段值按字母序排列，限 12 个）
+  - **图标图层**：火山/热点/星星 emoji 图标 + 图层名
+  - 总图层数 >15 折叠、字段值 >8 折叠
+- **新增 `assets/Leaflet.LegendControl.css`**：独立样式文件，适配 `var()` CSS 变量体系（深色/浅色主题自动切换），移动端 160px 窄版
+- **`assets/geo-utils.js`**：`getFieldColorPalette(fk)` 公开访问方法（浅拷贝），供图例读取字段值→颜色映射
+- **`assets/geojsonloader.js`**：
+  - 新增 `window._buildLegendData()`：遍历所有已勾选且已加载到地图的图层，构建图例数据
+  - 新增 `window._refreshLegend()` / `scheduleLegendRefresh(delay)`：触发图例控件刷新（150ms 防抖）
+  - **7 处钩子**：`loadGeoJSONLayer`(×2)、`removeGeoJSONLayer`、`reloadLayerWithNewMode`(×2)、用户图层添加(×2) 均自动刷新图例
+  - 覆盖内置图层（`id^="layer_"`）和用户上传图层（`id^="user_layer_"`）
+- **`assets/app.js`**：
+  - `TOGGLE_GROUPS` 控件分类新增 `legendToggle`（默认 `checked: true`）
+  - `toggleConfig.legendToggle`：创建 `L.control.legend({ position: 'bottomleft' })`，开关控制显示/隐藏
+- **`index.html`**：`<head>` 内引入 `Leaflet.LegendControl.css` + `Leaflet.LegendControl.js`（在 Leaflet 主库之后、`app.js` 之前加载）
+
+### 架构设计
+
+- **图例只追踪矢量 GeoJSON 图层**，不追踪底图/覆盖层（底图在多底图控件中已有名称）
+- **左下角放置**（与比例尺同在 `bottomleft`），CSS `margin-bottom: 28px` 为底部备案号留空
+- **图层勾选/取消勾选、颜色模式切换、字段分色选择、透明度变化（通过重建分支）均自动更新图例**
+- 图例数据构建完全基于 `checkbox.checked` + `layerCache[checkboxId]` + `map.hasLayer()` 三重判断，确保只显示真正在地图上的图层
+
+---
+
 ## 2026-07-25 v1.9.7 — 修复导出图片 + 面要素标签
 
 ### 导出图片终版（第三次迭代）

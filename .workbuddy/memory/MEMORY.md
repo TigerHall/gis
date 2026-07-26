@@ -1,7 +1,7 @@
 # OGV 项目长期记忆（精简版）
 
 ## 文件架构（加载顺序）
-`<head>`: dialog.js → geo-config.js ｜ `<body>`: 主脚本(index.html) → app.js → geojsonloader.js → file-handler.js → pointdrop.js
+`<head>`: dialog.js → geo-config.js → **Leaflet.LegendControl.js**（新增）｜ `<body>`: 主脚本(index.html) → app.js → geojsonloader.js → file-handler.js → pointdrop.js
 - `geo-config.js`: 图层路径/分组配置（window.* 全局暴露）。图层对象支持 `defaultOpacity`（默认不透明度，未覆盖用户设置时生效）与 `searchPriority:true`（搜索优先：未勾选也可搜、结果置顶，启动 2s 后后台静默建索引）
 - `geojsonloader.js`: 图层加载/样式/高亮/交互/搜索/上传（最大核心文件）
 - `file-handler.js`: `window.loadFileAsUserLayer(file)` 统一入口（按钮/拖入/PWA）
@@ -75,3 +75,15 @@
   - 天地图不支持 `crossOrigin` 重加载，不能走 canvas 手动绘制瓦片
 - **调用入口**：导出按钮、版本菜单、Ctrl+E/Cmd+E
 - **后续扩展**：用户需要经纬度网格、图例等额外元素。当前架构可用同一 pipeline — 截图前在 map 容器内临时注入这些元素，截图后清除
+
+## 图例控件（LegendControl）（2026-07-26 新增 + v2 升级）
+- 插件文件：`assets/Leaflet.LegendControl.js` + `assets/Leaflet.LegendControl.css`
+- `L.Control.Legend` 标准 Leaflet 控件，`position: 'bottomleft'`（与比例尺同在左下角）
+- 数据来源：`window._buildLegendData()`（定义在 `geojsonloader.js`）→ 遍历 `#dataLayerContent` + `#userLayerGroup` 中已勾选且已加载到地图的图层
+- **几何符号**：点用 SVG 圆形、线用横线、面用方块色块 — `_renderGeomSymbol(color, geom)`
+- **字段分色可展开**：`<details>` + `<summary>` 原生折叠，▶ 箭头 CSS 旋转动画；子项用小尺寸几何符号 + 字段值名
+- **模式标记**���sequential →「多色」badge；field →「N 色」badge
+- 每项数据含 `geomType`（从 `_geomTypeCache` 或 `featureCache` 快速检测）和 `mode`
+- 触发刷新：`scheduleLegendRefresh(delay=150ms)` → `window._refreshLegend()` → `legendControl.update(items)`
+- 钩子位置：`loadGeoJSONLayer`(×2)、`removeGeoJSONLayer`、`reloadLayerWithNewMode`(×2)、用户图层添加(×2)
+- 开关：`TOGGLE_GROUPS` 控件分类 `legendToggle`（checked:true），`toggleConfig.legendToggle`（enable 创建控件，disable 隐藏）

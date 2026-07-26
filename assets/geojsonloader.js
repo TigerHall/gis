@@ -1088,6 +1088,7 @@
       }
       if (layerCache[checkboxId]) {
         layerCache[checkboxId].addTo(map);
+        scheduleLegendRefresh();
         const state = highlightState[checkboxId];
         if (state && state.geoLayers)
           state.geoLayers.forEach(function (gl) {
@@ -1151,6 +1152,7 @@
         );
         layerCache[checkboxId] = worldCopyGroup;
         worldCopyGroup.addTo(map);
+        scheduleLegendRefresh();
 
         const boundsObj = window.GeoUtils.computeBounds
           ? window.GeoUtils.computeBounds(data_)
@@ -1642,6 +1644,7 @@
             );
             worldCopyGroup.addTo(map);
             layerCache[checkboxId] = worldCopyGroup;
+            scheduleLegendRefresh();
           } else {
             loadGeoJSONLayer(checkbox.value, checkboxId, false);
           }
@@ -1722,6 +1725,7 @@
       if (layerCache[checkboxId]) {
         map.removeLayer(layerCache[checkboxId]);
       }
+      scheduleLegendRefresh();
       // layerBoundsCache 同样保留，flyToLayer 仍可用
       if (layerBoundsCache[checkboxId]) {
         // baseGeoJson 未添加到地图，无需 removeLayer
@@ -3245,6 +3249,7 @@
         worldCopyGroup.addTo(map);
       }
       layerCache[uid] = worldCopyGroup;
+      scheduleLegendRefresh();
       userLayerGeoJson[uid] = {
         geoJsonData: data_,
         fileName: fileName,
@@ -3318,6 +3323,7 @@
         } else {
           if (layerCache[uid]) map.removeLayer(layerCache[uid]);
         }
+        scheduleLegendRefresh();
         // 持久化用户图层的勾选状态
         try {
           localStorage.setItem(
@@ -3403,6 +3409,7 @@
         clearHighlight(uid);
         if (layerCache[uid]) map.removeLayer(layerCache[uid]);
         delete layerCache[uid];
+        scheduleLegendRefresh();
         delete layerBoundsCache[uid];
         delete highlightState[uid];
         delete searchIndexMap[uid];
@@ -5070,6 +5077,7 @@
             );
             newGroup.addTo(map);
             layerCache[checkboxId] = newGroup;
+            scheduleLegendRefresh();
           } else {
             reloadLayerWithNewMode(
               checkboxId,
@@ -5243,6 +5251,126 @@
 
       initClusterToggle();
       initLabelToggle();
+    }
+
+    // ========== 图例数据构建（供外部 LegendControl 调用）==========
+    /**
+     * 收集当前地图上所有可见图层的图例信息，返回 items 数组供 L.Control.Legend 使用。
+     * 调用方式：window._buildLegendData() → legend.update(data)
+     */
+    window._buildLegendData = function () {
+      var items = [];
+      // 遍历所有已注册的图层 checkbox（内置图层 id^="layer_" + 用户图层 id^="user_layer_"）
+      var allCbs = document.querySelectorAll(
+        '.layer-section-content input[type="checkbox"][id^="layer_"], #userLayerGroup input[type="checkbox"][id^="user_layer_"]',
+      );
+      allCbs.forEach(function (cb) {
+        var checkboxId = cb.id;
+        // 仅收集勾选且已加载到地图的图层
+        if (!cb.checked) return;
+        if (!layerCache[checkboxId]) return;
+        if (!map.hasLayer(layerCache[checkboxId])) return;
+
+        var layerName = cb.dataset.layerName || checkboxId;
+        var fixedColor = layerColorMap[checkboxId] || "#999";
+        var mode = colorMode[checkboxId] || "single";
+        var icon = layerIconMap[checkboxId] || null;
+
+        // 快速检测几何类型：优先从 _geomTypeCache 按文件名查，否则采样第一要素
+        var geomType = "polygon";
+        var fileName = String(cb.value || "").split("/").pop();
+        if (_geomTypeCache[fileName]) {
+          geomType = _geomTypeCache[fileName];
+          if (geomType === "point" || geomType === "multipoint") geomType = "point";
+          else if (geomType === "linestring" || geomType === "multilinestring") geomType = "line";
+          else if (geomType === "polygon" || geomType === "multipolygon") geomType = "polygon";
+        } else {
+          var fc = featureCache[checkboxId];
+          if (fc && fc.length > 0) {
+            var f0 = fc[0];
+            if (f0 && f0.geometry && f0.geometry.type) {
+              var t = f0.geometry.type.toLowerCase();
+              if (t === "point" || t === "multipoint") geomType = "point";
+              else if (t === "linestring" || t === "multilinestring") geomType = "line";
+            }
+          }
+        }
+
+        var item = { name: layerName, color: fixedColor, geomType: geomType, mode: mode };
+
+        if (icon) {
+          item.icon = icon;
+        }
+
+        // 字段分色模式：提取唯一值并获取颜色
+        if (mode === "field" && fieldKey[checkboxId]) {
+          var fk = fieldKey[checkboxId];
+          var features = featureCache[checkboxId];
+          if (features && features.length > 0) {
+            // 提取唯一字段值
+            var seen = Object.create(null);
+            var uniqueValues = [];
+            for (var fi = 0; fi < features.length; fi++) {
+              var f = features[fi];
+              if (!f || !f.properties) continue;
+              var v = f.properties[fk];
+              if (v == null || v === "") continue;
+              var vs = String(v);
+              if (!seen[vs]) {
+                seen[vs] = true;
+                uniqueValues.push(vs);
+              }
+              if (uniqueValues.length >= 30) break;
+            }
+            uniqueValues.sort();
+            var palette = window.GeoUtils.getFieldColorPalette(fk);
+            var fields = [];
+            for (var ui = 0; ui < uniqueValues.length; ui++) {
+              var uval = uniqueValues[ui];
+              var ucolor = palette[uval] || fixedColor;
+              fields.push({ value: uval, color: ucolor });
+              if (fields.length >= 12) break;
+            }
+            if (fields.length > 0) {
+              item.fields = fields;
+            }
+          }
+        }
+
+        items.push(item);
+      });
+
+      // 排序：字段分色优先 → 图标优先 → 其余
+      items.sort(function (a, b) {
+        var sa = (a.fields ? 2 : 0) + (a.icon ? 1 : 0);
+        var sb = (b.fields ? 2 : 0) + (b.icon ? 1 : 0);
+        return sb - sa;
+      });
+
+      return items;
+    };
+
+    /**
+     * 刷新图例控件（如果已添加到地图）
+     */
+    window._refreshLegend = function () {
+      if (
+        window._legendControl &&
+        typeof window._legendControl.update === "function"
+      ) {
+        var items = window._buildLegendData();
+        window._legendControl.update(items);
+      }
+    };
+
+    /**
+     * 延迟刷新图例（用于异步加载场景，等图层渲染完成后再刷新）
+     */
+    function scheduleLegendRefresh(delay) {
+      clearTimeout(window._legendRefreshTimer);
+      window._legendRefreshTimer = setTimeout(function () {
+        window._refreshLegend();
+      }, delay || 150);
     }
 
     initGeoJsonLayer();

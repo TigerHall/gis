@@ -47,6 +47,12 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         category: "控件",
         items: [
           {
+            id: "legendToggle",
+            label: "图例🧪",
+            desc: "开启后在地图左下角显示当前可见图层的图例，包含颜色图块和图层名称",
+            checked: true,
+          },
+          {
             id: "mouseCoordToggle",
             label: "鼠标坐标",
             desc: "开启/关闭鼠标位置经纬度坐标显示控件，实时查看光标所在位置的经纬度",
@@ -1146,6 +1152,28 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         if (window._scaleControl) {
           map.removeControl(window._scaleControl);
           window._scaleControl = null;
+        }
+      },
+    },
+    legendToggle: {
+      storageKey: TOGGLE_PREFIX + "legend",
+      enable: function () {
+        if (!window._legendControl) {
+          window._legendControl = L.control
+            .legend({ position: "bottomleft" })
+            .addTo(map);
+          // 立即用当前可见图层填充图例
+          if (typeof window._buildLegendData === "function") {
+            var items = window._buildLegendData();
+            window._legendControl.update(items);
+          }
+        } else {
+          window._legendControl.setVisible(true);
+        }
+      },
+      disable: function () {
+        if (window._legendControl) {
+          window._legendControl.setVisible(false);
         }
       },
     },
