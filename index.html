@@ -57,6 +57,8 @@
     <link rel="stylesheet" href="./assets/main.css" />
     <!-- 投点编辑器样式 -->
     <link rel="stylesheet" href="./assets/pointdrop.css" />
+    <!-- 要素详情面板样式 -->
+    <link rel="stylesheet" href="./assets/feature-panel.css" />
 
     <!-- WPA -->
     <link rel="manifest" href="./manifest.json" />
@@ -1254,8 +1256,10 @@
     </script>
     <!-- 投点功能（独立模块） -->
     <script src="./assets/pointdrop.js"></script>
+    <!-- 要素详情面板（属性表 + 图表） -->
+    <script src="./assets/feature-panel.js"></script>
     <script>
-      // 悬浮窗：popup 打开时插入右下角缩放按钮
+      // 悬浮窗：popup 打开时插入右下角缩放按钮和查看详情按钮
       map.on("popupopen", function (e) {
         var popup = e.popup;
         var el = popup.getElement();
@@ -1299,7 +1303,227 @@
         };
 
         el.appendChild(btn);
+
+        // 注入「查看详情」按钮
+        if (!el.querySelector(".popup-detail-btn")) {
+          var detailBtn = document.createElement("button");
+          detailBtn.className = "popup-zoom-btn popup-detail-btn";
+          detailBtn.title = "查看属性与图表";
+          detailBtn.innerHTML = "📋";
+          detailBtn.style.right = "36px"; // 放在缩放按钮左边
+
+          detailBtn.onclick = function (ev) {
+            L.DomEvent.stop(ev);
+            var feature = null;
+            var layerId = null;
+            var layerName = "";
+
+            // Canvas 要素：直接从 popup 上的自定义属性读取
+            if (popup._featureRef) {
+              feature = popup._featureRef;
+              layerId = popup._layerId || null;
+              layerName = popup._layerName || "";
+            }
+
+            // 非 Canvas：从 popup._source 获取 feature
+            if (!feature) {
+              var source = popup._source || popup._sourceLayer;
+              if (source && source.feature) {
+                feature = source.feature;
+              }
+            }
+
+            // 尝试匹配 layerId
+            if (!layerId && feature) {
+              if (feature._fileName && window._layerIdByFileName) {
+                layerId = window._layerIdByFileName[feature._fileName];
+              }
+              if (!layerId && window._featureCache) {
+                for (var cacheId in window._featureCache) {
+                  var feats = window._featureCache[cacheId];
+                  if (feats) {
+                    for (var fi = 0; fi < feats.length; fi++) {
+                      if (feats[fi] === feature) {
+                        layerId = cacheId;
+                        break;
+                      }
+                    }
+                  }
+                  if (layerId) break;
+                }
+              }
+            }
+
+            // 获取图层名
+            if (layerId) {
+              var cbEl = document.getElementById(layerId);
+              if (cbEl) layerName = cbEl.dataset.layerName || "";
+            }
+
+            // 如果没有 layerId 但有 popup 的 latlng，构造精简 feature
+            if (!feature) {
+              var pLL = popup.getLatLng ? popup.getLatLng() : null;
+              feature = {
+                type: "Feature",
+                geometry: pLL
+                  ? { type: "Point", coordinates: [pLL.lng, pLL.lat] }
+                  : null,
+                properties: {},
+              };
+            }
+
+            if (
+              typeof window.FeaturePanel !== "undefined" &&
+              window.FeaturePanel.openSingle
+            ) {
+              window.FeaturePanel.openSingle(feature, layerId, layerName);
+              map.closePopup();
+            }
+          };
+
+          el.appendChild(detailBtn);
+        }
       });
     </script>
+
+    <!-- 要素详情面板（属性表 + 图表） -->
+    <div class="feature-panel-backdrop" id="featurePanelBackdrop"></div>
+    <div class="feature-panel" id="featureDetailPanel">
+      <!-- 左侧拖拽 resize 手柄 -->
+      <div
+        class="feature-panel-resize-handle"
+        id="featurePanelResizeHandle"
+      ></div>
+      <!-- 头部 -->
+      <div class="feature-panel-header">
+        <div>
+          <div class="feature-panel-title" id="featurePanelTitle">要素详情</div>
+          <div class="feature-panel-subtitle" id="featurePanelSubtitle"></div>
+        </div>
+        <button class="feature-panel-close" id="featurePanelClose" title="关闭">
+          ✕
+        </button>
+      </div>
+      <!-- Tab 导航 -->
+      <div class="feature-panel-tabs">
+        <button class="feature-panel-tab active" id="featurePanelTabAttr">
+          📋 属性表
+        </button>
+        <button class="feature-panel-tab" id="featurePanelTabChart">
+          📊 图表
+        </button>
+      </div>
+      <!-- 内容区 -->
+      <div class="feature-panel-content">
+        <!-- 属性表 Tab -->
+        <div
+          id="featurePanelContentAttr"
+          style="
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+          "
+        >
+          <!-- 模式切换 -->
+          <div
+            class="feature-panel-mode-switch"
+            id="featurePanelModeSwitch"
+            style="display: none"
+          >
+            <span class="mode-label">显示：</span>
+            <button class="mode-btn active" id="featurePanelModeSingle">
+              当前要素
+            </button>
+            <button class="mode-btn" id="featurePanelModeLayer">
+              全部要素
+            </button>
+          </div>
+          <!-- 搜索 -->
+          <div class="feature-panel-search">
+            <input
+              type="text"
+              id="featurePanelSearchInput"
+              placeholder="搜索属性..."
+              autocomplete="off"
+            />
+            <span
+              class="feature-panel-result-count"
+              id="featurePanelResultCount"
+            ></span>
+          </div>
+          <!-- 表格 -->
+          <div class="feature-panel-table-wrap" id="featurePanelTableWrap">
+            <table class="feature-panel-table" id="featurePanelTable"></table>
+          </div>
+          <!-- 空状态 -->
+          <div
+            class="feature-panel-empty"
+            id="featurePanelEmptyAttr"
+            style="display: none"
+          >
+            <span style="font-size: 32px">📋</span>
+            <span class="empty-text">暂无数据</span>
+          </div>
+          <!-- 翻页器 -->
+          <div class="feature-panel-pager" id="featurePanelPager">
+            <button class="pager-prev">◀ 上一页</button>
+            <span class="page-info" id="featurePanelPageInfo"
+              >第 1 页 / 共 1 页</span
+            >
+            <button class="pager-next">下一页 ▶</button>
+            <div class="page-jump">
+              <span>跳至</span>
+              <input
+                type="number"
+                id="featurePanelPageInput"
+                min="1"
+                value="1"
+              />
+              <span>页</span>
+            </div>
+          </div>
+        </div>
+        <!-- 图表 Tab -->
+        <div
+          id="featurePanelContentChart"
+          style="
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+          "
+        >
+          <div class="feature-panel-chart-toolbar">
+            <label for="featurePanelChartType">图表类型：</label>
+            <select id="featurePanelChartType">
+              <option value="bar" selected>柱状图</option>
+              <option value="radar">雷达图</option>
+              <option value="pie">饼图</option>
+            </select>
+            <label style="margin-left: 8px">
+              <input type="checkbox" id="featurePanelChartCompare" />
+              对比图层均值
+            </label>
+          </div>
+          <div
+            class="feature-panel-chart-container"
+            id="featurePanelChartContainer"
+          ></div>
+          <div
+            class="feature-panel-empty"
+            id="featurePanelEmptyChart"
+            style="display: none"
+          >
+            <span style="font-size: 32px">📊</span>
+            <span class="empty-text">没有数值字段可展示</span>
+          </div>
+          <div
+            class="feature-panel-chart-legend"
+            id="featurePanelChartLegend"
+          ></div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

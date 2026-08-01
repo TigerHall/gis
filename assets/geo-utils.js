@@ -114,10 +114,7 @@
     const config = POPUP_FIELD_CONFIG[fileName] || POPUP_FIELD_CONFIG._default;
     // 过滤空值（_featureIndex 保留在最后，object/array 用 JSON 字符串展示）
     const displayKeys = keys.filter(
-      (k) =>
-        props[k] !== undefined &&
-        props[k] !== null &&
-        props[k] !== "",
+      (k) => props[k] !== undefined && props[k] !== null && props[k] !== "",
     );
     if (displayKeys.length === 0) return null;
     // 标题行：优先用传入的 titleField，其次配置的 titleField，最后自动检测 Name 字段
@@ -379,6 +376,49 @@
     return copy;
   }
 
+  // ========== 提取数值字段（供图表使用） ==========
+  function extractNumericFields(feature) {
+    if (!feature || !feature.properties) return [];
+    const props = feature.properties;
+    const numericFields = [];
+    const excludeKeys = ["_featureIndex"];
+    for (const k of Object.keys(props)) {
+      if (excludeKeys.includes(k)) continue;
+      const v = props[k];
+      if (typeof v === "number" && isFinite(v)) {
+        numericFields.push({ key: k, value: v });
+      }
+    }
+    // 按绝对值降序排列
+    numericFields.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    return numericFields;
+  }
+
+  // ========== 计算图层数值字段统计（供图表对比） ==========
+  function computeLayerStats(features) {
+    if (!features || !features.length) return null;
+    // 收集所有数值字段
+    const fieldSums = {}; // key -> sum
+    const fieldCounts = {}; // key -> count
+    for (const f of features) {
+      if (!f || !f.properties) continue;
+      for (const k of Object.keys(f.properties)) {
+        const v = f.properties[k];
+        if (typeof v === "number" && isFinite(v) && k !== "_featureIndex") {
+          fieldSums[k] = (fieldSums[k] || 0) + v;
+          fieldCounts[k] = (fieldCounts[k] || 0) + 1;
+        }
+      }
+    }
+    const averages = {};
+    for (const k of Object.keys(fieldSums)) {
+      if (fieldCounts[k] > 0) {
+        averages[k] = fieldSums[k] / fieldCounts[k];
+      }
+    }
+    return averages;
+  }
+
   // ========== 暴露公共 API ==========
   window.GeoUtils = {
     createFixedSeededRandom,
@@ -395,5 +435,7 @@
     getAvailableFields,
     POPUP_FIELD_CONFIG,
     computeBounds,
+    extractNumericFields,
+    computeLayerStats,
   };
 })();

@@ -249,6 +249,9 @@
     const canvasFieldValuesCache = {};
     const searchIndexMap = {}; // 倒排索引：{ checkboxId: { tokens: { tok: [idx, ...] }, features: [...] } }
     const featureCache = {}; // 要素数据缓存：{ checkboxId: features[] }，独立于索引，保证要素搜索始终可用
+    const _layerIdByFileName = {}; // fileName → checkboxId 反向映射（供 feature-panel 使用）
+    window._featureCache = featureCache;
+    window._layerIdByFileName = _layerIdByFileName;
     const layerSearchPriorityMap = {}; // 搜索优先图层（如海底地名集）：检索时优先返回，且未勾选也可被搜索
     const layerSourceMap = {}; // 图层级数据来源（geo-config 的 source）：注入要素属性后显示在弹窗「数据源」
     let searchIndexingCount = 0; // 正在构建索引的图层数
@@ -580,6 +583,7 @@
       ) {
         geojsonData.features.forEach(function (f, idx) {
           f._featureIndex = idx;
+          f._fileName = f._fileName || fileName;
           if (!f.properties) f.properties = {};
           f.properties._featureIndex = idx;
         });
@@ -839,10 +843,14 @@
                 layerDisplayName,
               );
               if (content) {
-                L.popup({ maxWidth: 300 })
+                var popup = L.popup({ maxWidth: 300 })
                   .setLatLng(latlng)
                   .setContent(content)
                   .openOn(map);
+                // 存储要素引用，供「查看详情」按钮使用
+                popup._featureRef = f;
+                popup._layerId = checkboxId;
+                popup._layerName = layerDisplayName || "";
               }
             };
 
@@ -2163,14 +2171,6 @@
         </div>`;
     }
 
-    function getAttrTablePanelHTML() {
-      return '<div class="tab-placeholder"><span style="font-size:32px;">📋</span><p style="color:#888;margin-top:8px;">属性表功能开发中，敬请期待</p></div>';
-    }
-
-    function getChartPanelHTML() {
-      return '<div class="tab-placeholder"><span style="font-size:32px;">📊</span><p style="color:#888;margin-top:8px;">图表功能开发中，敬请期待</p></div>';
-    }
-
     function getLayerDialogHTML(
       checkboxId,
       layerName,
@@ -2184,14 +2184,7 @@
             <h3>⚙️ ${layerName}</h3>
             <button class="dialog-close" id="dlgCloseBtn">&times;</button>
           </div>
-          <div class="dlg-tabs">
-            <button class="dlg-tab active" data-tab="color">🎨 颜色</button>
-            <button class="dlg-tab" data-tab="attr">📋 属性表</button>
-            <button class="dlg-tab" data-tab="chart">📊 图表</button>
-          </div>
-          <div class="dlg-tab-content" id="dlgTabColor">${getColorPanelHTML(checkboxId, fields, userLabelField, isPointLayer)}</div>
-          <div class="dlg-tab-content" id="dlgTabAttr" style="display:none;">${getAttrTablePanelHTML()}</div>
-          <div class="dlg-tab-content" id="dlgTabChart" style="display:none;">${getChartPanelHTML()}</div>
+          <div class="dlg-tab-content">${getColorPanelHTML(checkboxId, fields, userLabelField, isPointLayer)}</div>
           <div class="dialog-footer">
             <button class="dlg-btn dlg-btn-secondary" id="dlgCancelBtn">取消</button>
             <button class="dlg-btn dlg-btn-primary" id="dlgConfirmBtn">确认</button>
@@ -2233,23 +2226,6 @@
         );
         document.body.appendChild(dlg);
         _layerDialog = dlg;
-
-        // === Tab 切换 ===
-        dlg.querySelectorAll(".dlg-tab").forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            dlg.querySelectorAll(".dlg-tab").forEach(function (b) {
-              b.classList.remove("active");
-            });
-            this.classList.add("active");
-            var tab = this.dataset.tab;
-            ["color", "attr", "chart"].forEach(function (t) {
-              var el = document.getElementById(
-                "dlgTab" + t.charAt(0).toUpperCase() + t.slice(1),
-              );
-              if (el) el.style.display = t === tab ? "block" : "none";
-            });
-          });
-        });
 
         // === 名称字段选择 ===
         var nameFieldSel = document.getElementById("dlgNameFieldSelect");
@@ -2624,8 +2600,12 @@
           .replace(/_+/g, "_")
           .replace(/^_+|_+$/g, "");
         if (!base) base = "layer";
-        var id = base, n = 2;
-        while (_seenLayerIds[id]) { id = base + "_" + n; n++; }
+        var id = base,
+          n = 2;
+        while (_seenLayerIds[id]) {
+          id = base + "_" + n;
+          n++;
+        }
         _seenLayerIds[id] = true;
         return id;
       }
@@ -2738,10 +2718,14 @@
 
         group.layers.forEach(function (layerConfig) {
           var idx = globalLayerIndex++;
-          var stableName = makeLayerStableId(layerConfig.name, layerConfig.file || layerConfig.url);
+          var stableName = makeLayerStableId(
+            layerConfig.name,
+            layerConfig.file || layerConfig.url,
+          );
           var checkboxId = "layer_" + stableName;
           var fullPath = window.geoJsonPrimaryPath + layerConfig.file;
           var fileName = layerConfig.file;
+          _layerIdByFileName[fileName] = checkboxId;
           var fixedColor =
             layerConfig.color || window.GeoUtils.getFixedColor(idx);
           layerColorMap[checkboxId] = fixedColor;
@@ -2866,6 +2850,23 @@
           layerItem.appendChild(statusSpan);
           layerItem.appendChild(settingsBtn);
           layerItem.appendChild(locateBtn);
+
+          // 属性表按钮
+          var attrBtn = document.createElement("button");
+          attrBtn.className = "layer-locate-btn layer-attr-btn";
+          attrBtn.title = "查看属性表";
+          attrBtn.innerHTML = "📋";
+          attrBtn.style.fontSize = "11px";
+          (function (cbId, lName) {
+            attrBtn.addEventListener("click", function (e) {
+              e.stopPropagation();
+              if (typeof window.openLayerAttributeTable === "function") {
+                window.openLayerAttributeTable(cbId, lName);
+              }
+            });
+          })(checkboxId, layerConfig.name);
+          layerItem.appendChild(attrBtn);
+
           children.appendChild(layerItem);
         });
 
@@ -3239,6 +3240,7 @@
       if (data_.type === "FeatureCollection" && Array.isArray(data_.features)) {
         data_.features.forEach(function (f, idx) {
           f._featureIndex = idx;
+          f._fileName = fileName;
         });
       }
 
@@ -3249,6 +3251,7 @@
         worldCopyGroup.addTo(map);
       }
       layerCache[uid] = worldCopyGroup;
+      _layerIdByFileName[fileName] = uid;
       scheduleLegendRefresh();
       userLayerGeoJson[uid] = {
         geoJsonData: data_,
@@ -3440,6 +3443,23 @@
       layerItem.appendChild(settingsBtn);
       layerItem.appendChild(locateBtn);
       layerItem.appendChild(removeBtn);
+
+      // 属性表按钮
+      var uAttrBtn = document.createElement("button");
+      uAttrBtn.className = "layer-locate-btn layer-attr-btn";
+      uAttrBtn.title = "查看属性表";
+      uAttrBtn.innerHTML = "📋";
+      uAttrBtn.style.fontSize = "11px";
+      (function (cbId, lName) {
+        uAttrBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (typeof window.openLayerAttributeTable === "function") {
+            window.openLayerAttributeTable(cbId, lName);
+          }
+        });
+      })(uid, fileName);
+      layerItem.appendChild(uAttrBtn);
+
       userGroup.appendChild(layerItem);
       // 隐藏空状态提示
       var hint = document.getElementById("userLayerHint");
@@ -4368,10 +4388,9 @@
               }
               addUnepFeatureToLayer(feat_, name_);
               if (typeof window.showToast === "function") {
-                window.showToast(
-                  "🏝️ 已添加「" + name_ + "」到海岛记录图层",
-                  { duration: 2000 },
-                );
+                window.showToast("🏝️ 已添加「" + name_ + "」到海岛记录图层", {
+                  duration: 2000,
+                });
               }
               resultsBox.classList.remove("open");
             });
@@ -4559,7 +4578,7 @@
             "」</div>" +
             '<div class="tdt-search-btn" onclick="window.__unepwcmcSearch(\'' +
             query.replace(/\\/g, "\\\\").replace(/'/g, "\\'") +
-            "')\" style=\"margin-left:6px;\">🏝️ 搜索海岛名「" +
+            '\')" style="margin-left:6px;">🏝️ 搜索海岛名「' +
             query.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
             "」</div></div>";
           resultsBox.classList.add("open");
@@ -4818,7 +4837,10 @@
       window.__OGV_restoreIsolation = _restoreFromSearch;
 
       function _isOptSearchOn() {
-        if (window.OGV_OPT_SEARCH && typeof window.OGV_OPT_SEARCH.enabled === "boolean") {
+        if (
+          window.OGV_OPT_SEARCH &&
+          typeof window.OGV_OPT_SEARCH.enabled === "boolean"
+        ) {
           return window.OGV_OPT_SEARCH.enabled;
         }
         // 兜底：直接读开关 DOM 状态（兼容初始化顺序）
@@ -5278,12 +5300,17 @@
 
         // 快速检测几何类型：优先从 _geomTypeCache 按文件名查，否则采样第一要素
         var geomType = "polygon";
-        var fileName = String(cb.value || "").split("/").pop();
+        var fileName = String(cb.value || "")
+          .split("/")
+          .pop();
         if (_geomTypeCache[fileName]) {
           geomType = _geomTypeCache[fileName];
-          if (geomType === "point" || geomType === "multipoint") geomType = "point";
-          else if (geomType === "linestring" || geomType === "multilinestring") geomType = "line";
-          else if (geomType === "polygon" || geomType === "multipolygon") geomType = "polygon";
+          if (geomType === "point" || geomType === "multipoint")
+            geomType = "point";
+          else if (geomType === "linestring" || geomType === "multilinestring")
+            geomType = "line";
+          else if (geomType === "polygon" || geomType === "multipolygon")
+            geomType = "polygon";
         } else {
           var fc = featureCache[checkboxId];
           if (fc && fc.length > 0) {
@@ -5291,12 +5318,18 @@
             if (f0 && f0.geometry && f0.geometry.type) {
               var t = f0.geometry.type.toLowerCase();
               if (t === "point" || t === "multipoint") geomType = "point";
-              else if (t === "linestring" || t === "multilinestring") geomType = "line";
+              else if (t === "linestring" || t === "multilinestring")
+                geomType = "line";
             }
           }
         }
 
-        var item = { name: layerName, color: fixedColor, geomType: geomType, mode: mode };
+        var item = {
+          name: layerName,
+          color: fixedColor,
+          geomType: geomType,
+          mode: mode,
+        };
 
         if (icon) {
           item.icon = icon;
@@ -5372,6 +5405,89 @@
         window._refreshLegend();
       }, delay || 150);
     }
+
+    /**
+     * 打开图层属性表（从图层面板 📋 按钮触发）
+     */
+    window.openLayerAttributeTable = function (layerId, layerName) {
+      var feats = featureCache[layerId] || null;
+
+      function _openWith(feats) {
+        if (
+          typeof window.FeaturePanel !== "undefined" &&
+          window.FeaturePanel.openLayer
+        ) {
+          window.FeaturePanel.openLayer(layerId, layerName, feats);
+        } else if (feats && feats.length) {
+          if (typeof window.showToast === "function") {
+            window.showToast(
+              layerName + "：共 " + feats.length + " 个要素（面板未就绪）",
+              { duration: 3000 },
+            );
+          }
+        } else {
+          if (typeof window.showToast === "function") {
+            window.showToast("该图层没有要素数据", { duration: 3000 });
+          }
+        }
+      }
+
+      if (feats && feats.length) {
+        _openWith(feats);
+        return;
+      }
+
+      // 缓存为空：后台 fetch GeoJSON 数据（不渲染到地图）
+      var cb = document.getElementById(layerId);
+      if (!cb || !cb.value) {
+        if (typeof window.showToast === "function") {
+          window.showToast("无法获取图层数据路径", { duration: 3000 });
+        }
+        return;
+      }
+      var filePath = cb.value;
+
+      if (typeof window.showToast === "function") {
+        window.showToast("正在加载 " + layerName + " 数据...", {
+          duration: 1500,
+        });
+      }
+
+      L.GzIdbLoader.fetch(filePath)
+        .then(function (geojsonData) {
+          var dataFeats = geojsonData && geojsonData.features;
+          if (dataFeats && dataFeats.length) {
+            // 设置 _featureIndex 和 _fileName
+            var fName = filePath.split("/").pop();
+            dataFeats.forEach(function (f, idx) {
+              f._featureIndex = idx;
+              f._fileName = f._fileName || fName;
+              if (!f.properties) f.properties = {};
+              f.properties._featureIndex = idx;
+            });
+            featureCache[layerId] = dataFeats;
+            _layerIdByFileName[fName] = layerId;
+          }
+          _openWith(dataFeats);
+        })
+        .catch(function () {
+          if (typeof window.showToast === "function") {
+            window.showToast("加载 " + layerName + " 失败", { duration: 3000 });
+          }
+        });
+    };
+
+    /**
+     * 打开单要素详情（从 Popup 📋 按钮触发）
+     */
+    window.openFeatureDetail = function (feature, layerId, layerName) {
+      if (
+        typeof window.FeaturePanel !== "undefined" &&
+        window.FeaturePanel.openSingle
+      ) {
+        window.FeaturePanel.openSingle(feature, layerId, layerName);
+      }
+    };
 
     initGeoJsonLayer();
   }); // 闭合 waitForMap 回调

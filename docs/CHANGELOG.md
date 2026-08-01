@@ -1,5 +1,23 @@
 # 更新记录
 
+## 2026-08-01 — 新增要素详情面板（属性表翻页 + ECharts 图表）
+
+### 要素详情面板
+
+- **新增 `assets/feature-panel.js`**：右侧滑出面板，双 Tab（属性表 / 图表）
+  - 单要素模式：Popup [📋 查看详情] → 属性 key-value 翻页（15条/页）
+  - 图层模式：图层面板 [📋] 按钮 → 全部要素多行表格翻页 + 搜索过滤
+  - 图表：ECharts 5.5.1 CDN 懒加载；柱状图 / 雷达图 / 饼图；支持对比图层均值
+- **新增 `assets/feature-panel.css`**：面板样式（滑出动画、表格、翻页器、响应式）
+- **修改 `index.html`**：面板 HTML 容器、popupopen 注入 [📋 查看详情] 按钮、feature-panel.js 引用
+- **修改 `assets/geo-utils.js`**：新增 `extractNumericFields(feature)` 和 `computeLayerStats(features)` 工具函数
+- **修改 `assets/geojsonloader.js`**：
+  - 暴露 `window._featureCache` / `window._layerIdByFileName`
+  - 全局入口 `window.openFeatureDetail()` / `window.openLayerAttributeTable()`
+  - 图层项新增 [📋] 属性表按钮
+  - Canvas 点击回调在 popup 上存储 `_featureRef` / `_layerId`
+  - 要素加载时设置 `_fileName` 用于图层反向查找
+
 ## 2026-07-26 — 新增图例控件（v2: 几何符号 + 可展开）
 
 ### 图例 v2 — 几何符号差异化 + 可展开字段分色
@@ -53,14 +71,15 @@
 
 经三次迭代最终定稿：
 
-| 迭代 | 方案 | 问题 |
-|------|------|------|
-| 旧版 | transform 摊平(`offsetLeft`) + `toPng` | `offsetLeft` 整数截断 → 平移后瓦片错乱 |
-| v1 | 手动加载瓦片(`crossOrigin`) + `toCanvas` | 天地图不支持 CORS → 底图全白、标注丢失 |
-| v2 | 不做摊平直接用 `toPng` | html-to-image 对 `translate3d` 的 SVG 序列化精度不一致 → 平移后错乱 |
-| **终版** | **`getBoundingClientRect` 摊平 + 保留 tooltip** | ✅ 瓦片正确、标注可见 |
+| 迭代     | 方案                                            | 问题                                                                |
+| -------- | ----------------------------------------------- | ------------------------------------------------------------------- |
+| 旧版     | transform 摊平(`offsetLeft`) + `toPng`          | `offsetLeft` 整数截断 → 平移后瓦片错乱                              |
+| v1       | 手动加载瓦片(`crossOrigin`) + `toCanvas`        | 天地图不支持 CORS → 底图全白、标注丢失                              |
+| v2       | 不做摊平直接用 `toPng`                          | html-to-image 对 `translate3d` 的 SVG 序列化精度不一致 → 平移后错乱 |
+| **终版** | **`getBoundingClientRect` 摊平 + 保留 tooltip** | ✅ 瓦片正确、标注可见                                               |
 
 **终版核心变更**（`assets/app.js` `exportMapImage()`）：
+
 1. 用 `getBoundingClientRect()` **子像素精度**计算 pane 位置，清空 transform 改 left/top — 解决 `offsetLeft` 整数截断
 2. **filter 移除 `.leaflet-tooltip`** — 面要素标签用 `bindTooltip(permanent:true)` 实现，排除就丢失了
 3. 保留瓦片动画禁用 `<style>`、两帧等待、成功/失败恢复逻辑

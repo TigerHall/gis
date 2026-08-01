@@ -165,13 +165,32 @@
   padding: 16px 18px;
   min-height: 120px;
 }
-.tab-placeholder {
+.tab-placeholder,
+.dlg-tab-action {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 32px 0;
   user-select: none;
+}
+.dlg-tab-action p {
+  margin: 8px 0 16px;
+  font-size: 13px;
+}
+.dlg-action-btn {
+  padding: 8px 20px;
+  background: #9c9;
+  color: #1a1a2e;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dlg-action-btn:hover {
+  background: #b3e6b3;
 }
 
 /* 字段选择下拉框 */
