@@ -283,6 +283,8 @@
 .feature-panel-table td {
   padding: 3px 8px;
   line-height: 1.35;
+  max-height: 4.05em; /* 3行 × 1.35 ≈ 3行上限 */
+  overflow: hidden;
   border-bottom: 1px solid var(--fp-border-subtle);
   vertical-align: top;
   overflow-wrap: break-word;
@@ -494,6 +496,11 @@
   font-size: 11px;
   outline: none;
   cursor: pointer;
+  color-scheme: light dark;
+}
+.feature-panel-chart-toolbar select option {
+  background: var(--panel-bg, #fff);
+  color: var(--text-primary, #333);
 }
 .feature-panel-chart-toolbar select:focus {
   border-color: #9c9;

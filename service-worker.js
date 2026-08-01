@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v2.0.1";
+const CACHE_NAME = "v2.0.2";
 
 // 全量预缓存：安装 PWA 后全部功能离线可用（后台静默执行，不阻塞页面）
 const STATIC_ASSETS = [

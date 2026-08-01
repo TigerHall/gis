@@ -39,6 +39,10 @@
     searchQuery: "",
     chartInstance: null,
     chartType: "bar",
+    chartXField: "",
+    chartYField: "",
+    chartGroupField: "",
+    showLegend: true,
     showCompare: false,
     layerStats: null,
   };
@@ -92,6 +96,10 @@
     dom.pageInfo = document.getElementById("featurePanelPageInfo");
     dom.pageInput = document.getElementById("featurePanelPageInput");
     dom.chartType = document.getElementById("featurePanelChartType");
+    dom.chartX = document.getElementById("featurePanelChartX");
+    dom.chartY = document.getElementById("featurePanelChartY");
+    dom.chartGroup = document.getElementById("featurePanelChartGroup");
+    dom.chartShowLegend = document.getElementById("featurePanelChartShowLegend");
     dom.chartCompare = document.getElementById("featurePanelChartCompare");
     dom.chartContainer = document.getElementById("featurePanelChartContainer");
     dom.chartLegend = document.getElementById("featurePanelChartLegend");
@@ -671,326 +679,325 @@
     });
   }
 
-  // ========== ECharts ==========
+  // ========== ECharts（字段选择器增强版） ==========
 
   function _loadEChartsAndRender() {
-    if (ECHARTS_LOADED) {
-      _renderChart();
-      return;
-    }
+    if (ECHARTS_LOADED) { _renderChart(); return; }
     if (ECHARTS_LOADING) return;
     ECHARTS_LOADING = true;
     var script = document.createElement("script");
     script.src = ECHARTS_CDN;
-    script.onload = function () {
-      ECHARTS_LOADED = true;
-      ECHARTS_LOADING = false;
-      _renderChart();
-    };
+    script.onload = function () { ECHARTS_LOADED = true; ECHARTS_LOADING = false; _renderChart(); };
     script.onerror = function () {
       ECHARTS_LOADING = false;
-      if (dom.emptyChart) {
-        dom.emptyChart.style.display = "flex";
-        dom.emptyChart.querySelector(".empty-text").textContent =
-          "ECharts 加载失败，请检查网络连接";
-      }
+      if (dom.emptyChart) { dom.emptyChart.style.display = "flex"; dom.emptyChart.querySelector(".empty-text").textContent = "ECharts 加载失败"; }
       if (dom.chartContainer) dom.chartContainer.style.display = "none";
     };
     document.head.appendChild(script);
   }
 
-  function _renderChart() {
-    if (typeof echarts === "undefined") {
-      _showEmpty("chart", "ECharts 尚未加载");
-      return;
-    }
-
-    var numericFields;
-    if (panelState.mode === "single" && panelState.feature) {
-      numericFields = window.GeoUtils.extractNumericFields(panelState.feature);
-    } else if (
-      panelState.mode === "layer" &&
-      panelState.allFeatures &&
-      panelState.allFeatures.length > 0
-    ) {
-      numericFields = _aggregateLayerNumericFields(panelState.allFeatures);
-    } else {
-      _showEmpty("chart", "没有数值字段可展示");
-      return;
-    }
-
-    if (!numericFields || numericFields.length === 0) {
-      _showEmpty("chart", "该要素没有数值字段");
-      return;
-    }
-
-    if (
-      panelState.showCompare &&
-      panelState.layerId &&
-      !panelState.layerStats
-    ) {
-      var feats = panelState.allFeatures;
-      if (!feats || !feats.length) {
-        if (window._featureCache && window._featureCache[panelState.layerId]) {
-          feats = window._featureCache[panelState.layerId];
-        }
+  function _getAvailableFields() {
+    var numeric = [], categorical = [], seen = {};
+    if (panelState.mode === "single" && panelState.feature && panelState.feature.properties) {
+      var props = panelState.feature.properties;
+      for (var k in props) { if (k === "_featureIndex") continue; var v = props[k]; if (typeof v === "number" && isFinite(v)) numeric.push(k); else if (v != null && v !== "") categorical.push(k); }
+    } else if (panelState.allFeatures && panelState.allFeatures.length > 0) {
+      for (var fi = 0; fi < panelState.allFeatures.length; fi++) {
+        var f = panelState.allFeatures[fi]; if (!f || !f.properties) continue;
+        for (var k2 in f.properties) { if (k2 === "_featureIndex" || seen[k2]) continue; seen[k2] = true; var v2 = f.properties[k2]; if (typeof v2 === "number" && isFinite(v2)) numeric.push(k2); else if (v2 != null && v2 !== "") categorical.push(k2); }
+        if (numeric.length > 50 && categorical.length > 20) break;
       }
-      if (feats && feats.length)
-        panelState.layerStats = window.GeoUtils.computeLayerStats(feats);
     }
+    numeric.sort(); categorical.sort();
+    return { numeric: numeric, categorical: categorical };
+  }
 
+  function _populateFieldSelectors() {
+    if (!dom.chartX || !dom.chartY) return;
+    var fields = _getAvailableFields(), curX = dom.chartX.value || panelState.chartXField || "", curY = dom.chartY.value || panelState.chartYField || "", curG = panelState.chartGroupField || "", ct = panelState.chartType;
+    var xFields = [], yFields = [], gFields = [];
+    if (ct === "scatter") { xFields = fields.numeric; yFields = fields.numeric; gFields = fields.categorical; }
+    else if (ct === "histogram") { xFields = fields.numeric; }
+    else if (ct === "bar") { xFields = fields.numeric.concat(fields.categorical); gFields = fields.categorical; }
+    else if (ct === "pie") { xFields = fields.categorical.length ? fields.categorical : fields.numeric; }
+    _fillSelect(dom.chartX, xFields, curX);
+    _fillSelect(dom.chartY, yFields, curY);
+    if (dom.chartGroup) _fillSelect(dom.chartGroup, gFields, curG);
+    if (!dom.chartX.value && xFields.length > 0) dom.chartX.value = xFields[0];
+    if (!dom.chartY.value && yFields.length > 1) dom.chartY.value = yFields[1] || yFields[0];
+    else if (!dom.chartY.value && yFields.length > 0) dom.chartY.value = yFields[0];
+  }
+
+  function _fillSelect(sel, options, selected) {
+    sel.innerHTML = "";
+    if (options.length === 0) { sel.innerHTML = '<option value="">—</option>'; return; }
+    for (var i = 0; i < options.length; i++) { var opt = document.createElement("option"); opt.value = options[i]; opt.textContent = options[i]; if (options[i] === selected) opt.selected = true; sel.appendChild(opt); }
+  }
+
+  function _updateFieldSelectorVisibility() {
+    var ct = panelState.chartType;
+    var showX = ct === "scatter" || ct === "histogram" || ct === "bar" || ct === "pie";
+    var showY = ct === "scatter";
+    var showG = ct === "scatter" || ct === "bar";
+    if (dom.chartX) { var xlbl = dom.chartX.previousElementSibling; if (xlbl) xlbl.style.display = showX ? "" : "none"; dom.chartX.style.display = showX ? "" : "none"; }
+    if (dom.chartY) { var ylbl = dom.chartY.previousElementSibling; if (ylbl) ylbl.style.display = showY ? "" : "none"; dom.chartY.style.display = showY ? "" : "none"; }
+    if (dom.chartGroup) { var glbl = dom.chartGroup.previousElementSibling; if (glbl) glbl.style.display = showG ? "" : "none"; dom.chartGroup.style.display = showG ? "" : "none"; }
+    var cmp = dom.chartCompare ? dom.chartCompare.closest("label") : null;
+    if (cmp) cmp.style.display = (ct === "bar" || ct === "radar") ? "" : "none";
+  }
+
+  function _renderChart() {
+    if (typeof echarts === "undefined") { _showEmpty("chart", "ECharts 尚未加载"); return; }
+    _populateFieldSelectors();
+    _updateFieldSelectorVisibility();
+    var container = dom.chartContainer; if (!container) return;
     if (dom.chartContainer) dom.chartContainer.style.display = "";
     if (dom.emptyChart) dom.emptyChart.style.display = "none";
-
-    var container = dom.chartContainer;
-    if (!container) return;
-
-    if (panelState.chartInstance) {
-      try {
-        panelState.chartInstance.dispose();
-      } catch (e) {}
-    }
-    panelState.chartInstance = echarts.init(container, null, {
-      renderer: "canvas",
-    });
-
-    var chartType = panelState.chartType || "bar";
+    panelState.chartXField = dom.chartX ? dom.chartX.value : "";
+    panelState.chartYField = dom.chartY ? dom.chartY.value : "";
+    panelState.chartGroupField = dom.chartGroup ? dom.chartGroup.value : "";
+    panelState.showLegend = dom.chartShowLegend ? dom.chartShowLegend.checked : true;
     var option;
-    if (chartType === "radar") option = _buildRadarOption(numericFields);
-    else if (chartType === "pie") option = _buildPieOption(numericFields);
-    else option = _buildBarOption(numericFields);
-
-    panelState.chartInstance.setOption(option);
-    _updateChartLegend();
     try {
-      panelState.chartInstance.resize();
-    } catch (e) {}
+      if (panelState.chartType === "scatter") option = _buildScatterOption();
+      else if (panelState.chartType === "histogram") option = _buildHistogramOption();
+      else if (panelState.chartType === "pie") option = _buildPieOption();
+      else if (panelState.chartType === "radar") option = _buildRadarOption();
+      else option = _buildBarOption();
+    } catch (e) { _showEmpty("chart", "图表渲染出错：" + e.message); return; }
+    if (!option) { _showEmpty("chart", "没有可用的数据字段"); return; }
+    if (panelState.chartInstance) { try { panelState.chartInstance.dispose(); } catch (e) {} }
+    panelState.chartInstance = echarts.init(container, null, { renderer: "canvas" });
+    panelState.chartInstance.setOption(option, { notMerge: true });
+    _updateChartLegend();
+    try { panelState.chartInstance.resize(); } catch (e) {}
   }
 
-  function _buildBarOption(fields) {
-    var names = fields.map(function (f) {
-      return f.key;
-    });
-    var values = fields.map(function (f) {
-      return f.value;
-    });
-    if (names.length > 30) {
-      names = names.slice(0, 30);
-      values = values.slice(0, 30);
+  function _buildScatterOption() {
+    var xF = panelState.chartXField, yF = panelState.chartYField, gF = panelState.chartGroupField;
+    if (!xF || !yF) return null;
+    var feats = panelState.mode === "single" ? [panelState.feature] : panelState.allFeatures;
+    if (!feats || !feats.length) return null;
+    var COLORS = ["#9c9","#6b8ec4","#e68a6e","#c49b6b","#8ec46b","#6bc4c4","#b86bc4","#c4b86b","#6b8ec4","#c46b8e"];
+
+    if (gF) {
+      // 分组散点图：每组一个 series
+      var groups = {};
+      for (var i = 0; i < feats.length; i++) {
+        var f = feats[i]; if (!f || !f.properties) continue;
+        var xv = f.properties[xF], yv = f.properties[yF];
+        if (typeof xv !== "number" || typeof yv !== "number") continue;
+        var gv = f.properties[gF]; if (gv == null || gv === "") gv = "其他";
+        var key = String(gv).substring(0, 30);
+        if (!groups[key]) groups[key] = [];
+        var label = (f.properties.name || f.properties.Name || f.properties.NAME || f.properties.Fullname || f.properties.Hole || f.properties.site || ("#" + (f._featureIndex || i)));
+        groups[key].push({ value: [xv, yv], name: String(label) });
+      }
+      var series = [];
+      var ci = 0;
+      var legendData = [];
+      for (var gk in groups) {
+        legendData.push(gk);
+        series.push({ type: "scatter", name: gk, data: groups[gk], symbolSize: 5, itemStyle: { color: COLORS[ci % COLORS.length] } });
+        ci++;
+      }
+      if (!series.length) return null;
+      return _addToolbox({
+        tooltip: { formatter: function (p) { return p.seriesName + "<br/>" + p.name + "<br/>" + xF + ": " + p.value[0] + "<br/>" + yF + ": " + p.value[1]; }, backgroundColor: "rgba(30,30,46,0.95)", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e0e0e0", fontSize: 12 } },
+        legend: panelState.showLegend ? { show: true, type: "scroll", bottom: 0, textStyle: { color: "#999", fontSize: 10 }, data: legendData } : { show: false },
+        grid: { left: "6%", right: "6%", bottom: "10%", top: "6%", containLabel: true },
+        xAxis: { type: "value", name: xF, nameTextStyle: { color: "#888", fontSize: 11 }, axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } }, axisLabel: { color: "#888", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } } },
+        yAxis: { type: "value", name: yF, nameTextStyle: { color: "#888", fontSize: 11 }, axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } }, axisLabel: { color: "#888", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } } },
+        series: series,
+        dataZoom: [{ type: "inside" }],
+      });
     }
 
-    var series = [
-      {
-        type: "bar",
-        data: values,
-        itemStyle: { color: "#9c9", borderRadius: [0, 3, 3, 0] },
-        emphasis: { itemStyle: { color: "#b3e6b3" } },
-        barMaxWidth: 30,
-      },
-    ];
+    // 无分组：单色散点
+    var data = [];
+    for (var j = 0; j < feats.length; j++) {
+      var f2 = feats[j]; if (!f2 || !f2.properties) continue;
+      var xv2 = f2.properties[xF], yv2 = f2.properties[yF];
+      if (typeof xv2 !== "number" || typeof yv2 !== "number") continue;
+      var label2 = (f2.properties.name || f2.properties.Name || f2.properties.NAME || f2.properties.Fullname || f2.properties.Hole || f2.properties.site || ("#" + (f2._featureIndex || j)));
+      data.push({ value: [xv2, yv2], name: String(label2) });
+    }
+    if (!data.length) return null;
+    return _addToolbox({
+      tooltip: { formatter: function (p) { return p.name + "<br/>" + xF + ": " + p.value[0] + "<br/>" + yF + ": " + p.value[1]; }, backgroundColor: "rgba(30,30,46,0.95)", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e0e0e0", fontSize: 12 } },
+      grid: { left: "6%", right: "6%", bottom: "10%", top: "6%", containLabel: true },
+      xAxis: { type: "value", name: xF, nameTextStyle: { color: "#888", fontSize: 11 }, axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } }, axisLabel: { color: "#888", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } } },
+      yAxis: { type: "value", name: yF, nameTextStyle: { color: "#888", fontSize: 11 }, axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } }, axisLabel: { color: "#888", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } } },
+      series: [{ type: "scatter", data: data, symbolSize: 6, itemStyle: { color: "#9c9" }, emphasis: { itemStyle: { color: "#b3e6b3", shadowBlur: 6 } } }],
+      dataZoom: [{ type: "inside" }],
+    });
+  }
 
-    if (panelState.showCompare && panelState.layerStats) {
-      var compareVals = names.map(function (k) {
-        return panelState.layerStats[k] != null
-          ? panelState.layerStats[k]
-          : null;
-      });
-      series.push({
-        type: "bar",
-        data: compareVals,
-        itemStyle: {
-          color: "rgba(255,255,255,0.2)",
-          borderRadius: [0, 3, 3, 0],
-        },
-        barMaxWidth: 24,
-        barGap: "10%",
+  function _buildHistogramOption() {
+    var field = panelState.chartXField; if (!field) return null;
+    var feats = panelState.mode === "single" ? [panelState.feature] : panelState.allFeatures;
+    if (!feats || !feats.length) return null;
+    var values = [];
+    for (var i = 0; i < feats.length; i++) { var f = feats[i]; if (!f || !f.properties) continue; var v = f.properties[field]; if (typeof v === "number" && isFinite(v)) values.push(v); }
+    if (!values.length) return null;
+    values.sort(function (a, b) { return a - b; });
+    var mn = values[0], mx = values[values.length - 1];
+    var bc = Math.min(30, Math.max(5, Math.ceil(Math.sqrt(values.length))));
+    var bw = (mx - mn) / bc || 1;
+    var bins = [];
+    for (var b = 0; b < bc; b++) bins.push({ from: mn + b * bw, count: 0 });
+    for (var j = 0; j < values.length; j++) { var idx = Math.min(bc - 1, Math.floor((values[j] - mn) / bw)); if (idx >= 0 && idx < bc) bins[idx].count++; }
+    return _addToolbox({
+      tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, formatter: function (p) { var d = p[0]; return field + ": " + d.name + "<br/>数量: " + d.value; }, backgroundColor: "rgba(30,30,46,0.95)", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e0e0e0", fontSize: 12 } },
+      grid: { left: "6%", right: "6%", bottom: "10%", top: "6%", containLabel: true },
+      xAxis: { type: "category", data: bins.map(function (b) { return b.from.toFixed(2); }), axisLabel: { color: "#888", fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } } },
+      yAxis: { type: "value", name: "数量", axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } }, axisLabel: { color: "#888", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } } },
+      series: [{ type: "bar", data: bins.map(function (b) { return b.count; }), itemStyle: { color: "#9c9", borderRadius: [3, 3, 0, 0] }, barCategoryGap: "5%" }],
+      dataZoom: [{ type: "inside" }],
+    });
+  }
+
+  function _buildBarOption() {
+    var xField = panelState.chartXField, gField = panelState.chartGroupField;
+    if (!xField) {
+      var autoFields = panelState.mode === "single" && panelState.feature ? window.GeoUtils.extractNumericFields(panelState.feature) : _aggregateLayerNumericFields(panelState.allFeatures);
+      if (!autoFields || !autoFields.length) return null;
+      var names = autoFields.map(function (f) { return f.key; }), values = autoFields.map(function (f) { return f.value; });
+      if (names.length > 30) { names = names.slice(0, 30); values = values.slice(0, 30); }
+      return _makeBarChart(names, values, "");
+    }
+    var feats = panelState.allFeatures || (panelState.feature ? [panelState.feature] : []);
+
+    if (gField) {
+      // 分组柱状图：X轴=分类值，分组=颜色系列
+      var xCats = {}, groupNames = {};
+      for (var i = 0; i < feats.length; i++) {
+        var f = feats[i]; if (!f || !f.properties) continue;
+        var xv = f.properties[xField], gv = f.properties[gField];
+        if (xv == null || xv === "") continue;
+        var xkey = String(xv).substring(0, 40);
+        var gkey = gv != null && gv !== "" ? String(gv).substring(0, 30) : "其他";
+        if (!xCats[xkey]) xCats[xkey] = {};
+        xCats[xkey][gkey] = (xCats[xkey][gkey] || 0) + 1;
+        groupNames[gkey] = true;
+      }
+      var xLabels = Object.keys(xCats);
+      if (!xLabels.length) return null;
+      var gKeys = Object.keys(groupNames);
+      var COLORS = ["#9c9","#6b8ec4","#e68a6e","#c49b6b","#8ec46b","#6bc4c4","#b86bc4","#c4b86b"];
+      var series = [];
+      for (var gi = 0; gi < gKeys.length; gi++) {
+        var gk = gKeys[gi];
+        var sdata = xLabels.map(function (xk) { return xCats[xk][gk] || 0; });
+        series.push({ type: "bar", name: gk, data: sdata, itemStyle: { color: COLORS[gi % COLORS.length] }, barMaxWidth: 30 });
+      }
+      return _addToolbox({
+        tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "rgba(30,30,46,0.95)", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e0e0e0", fontSize: 12 } },
+        legend: panelState.showLegend ? { show: true, type: "scroll", bottom: 0, textStyle: { color: "#999", fontSize: 10 } } : { show: false },
+        grid: { left: "6%", right: "6%", bottom: "14%", top: "6%", containLabel: true },
+        xAxis: { type: "category", data: xLabels, axisLabel: { color: "#888", fontSize: 10, rotate: 30 }, axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } } },
+        yAxis: { type: "value", name: "数量", axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } }, axisLabel: { color: "#888", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } } },
+        series: series,
+        dataZoom: [{ type: "inside" }],
       });
     }
 
-    return {
-      tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "shadow" },
-        backgroundColor: "rgba(30,30,46,0.95)",
-        borderColor: "rgba(255,255,255,0.1)",
-        textStyle: { color: "#e0e0e0", fontSize: 12 },
-      },
-      grid: {
-        left: "3%",
-        right: "8%",
-        bottom: "3%",
-        top: "3%",
-        containLabel: true,
-      },
-      xAxis: {
-        type: "value",
-        axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } },
-        axisLabel: { color: "#888", fontSize: 10 },
-        splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
-      },
-      yAxis: {
-        type: "category",
-        data: names,
-        axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } },
-        axisLabel: {
-          color: "#e0e0e0",
-          fontSize: 11,
-          width: 120,
-          overflow: "truncate",
-        },
-        axisTick: { show: false },
-      },
+    // 无分组：单色柱状
+    var counts = {};
+    for (var j = 0; j < feats.length; j++) { var f2 = feats[j]; if (!f2 || !f2.properties) continue; var v2 = f2.properties[xField]; if (v2 == null || v2 === "") continue; var key2 = String(v2).substring(0, 40); counts[key2] = (counts[key2] || 0) + 1; }
+    if (!Object.keys(counts).length) return null;
+    var entries = Object.keys(counts).map(function (k) { return { key: k, value: counts[k] }; });
+    entries.sort(function (a, b) { return b.value - a.value; });
+    if (entries.length > 30) entries = entries.slice(0, 30);
+    return _makeBarChart(entries.map(function (e) { return e.key; }), entries.map(function (e) { return e.value; }), xField);
+  }
+
+  function _makeBarChart(names, values, fieldName) {
+    var series = [{ type: "bar", name: fieldName || "计数", data: values, itemStyle: { color: "#9c9", borderRadius: [0, 3, 3, 0] }, emphasis: { itemStyle: { color: "#b3e6b3" } }, barMaxWidth: 30 }];
+    return _addToolbox({
+      legend: panelState.showLegend ? { show: true, bottom: 0, textStyle: { color: "#999", fontSize: 10 } } : { show: false },
+      tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "rgba(30,30,46,0.95)", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e0e0e0", fontSize: 12 } },
+      grid: { left: "3%", right: "8%", bottom: "3%", top: "3%", containLabel: true },
+      xAxis: { type: "value", name: fieldName || "", axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } }, axisLabel: { color: "#888", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } } },
+      yAxis: { type: "category", data: names, axisLine: { lineStyle: { color: "rgba(255,255,255,0.15)" } }, axisLabel: { color: "#e0e0e0", fontSize: 11, width: 140, overflow: "truncate" }, axisTick: { show: false } },
       series: series,
-    };
+      dataZoom: [{ type: "inside" }],
+    });
   }
 
-  function _buildPieOption(fields) {
-    var pieData = fields
-      .filter(function (f) {
-        return f.value > 0;
-      })
-      .slice(0, 12)
-      .map(function (f) {
-        return { name: f.key, value: f.value };
-      });
-    if (pieData.length === 0)
-      pieData = fields.slice(0, 12).map(function (f) {
-        return { name: f.key, value: Math.abs(f.value) };
-      });
-    return {
-      tooltip: {
-        trigger: "item",
-        formatter: "{b}: {c} ({d}%)",
-        backgroundColor: "rgba(30,30,46,0.95)",
-        borderColor: "rgba(255,255,255,0.1)",
-        textStyle: { color: "#e0e0e0", fontSize: 12 },
-      },
-      legend: { show: false },
-      series: [
-        {
-          type: "pie",
-          radius: ["35%", "70%"],
-          center: ["50%", "50%"],
-          data: pieData,
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: "rgba(0,0,0,0.5)",
-            },
-          },
-          label: { color: "#999", fontSize: 10, formatter: "{b}\n{d}%" },
-        },
-      ],
-    };
+  function _buildPieOption() {
+    var xField = panelState.chartXField;
+    var feats = panelState.allFeatures || (panelState.feature ? [panelState.feature] : []);
+    if (!feats || !feats.length) return null;
+    if (xField) {
+      var counts = {};
+      for (var i = 0; i < feats.length; i++) { var f = feats[i]; if (!f || !f.properties) continue; var v = f.properties[xField]; if (v == null || v === "") continue; var key = String(v).substring(0, 30); counts[key] = (counts[key] || 0) + 1; }
+      var entries = Object.keys(counts).map(function (k) { return { name: k, value: counts[k] }; });
+      entries.sort(function (a, b) { return b.value - a.value; });
+      if (entries.length > 12) entries = entries.slice(0, 12);
+      return _makePieChart(entries);
+    }
+    var fields = panelState.mode === "single" && panelState.feature ? window.GeoUtils.extractNumericFields(panelState.feature) : _aggregateLayerNumericFields(panelState.allFeatures);
+    if (!fields || !fields.length) return null;
+    var pieData = fields.filter(function (f) { return f.value > 0; }).slice(0, 12).map(function (f) { return { name: f.key, value: f.value }; });
+    if (pieData.length === 0) pieData = fields.slice(0, 12).map(function (f) { return { name: f.key, value: Math.abs(f.value) }; });
+    return _makePieChart(pieData);
   }
 
-  function _buildRadarOption(fields) {
-    var topFields = fields.slice(0, 10);
-    var maxVal = 0;
-    for (var i = 0; i < topFields.length; i++) {
-      var abs = Math.abs(topFields[i].value);
-      if (abs > maxVal) maxVal = abs;
-    }
-    if (maxVal === 0) maxVal = 1;
-    var values = topFields.map(function (f) {
-      return f.value;
+  function _makePieChart(data) {
+    return _addToolbox({
+      tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)", backgroundColor: "rgba(30,30,46,0.95)", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e0e0e0", fontSize: 12 } },
+      legend: { show: data.length <= 10, bottom: 0, textStyle: { color: "#999", fontSize: 10 } },
+      series: [{ type: "pie", radius: ["35%", "70%"], center: ["50%", "48%"], data: data, emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: "rgba(0,0,0,0.5)" } }, label: { color: "#999", fontSize: 10, formatter: "{b}\n{d}%" } }],
     });
-    var indicators = topFields.map(function (f) {
-      return { name: f.key, max: maxVal * 1.2 };
-    });
-    var series = [
-      {
-        type: "radar",
-        data: [
-          {
-            value: values,
-            name: "当前要素",
-            areaStyle: { color: "rgba(153,204,153,0.2)" },
-          },
-        ],
-        symbol: "circle",
-        symbolSize: 4,
-        lineStyle: { color: "#9c9", width: 2 },
-        itemStyle: { color: "#9c9" },
-      },
-    ];
+  }
 
-    if (panelState.showCompare && panelState.layerStats) {
-      var compVals = topFields.map(function (f) {
-        return panelState.layerStats[f.key] != null
-          ? panelState.layerStats[f.key]
-          : 0;
-      });
-      series.push({
-        type: "radar",
-        data: [{ value: compVals, name: "图层均值" }],
-        symbol: "diamond",
-        symbolSize: 4,
-        lineStyle: {
-          color: "rgba(255,255,255,0.4)",
-          width: 1.5,
-          type: "dashed",
-        },
-        itemStyle: { color: "rgba(255,255,255,0.5)" },
-      });
-    }
-
-    return {
-      tooltip: {
-        backgroundColor: "rgba(30,30,46,0.95)",
-        borderColor: "rgba(255,255,255,0.1)",
-        textStyle: { color: "#e0e0e0", fontSize: 12 },
-      },
-      legend: {
-        show: true,
-        bottom: 5,
-        textStyle: { color: "#999", fontSize: 11 },
-      },
-      radar: {
-        indicators: indicators,
-        axisName: { color: "#999", fontSize: 10 },
-        splitArea: {
-          areaStyle: {
-            color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.04)"],
-          },
-        },
-        splitLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
-        axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
-      },
+  function _buildRadarOption() {
+    var fields = panelState.mode === "single" && panelState.feature ? window.GeoUtils.extractNumericFields(panelState.feature) : _aggregateLayerNumericFields(panelState.allFeatures);
+    if (!fields || !fields.length) return null;
+    var topFields = fields.slice(0, 10), maxVal = 0;
+    for (var i = 0; i < topFields.length; i++) { var abs = Math.abs(topFields[i].value); if (abs > maxVal) maxVal = abs; }
+    if (topFields.length === 0 || maxVal === 0) return null;
+    var values = topFields.map(function (f) { return f.value; });
+    var indicators = topFields.map(function (f) { return { name: f.key, max: maxVal * 1.2 }; });
+    var series = [{ type: "radar", data: [{ value: values, name: "当前数据", areaStyle: { color: "rgba(153,204,153,0.2)" } }], symbol: "circle", symbolSize: 4, lineStyle: { color: "#9c9", width: 2 }, itemStyle: { color: "#9c9" } }];
+    return _addToolbox({
+      tooltip: { backgroundColor: "rgba(30,30,46,0.95)", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e0e0e0", fontSize: 12 } },
+      legend: { show: true, bottom: 5, textStyle: { color: "#999", fontSize: 11 } },
+      radar: { indicator: indicators, axisName: { color: "#999", fontSize: 10 }, splitArea: { areaStyle: { color: ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.04)"] } }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } }, axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } } },
       series: series,
+    });
+  }
+
+  // 给图表配置添加工具箱（保存图片等）
+  function _addToolbox(option) {
+    option.toolbox = {
+      show: true,
+      right: 10,
+      top: 0,
+      feature: {
+        saveAsImage: { title: "保存图片", pixelRatio: 2 },
+        restore: { title: "还原" },
+      },
     };
+    return option;
   }
 
   function _aggregateLayerNumericFields(features) {
+    if (!features || !features.length) return [];
     var sums = {};
-    for (var i = 0; i < features.length; i++) {
-      var f = features[i];
-      if (!f || !f.properties) continue;
-      var props = f.properties;
-      for (var k in props) {
-        if (k === "_featureIndex") continue;
-        var v = props[k];
-        if (typeof v === "number" && isFinite(v)) sums[k] = (sums[k] || 0) + v;
-      }
-    }
+    for (var i = 0; i < features.length; i++) { var f = features[i]; if (!f || !f.properties) continue; var props = f.properties; for (var k in props) { if (k === "_featureIndex") continue; var v = props[k]; if (typeof v === "number" && isFinite(v)) sums[k] = (sums[k] || 0) + v; } }
     var results = [];
     for (var key in sums) results.push({ key: key, value: sums[key] });
-    results.sort(function (a, b) {
-      return Math.abs(b.value) - Math.abs(a.value);
-    });
+    results.sort(function (a, b) { return Math.abs(b.value) - Math.abs(a.value); });
     return results;
   }
 
   function _updateChartLegend() {
     if (!dom.chartLegend) return;
     dom.chartLegend.innerHTML = "";
-    if (panelState.showCompare && panelState.layerStats) {
-      dom.chartLegend.innerHTML =
-        '<span><span class="legend-dot" style="background:#9c9"></span>当前要素</span>' +
-        '<span><span class="legend-dot" style="background:rgba(255,255,255,0.2)"></span>图层均值</span>';
-    }
   }
+
 
   // ========== 事件绑定 ==========
 
@@ -1063,6 +1070,26 @@
     if (dom.chartType)
       dom.chartType.addEventListener("change", function () {
         panelState.chartType = this.value;
+        _renderChart();
+      });
+    if (dom.chartX)
+      dom.chartX.addEventListener("change", function () {
+        panelState.chartXField = this.value;
+        _renderChart();
+      });
+    if (dom.chartY)
+      dom.chartY.addEventListener("change", function () {
+        panelState.chartYField = this.value;
+        _renderChart();
+      });
+    if (dom.chartGroup)
+      dom.chartGroup.addEventListener("change", function () {
+        panelState.chartGroupField = this.value;
+        _renderChart();
+      });
+    if (dom.chartShowLegend)
+      dom.chartShowLegend.addEventListener("change", function () {
+        panelState.showLegend = this.checked;
         _renderChart();
       });
     if (dom.chartCompare)
