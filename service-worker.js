@@ -1,7 +1,7 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v2.0.0";
+const CACHE_NAME = "v2.0.1";
 
-// 只需要预缓存核心静态资源（小文件，快速）
+// 全量预缓存：安装 PWA 后全部功能离线可用（后台静默执行，不阻塞页面）
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -15,7 +15,12 @@ const STATIC_ASSETS = [
   "./assets/geojsonloader.css",
   "./assets/Leaflet.MousePosition.css",
   "./assets/leaflet-geoman.css",
-  // 脚本（按依赖顺序）
+  "./assets/dialog.css",
+  "./assets/feature-panel.css",
+  "./assets/Leaflet.LegendControl.css",
+  "./assets/pointdrop.css",
+  "./assets/elevation-query.css",
+  // 脚本
   "./assets/leaflet.js",
   "./assets/geo-utils.js",
   "./assets/Leaflet.GeoMarker.js",
@@ -39,11 +44,12 @@ const STATIC_ASSETS = [
   "./assets/georaster-layer-for-leaflet.min.js",
   "./assets/app.js",
   "./assets/html-to-image.min.js",
-  // Dialog 弹窗
   "./assets/dialog.js",
-  "./assets/dialog.css",
-  "./assets/pointdrop.css",
+  "./assets/feature-panel.js",
+  "./assets/Leaflet.LegendControl.js",
   "./assets/marked.min.js",
+  "./assets/esri-leaflet.js",
+  "./assets/echarts.min.js",
   // 文档
   "./docs/CHANGELOG.md",
   "./docs/REFERENCES.md",
@@ -56,21 +62,21 @@ const STATIC_ASSETS = [
   // 截图
   "./assets/images/screenshot-desktop.jpg",
   "./assets/images/screenshot-mobile.jpg",
-  // 其他网站
+  // 其他页面
   "./test.html",
   "./about.html",
 ];
-// 安装阶段：只缓存小文件（快速）
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => {
-        console.log("预缓存核心资源：", STATIC_ASSETS.length, "个文件");
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => self.skipWaiting()),
-  );
+// 安装阶段：立即激活，后台静默缓存（不阻塞页面加载）
+self.addEventListener("install", () => {
+  self.skipWaiting();
+  // 后台静默预缓存，不 waitUntil——SW 立即可用，页面不白屏
+  caches.open(CACHE_NAME).then((cache) => {
+    console.log("后台预缓存：", STATIC_ASSETS.length, "个文件");
+    // 逐个缓存，一个失败不影响其他
+    STATIC_ASSETS.forEach((url) => {
+      cache.add(url).catch(() => {});
+    });
+  });
 });
 
 // 消息处理：接收页面发来的 skipWaiting 指令 / 版本查询
