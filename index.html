@@ -1259,12 +1259,12 @@
     <!-- 要素详情面板（属性表 + 图表） -->
     <script src="./assets/feature-panel.js"></script>
     <script>
-      // 悬浮窗：popup 打开时插入右下角缩放按钮和查看详情按钮
+      // 悬浮窗：popup 打开时在右侧外边竖向添加缩放和详情按钮
       map.on("popupopen", function (e) {
         var popup = e.popup;
-        var el = popup.getElement();
-        if (!el) return;
-        if (el.querySelector(".popup-zoom-btn")) return;
+        var container = popup._container;
+        if (!container) return;
+        if (container.querySelector(".popup-ext-btn-wrap")) return;
 
         // 从 popup 关联的图层/要素中提取 bounds 或坐标
         var layer = popup._source || popup._sourceLayer;
@@ -1287,12 +1287,16 @@
         }
         if (!bounds && !latLng) return;
 
-        var btn = document.createElement("button");
-        btn.className = "popup-zoom-btn";
-        btn.title = "缩放至要素";
-        btn.innerHTML = "⚲";
+        // 创建竖向按钮组容器
+        var wrap = document.createElement("div");
+        wrap.className = "popup-ext-btn-wrap";
 
-        btn.onclick = function (ev) {
+        // 缩放按钮
+        var zoomBtn = document.createElement("button");
+        zoomBtn.className = "popup-ext-btn";
+        zoomBtn.title = "缩放至要素";
+        zoomBtn.innerHTML = "⚲";
+        zoomBtn.onclick = function (ev) {
           L.DomEvent.stop(ev);
           if (bounds) {
             map.fitBounds(bounds, { maxZoom: 16, padding: [40, 40] });
@@ -1302,87 +1306,83 @@
           map.closePopup();
         };
 
-        el.appendChild(btn);
+        // 详情按钮
+        var detailBtn = document.createElement("button");
+        detailBtn.className = "popup-ext-btn";
+        detailBtn.title = "查看属性与图表";
+        detailBtn.innerHTML = "📋";
+        detailBtn.onclick = function (ev) {
+          L.DomEvent.stop(ev);
+          var feature = null;
+          var layerId = null;
+          var layerName = "";
 
-        // 注入「查看详情」按钮
-        if (!el.querySelector(".popup-detail-btn")) {
-          var detailBtn = document.createElement("button");
-          detailBtn.className = "popup-zoom-btn popup-detail-btn";
-          detailBtn.title = "查看属性与图表";
-          detailBtn.innerHTML = "📋";
-          detailBtn.style.right = "36px"; // 放在缩放按钮左边
+          // Canvas 要素：直接从 popup 上的自定义属性读取
+          if (popup._featureRef) {
+            feature = popup._featureRef;
+            layerId = popup._layerId || null;
+            layerName = popup._layerName || "";
+          }
 
-          detailBtn.onclick = function (ev) {
-            L.DomEvent.stop(ev);
-            var feature = null;
-            var layerId = null;
-            var layerName = "";
-
-            // Canvas 要素：直接从 popup 上的自定义属性读取
-            if (popup._featureRef) {
-              feature = popup._featureRef;
-              layerId = popup._layerId || null;
-              layerName = popup._layerName || "";
+          // 非 Canvas：从 popup._source 获取 feature
+          if (!feature) {
+            var source = popup._source || popup._sourceLayer;
+            if (source && source.feature) {
+              feature = source.feature;
             }
+          }
 
-            // 非 Canvas：从 popup._source 获取 feature
-            if (!feature) {
-              var source = popup._source || popup._sourceLayer;
-              if (source && source.feature) {
-                feature = source.feature;
-              }
+          // 尝试匹配 layerId
+          if (!layerId && feature) {
+            if (feature._fileName && window._layerIdByFileName) {
+              layerId = window._layerIdByFileName[feature._fileName];
             }
-
-            // 尝试匹配 layerId
-            if (!layerId && feature) {
-              if (feature._fileName && window._layerIdByFileName) {
-                layerId = window._layerIdByFileName[feature._fileName];
-              }
-              if (!layerId && window._featureCache) {
-                for (var cacheId in window._featureCache) {
-                  var feats = window._featureCache[cacheId];
-                  if (feats) {
-                    for (var fi = 0; fi < feats.length; fi++) {
-                      if (feats[fi] === feature) {
-                        layerId = cacheId;
-                        break;
-                      }
+            if (!layerId && window._featureCache) {
+              for (var cacheId in window._featureCache) {
+                var feats = window._featureCache[cacheId];
+                if (feats) {
+                  for (var fi = 0; fi < feats.length; fi++) {
+                    if (feats[fi] === feature) {
+                      layerId = cacheId;
+                      break;
                     }
                   }
-                  if (layerId) break;
                 }
+                if (layerId) break;
               }
             }
+          }
 
-            // 获取图层名
-            if (layerId) {
-              var cbEl = document.getElementById(layerId);
-              if (cbEl) layerName = cbEl.dataset.layerName || "";
-            }
+          // 获取图层名
+          if (layerId) {
+            var cbEl = document.getElementById(layerId);
+            if (cbEl) layerName = cbEl.dataset.layerName || "";
+          }
 
-            // 如果没有 layerId 但有 popup 的 latlng，构造精简 feature
-            if (!feature) {
-              var pLL = popup.getLatLng ? popup.getLatLng() : null;
-              feature = {
-                type: "Feature",
-                geometry: pLL
-                  ? { type: "Point", coordinates: [pLL.lng, pLL.lat] }
-                  : null,
-                properties: {},
-              };
-            }
+          // 如果没有 layerId 但有 popup 的 latlng，构造精简 feature
+          if (!feature) {
+            var pLL = popup.getLatLng ? popup.getLatLng() : null;
+            feature = {
+              type: "Feature",
+              geometry: pLL
+                ? { type: "Point", coordinates: [pLL.lng, pLL.lat] }
+                : null,
+              properties: {},
+            };
+          }
 
-            if (
-              typeof window.FeaturePanel !== "undefined" &&
-              window.FeaturePanel.openSingle
-            ) {
-              window.FeaturePanel.openSingle(feature, layerId, layerName);
-              map.closePopup();
-            }
-          };
+          if (
+            typeof window.FeaturePanel !== "undefined" &&
+            window.FeaturePanel.openSingle
+          ) {
+            window.FeaturePanel.openSingle(feature, layerId, layerName);
+            map.closePopup();
+          }
+        };
 
-          el.appendChild(detailBtn);
-        }
+        wrap.appendChild(zoomBtn);
+        wrap.appendChild(detailBtn);
+        container.appendChild(wrap);
       });
     </script>
 

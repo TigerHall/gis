@@ -1,5 +1,32 @@
 # 更新记录
 
+## 2026-08-07 — 图层不可选中 + 弹窗按钮外移 + 用户图层永久持久化
+
+### 图层不可选中
+
+- **新增 `layerSelectableMap`**（`geojsonloader.js`）：跟踪每层是否可选中，false 时点击不弹窗不缩放
+- **geo-config 优先**（`geo-config.js`）：图层项新增 `selectable: false` 字段，「浙江适飞区(2026-05-12)」默认不可选中
+- **优先级**：localStorage 用户设置 > geo-config 默认值 > true（用户开关优先级最高）
+- **设置弹窗**：底部新增「可选中」复选框，用户自由开关，持久化到 `saveLayerSettings`
+- **点击路径**：Canvas/DOM聚类/DOM非聚类/面线 四种渲染模式均已接入 selectable 检查
+- **用户上传图层**：默认 `selectable: true`，可在设置中关闭
+
+### 弹窗按钮
+
+- 缩放（⚲）和详情（📋）按钮从内容区右下角移到 `.leaflet-popup` 外层右侧外边，竖向排列
+- `.popup-ext-btn-wrap`（flex column, right: -36px, 垂直居中）替代旧 `.popup-zoom-btn`
+- `.leaflet-popup { overflow: visible !important }` 防裁剪
+- 测量控件画线测距时弹出的距离标签不再被按钮遮挡
+
+### 用户图层永久持久化
+
+- 用户上传图层始终保存到 IndexedDB + localStorage，不受「记住图层」开关影响
+- `saveUserLayerMeta` 始终调用（移除 `isRememberLayerEnabled()` 守卫）
+- `restoreUserLayers` 始终执行；「记住图层」开关仅控制 checkbox 初始勾选状态
+- 关闭「记住图层」时，上传的图层仍在面板中，但默认不勾选
+
+---
+
 ## 2026-08-01 — 新增要素详情面板（属性表翻页 + ECharts 图表）
 
 ### 要素详情面板

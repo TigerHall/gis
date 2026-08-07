@@ -907,25 +907,13 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           String(this.checked),
         );
         if (!this.checked) {
-          // 关闭 → 清除所有已保存的记录
-          // 1. 清除用户图层 GeoJSON 和索引
-          var list = [];
-          try {
-            list = JSON.parse(
-              localStorage.getItem("dupal_user_layers") || "[]",
-            );
-          } catch (e) {}
-          list.forEach(function (meta) {
-            L.GzIdbLoader.delCache("user_geo_" + meta.id);
-            L.GzIdbLoader.deleteSearchIndex("user_" + meta.id);
-          });
-          localStorage.removeItem("dupal_user_layers");
-          // 2. 清除所有图层的勾选状态（内置 + 用户上传）
+          // 关闭 → 只清除勾选状态，不删除用户图层数据
           var keysToRemove = [];
           for (var i = 0; i < localStorage.length; i++) {
             var key = localStorage.key(i);
             if (
               key &&
+              key !== "dupal_user_layers" &&
               (key.indexOf("dupal_layer_") === 0 ||
                 key.indexOf("dupal_user_layer_") === 0)
             ) {

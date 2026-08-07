@@ -352,6 +352,7 @@
           file: "浙江适飞区_20260512.geojson.gz",
           source:
             "浙江省交通运输厅 2026年5月12日 关于公布新版浙江省无人驾驶航空器适飞空域范围的公告",
+          selectable: false,
         },
         // {
         //   name: "国家行政区 countries",

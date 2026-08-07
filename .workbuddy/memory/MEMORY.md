@@ -4,7 +4,7 @@
 
 `<head>`: dialog.js → geo-config.js → **Leaflet.LegendControl.js**（新增）｜ `<body>`: 主脚本(index.html) → app.js → geojsonloader.js → file-handler.js → pointdrop.js
 
-- `geo-config.js`: 图层路径/分组配置（window.\* 全局暴露）。图层对象支持 `defaultOpacity`（默认不透明度，未覆盖用户设置时生效）与 `searchPriority:true`（搜索优先：未勾选也可搜、结果置顶，启动 2s 后后台静默建索引）
+- `geo-config.js`: 图层路径/分组配置（window.\* 全局暴露）。图层对象支持 `defaultOpacity`、`searchPriority:true`、`selectable:false`（不可选中：点击不弹窗不缩放，用户可在设置覆盖）
 - `geojsonloader.js`: 图层加载/样式/高亮/交互/搜索/上传（最大核心文件）
 - `file-handler.js`: `window.loadFileAsUserLayer(file)` 统一入口（按钮/拖入/PWA）
 - `app.js`: 版本号/导出/SW/剪贴板/记住图层/toggle（TOGGLE_GROUPS 数据驱动）
@@ -115,3 +115,23 @@
 - **属性表**：单要素模式 key-value 翻页（15条/页）；图层模式多行表格翻页 + 搜索过滤
 - **图表**：ECharts 5.5.1 CDN 懒加载；柱状图/雷达图/饼图；支持「对比图层均值」
 - **全局依赖**：`window._featureCache`、`window._layerIdByFileName`、`window.GeoUtils.extractNumericFields`、`window.GeoUtils.computeLayerStats`
+
+## 图层不可选中（2026-08-07 新增）
+
+- `layerSelectableMap[checkboxId]` 跟踪每层可否选中，false 时不弹窗不缩放
+- **优先级**：localStorage 用户设置 > geo-config `selectable:false` > 默认 true
+- 设置弹窗底部「可选中」复选框，持久化到 `saveLayerSettings`
+- 所有要素点击路径（Canvas/DOM聚类/DOM非聚类/面线）均已接入检查
+- 用户上传图层默认 selectable=true
+
+## 弹窗按钮外移（2026-08-07 调整）
+
+- 缩放 ⚲ 和详情 📋 按钮移到 `.leaflet-popup` 右侧外边竖向排列
+- 注入 `.popup-ext-btn-wrap`（flex column, right:-36px, top:50% translateY(-50%)）
+- 旧 `.popup-zoom-btn` 已移除；`.leaflet-popup{overflow:visible!important}` 防裁剪
+
+## 用户图层永久持久化（2026-08-07 修正）
+
+- `saveUserLayerMeta` 始终调用（去掉 `isRememberLayerEnabled` 守卫）
+- `restoreUserLayers` 始终执行；「记住图层」开关仅控制 checkbox 初始勾选
+- 即使用户选择「不恢复」或关闭「记住图层」，图层数据不会丢失

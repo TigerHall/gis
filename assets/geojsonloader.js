@@ -254,6 +254,7 @@
     window._layerIdByFileName = _layerIdByFileName;
     const layerSearchPriorityMap = {}; // 搜索优先图层（如海底地名集）：检索时优先返回，且未勾选也可被搜索
     const layerSourceMap = {}; // 图层级数据来源（geo-config 的 source）：注入要素属性后显示在弹窗「数据源」
+    const layerSelectableMap = {}; // checkboxId → boolean，localStorage 优先于 geo-config
     let searchIndexingCount = 0; // 正在构建索引的图层数
 
     // 搜索辅助函数（提取 feature 所有属性为可搜索字符串）
@@ -621,6 +622,12 @@
       if (savedSettings.opacity !== undefined)
         layerOpacityMap[checkboxId] = Number(savedSettings.opacity);
 
+      // 可否选中：localStorage 用户设置优先，其次 geo-config 默认，最后 true
+      if (savedSettings.selectable !== undefined)
+        layerSelectableMap[checkboxId] = savedSettings.selectable;
+      else if (layerSelectableMap[checkboxId] === undefined)
+        layerSelectableMap[checkboxId] = true;
+
       // 标签字段：用户自定义 → geo-config.js 配置 → 默认 "Name"
       let labelField =
         savedSettings.labelField ||
@@ -836,6 +843,7 @@
 
             // 点击回调：所有数据集均设置（f 即 featuresArray 元素，含完整属性）
             canvasLayer.options.onFeatureClick = function (f, latlng) {
+              if (layerSelectableMap[checkboxId] === false) return;
               const content = window.GeoUtils.buildPopupContent(
                 f,
                 fileName,
@@ -889,9 +897,14 @@
                   labelField,
                   layerDisplayName,
                 );
-                if (content) marker.bindPopup(content, { maxWidth: 300 });
+                if (content && layerSelectableMap[checkboxId] !== false)
+                  marker.bindPopup(content, { maxWidth: 300 });
 
                 marker.on("click", function (e) {
+                  if (layerSelectableMap[checkboxId] === false) {
+                    L.DomEvent.stop(e);
+                    return;
+                  }
                   const hlStyle = {
                     color: "#ffff00",
                     weight: 3,
@@ -907,6 +920,10 @@
                 });
 
                 marker.on("dblclick", function (e) {
+                  if (layerSelectableMap[checkboxId] === false) {
+                    L.DomEvent.stop(e);
+                    return;
+                  }
                   try {
                     map.setView(latlng, map.getZoom() + 2, { animate: true });
                   } catch (err) {}
@@ -954,6 +971,8 @@
                   ),
                   { maxWidth: 300 },
                 );
+                if (layerSelectableMap[checkboxId] === false)
+                  marker.unbindPopup();
                 return marker;
               },
             });
@@ -993,6 +1012,8 @@
                 ),
                 { maxWidth: 300 },
               );
+              if (layerSelectableMap[checkboxId] === false)
+                marker.unbindPopup();
               return marker;
             },
             style: function (feature) {
@@ -1012,6 +1033,10 @@
               _bindPermanentLabel(layer, labelField);
 
               layer.on("click", function (e) {
+                if (layerSelectableMap[checkboxId] === false) {
+                  L.DomEvent.stop(e);
+                  return;
+                }
                 const idx = feature._featureIndex || 0;
                 const baseStyle = getGeoJsonStyle(
                   feature,
@@ -1033,6 +1058,10 @@
               });
 
               layer.on("dblclick", function (e) {
+                if (layerSelectableMap[checkboxId] === false) {
+                  L.DomEvent.stop(e);
+                  return;
+                }
                 const idx = feature._featureIndex || 0;
                 const baseStyle = getGeoJsonStyle(
                   feature,
@@ -2079,6 +2108,11 @@
         layerOpacityMap[checkboxId] !== undefined
           ? layerOpacityMap[checkboxId]
           : 0.8;
+      // selectable 优先级：localStorage > geo-config > true
+      const currentSelectable =
+        layerSelectableMap[checkboxId] !== undefined
+          ? layerSelectableMap[checkboxId]
+          : true;
       const fieldOptions = fields
         .map(function (f) {
           return `<option value="${f}" ${f === currentField ? "selected" : ""}>${f}</option>`;
@@ -2167,6 +2201,13 @@
             </label>
             <input type="range" id="dlgOpacitySlider" min="0" max="1" step="0.05" value="${currentOpacity}"
               style="width:100%;cursor:pointer;">
+          </div>
+          <hr class="dlg-section-divider">
+          <div class="dlg-selectable-section" style="margin-top:4px;">
+            <label class="color-mode-option" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#555;">
+              <input type="checkbox" id="dlgSelectableSwitch" ${currentSelectable ? "checked" : ""} style="width:auto;cursor:pointer;">
+              <span>可选中（点击弹出信息窗）</span>
+            </label>
           </div>
         </div>`;
     }
@@ -2511,12 +2552,15 @@
             : 20;
           var opSlider = dlg.querySelector("#dlgOpacitySlider");
           var newOpacity = opSlider ? parseFloat(opSlider.value) : 0.8;
+          var selSwitch = dlg.querySelector("#dlgSelectableSwitch");
+          var newSelectable = selSwitch ? selSwitch.checked : true;
 
           // 统一写入持久化设置
           var s = {};
           s.colorMode = newMode;
           s.colorValue = newColor;
           s.opacity = newOpacity;
+          s.selectable = newSelectable;
           if (newField) s.colorField = newField;
           if (nf) s.labelField = nf;
           if (newIcon) s.iconValue = newIcon;
@@ -2529,6 +2573,7 @@
           else delete layerIconMap[cbId];
           layerIconSizeMap[cbId] = newIconSize;
           layerOpacityMap[cbId] = newOpacity;
+          layerSelectableMap[cbId] = newSelectable;
 
           // 统一通过 reloadLayerWithNewMode 更新（Canvas 图标的 Image 在其中刷新）
           // iconChanged（图标类型或大小变化）时强制重建图层，否则仅更新透明度即可
@@ -2766,6 +2811,10 @@
           // 图层级数据来源（显示在要素弹窗「数据源」字段）
           if (layerConfig.source) {
             layerSourceMap[checkboxId] = layerConfig.source;
+          }
+          // 可否选中（geo-config 默认设置，localStorage 保存后优先）
+          if (layerConfig.selectable !== undefined) {
+            layerSelectableMap[checkboxId] = layerConfig.selectable;
           }
 
           // 注册到搜索列表（即使图层尚未加载）
@@ -3205,12 +3254,14 @@
             removeUserLayerMeta(meta.id);
             return;
           }
-          // 恢复时检查该图层之前的勾选状态
-          var wasChecked = true;
-          try {
-            var saved = localStorage.getItem("dupal_user_layer_" + meta.id);
-            wasChecked = saved !== null ? saved === "true" : true;
-          } catch (e) {}
+          // 记住图层开关控制勾选状态：关→不勾选，开→恢复保存的勾选状态
+          var wasChecked = false;
+          if (isRememberLayerEnabled()) {
+            try {
+              var saved = localStorage.getItem("dupal_user_layer_" + meta.id);
+              wasChecked = saved !== null ? saved === "true" : true;
+            } catch (e) {}
+          }
           addUserLayer(data, meta.fileName, wasChecked, meta.id);
         });
       });
@@ -3229,6 +3280,7 @@
         Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
       var fixedColor = window.GeoUtils.getFixedColor(globalLayerIndex++);
       layerColorMap[uid] = fixedColor;
+      layerSelectableMap[uid] = true; // 用户上传图层默认可选中
 
       var data_ = geojsonData; // 直接使用原始数据，三副本逻辑处理跨180显示
       var mainGeomType = window.GeoUtils.detectMainGeomType(data_);
@@ -3477,8 +3529,8 @@
       // 用户上传图层：持久化到 IDB（GeoJSON 数据 + 搜索索引）
       if (data_.features && data_.features.length) {
         var cacheKey = "user_" + persistentId;
-        if (!existingPersistentId && isRememberLayerEnabled()) {
-          // 新上传且开关打开：保存到 IDB 和 localStorage
+        if (!existingPersistentId) {
+          // 新上传：始终持久化到 IDB 和 localStorage
           L.GzIdbLoader.setCache("user_geo_" + persistentId, geojsonData);
           saveUserLayerMeta(persistentId, fileName);
         }
@@ -5139,6 +5191,7 @@
         var key = localStorage.key(i);
         if (
           key &&
+          key !== USER_LAYER_STORAGE_KEY &&
           (key.indexOf("dupal_layer_") === 0 ||
             key.indexOf("dupal_user_layer_") === 0)
         ) {
@@ -5148,28 +5201,15 @@
       keysToRemove.forEach(function (k) {
         localStorage.removeItem(k);
       });
-      // 清除所有自定义图层设置
+      // 清除图层勾选状态和设置（不删除用户图层数据和元数据）
       for (var j = 0; j < localStorage.length; j++) {
         var k2 = localStorage.key(j);
         if (k2 && k2.indexOf(LAYER_SETTINGS_PREFIX) === 0) {
           localStorage.removeItem(k2);
         }
       }
-      // 清除用户图层元数据列表
-      try {
-        var list = JSON.parse(
-          localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]",
-        );
-        list.forEach(function (meta) {
-          if (L.GzIdbLoader && L.GzIdbLoader.delCache) {
-            L.GzIdbLoader.delCache("user_geo_" + meta.id);
-          }
-          if (L.GzIdbLoader && L.GzIdbLoader.deleteSearchIndex) {
-            L.GzIdbLoader.deleteSearchIndex("user_" + meta.id);
-          }
-        });
-      } catch (e) {}
-      localStorage.removeItem(USER_LAYER_STORAGE_KEY);
+      // 注意：不清除 USER_LAYER_STORAGE_KEY 和 IDB 用户图层缓存
+      // 用户图层始终持久化，不受「不恢复」影响
       localStorage.removeItem(MAP_STATE_KEY);
     }
 
@@ -5247,8 +5287,8 @@
         }
       } catch (e) {}
 
-      // 图层恢复：检测到已保存的图层状态时，弹窗询问用户是否恢复
-      if (isRememberLayerEnabled() && hasSavedLayerState()) {
+      // 图层恢复：检测到已保存状态时弹窗询问（内置图层 + 用户上传图层统一由此控制）
+      if (hasSavedLayerState()) {
         showConfirm(
           "检测到上次访问时打开的图层。<br><br>" +
             "⚠️ 如果上次加载的图层数据较大导致页面运行缓慢或崩溃，请选择「不恢复」以避免自动重载。<br><br>" +
