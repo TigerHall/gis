@@ -3254,14 +3254,12 @@
             removeUserLayerMeta(meta.id);
             return;
           }
-          // 记住图层开关控制勾选状态：关→不勾选，开→恢复保存的勾选状态
+          // 严格按保存的勾选状态还原：true→勾选并加载，false/未保存→不勾选（默认不加载）
           var wasChecked = false;
-          if (isRememberLayerEnabled()) {
-            try {
-              var saved = localStorage.getItem("dupal_user_layer_" + meta.id);
-              wasChecked = saved !== null ? saved === "true" : true;
-            } catch (e) {}
-          }
+          try {
+            var saved = localStorage.getItem("dupal_user_layer_" + meta.id);
+            wasChecked = saved === "true";
+          } catch (e) {}
           addUserLayer(data, meta.fileName, wasChecked, meta.id);
         });
       });
@@ -3369,6 +3367,13 @@
       checkbox.style.setProperty("--layer-color", fixedColor);
       checkbox.style.background = autoShow !== false ? fixedColor : "#fff";
       checkbox.dataset.layerName = fileName;
+      // 持久化初始勾选状态（上传即视为“打开”，便于下次恢复时正确还原勾选）
+      try {
+        localStorage.setItem(
+          "dupal_user_layer_" + persistentId,
+          String(checkbox.checked),
+        );
+      } catch (e) {}
       checkbox.addEventListener("change", function () {
         this.style.background = this.checked ? fixedColor : "#fff";
         // 勾选时展开到对应面板层级

@@ -130,8 +130,23 @@
 - 注入 `.popup-ext-btn-wrap`（flex column, right:-36px, top:50% translateY(-50%)）
 - 旧 `.popup-zoom-btn` 已移除；`.leaflet-popup{overflow:visible!important}` 防裁剪
 
-## 用户图层永久持久化（2026-08-07 修正）
+## 用户图层存储逻辑（2026-08-07 终版梳理）
 
-- `saveUserLayerMeta` 始终调用（去掉 `isRememberLayerEnabled` 守卫）
-- `restoreUserLayers` 始终执行；「记住图层」开关仅控制 checkbox 初始勾选
-- 即使用户选择「不恢复」或关闭「记住图层」，图层数据不会丢失
+### 存储键
+- `dupal_user_layers`（USER_LAYER_STORAGE_KEY）：JSON 数组 `[{id, fileName}]`，**图层清单，永不被恢复/不恢复/开关删除**
+- `user_geo_<id>`（IndexedDB）：GeoJSON 真数据
+- `user_<id>`（IndexedDB）：搜索索引
+- `dupal_user_layer_<id>`：该图层勾选状态 `"true"/"false"`，用于恢复时还原
+
+### 生命周期
+- **上传**：`addUserLayer(data, name)` → 写 IDB + 写 `dupal_user_layers` + 写 `dupal_user_layer_<id>="true"`（初始即“打开”）+ 上图勾选渲染
+- **× 按钮（唯一删除路径）**：`delCache` + `deleteSearchIndex` + `removeUserLayerMeta` —— 数据/索引/清单全清
+- **重新打开**：默认**不加载**用户图层（`restoreUserLayers` 只在「恢复」回调里调用），清单仍在存储中
+- **点「恢复」**：`restoreUserLayers` 按 `dupal_user_layer_<id>` 严格还原 —— `true`→勾选并加载，`false`/未保存→不勾选（默认不加载）
+- **点「不恢复」**：`clearAllLayerStates` 只清 `dupal_layer_*` + `dupal_user_layer_*` 勾选键 + 设置，**排除 `dupal_user_layers` 和 IDB**，数据不丢
+- **「记住图层」开关关**：只清勾选键（`dupal_layer_*`、`dupal_user_layer_*`），**不碰 `dupal_user_layers` 和 IDB**
+
+### 关键坑（已修）
+- 字符串前缀碰撞：`"dupal_user_layers".indexOf("dupal_user_layer_")===0` 为真 → 清除循环曾误删清单。两处清除逻辑都已 `key !== "dupal_user_layers"` 显式排除
+- `restoreUserLayers` 的 `wasChecked` 原被 `isRememberLayerEnabled` 纠缠（关→强制不勾选）；现改为严格读 `dupal_user_layer_<id>`
+- 上传时需主动 `setItem("dupal_user_layer_<id>", ...)`，否则「恢复」读不到初始打开状态
