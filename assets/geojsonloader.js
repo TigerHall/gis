@@ -5248,8 +5248,18 @@
       generateLayerItems();
       initSearch();
 
-      // 页面卸载时保存地图中心坐标和缩放级别
-      window.addEventListener("pagehide", function () {
+      // ========== 地图状态持久化（中心 + 缩放）==========
+      // 背景：iOS Safari 上 pagehide 不可靠（切后台/锁屏可能不触发或来不及写 localStorage），
+      // 因此采用三层保存策略确保状态及时落地：
+      //   1. moveend 防抖 — 用户操作停止后 500ms 自动保存（主力，实时落地）
+      //   2. visibilitychange — 页面变 hidden 立即保存（iOS 上最可靠的"离开"信号）
+      //   3. pagehide — 兜底（标准导航离开事件）
+      // 初始化未完成前禁止保存（防止 visibilitychange 在恢复弹窗期间
+      // 把默认中心坐标写入 localStorage 覆盖掉用户上次的真实位置）
+      var _mapStateReady = false;
+      var _saveMapStateTimer = null;
+      function saveMapState() {
+        if (!_mapStateReady) return;
         try {
           var center = map.getCenter();
           var zoom = map.getZoom();
@@ -5258,7 +5268,26 @@
             JSON.stringify({ lat: center.lat, lng: center.lng, zoom: zoom }),
           );
         } catch (e) {}
+      }
+      function saveMapStateDebounced() {
+        if (!_mapStateReady) return;
+        if (_saveMapStateTimer) clearTimeout(_saveMapStateTimer);
+        _saveMapStateTimer = setTimeout(saveMapState, 500);
+      }
+
+      // (1) 用户操作停止后自动保存
+      map.on("moveend", saveMapStateDebounced);
+
+      // (2) 页面隐藏时立即保存（iOS reliable）
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden") {
+          if (_saveMapStateTimer) clearTimeout(_saveMapStateTimer);
+          saveMapState();
+        }
       });
+
+      // (3) 标准页面离开兜底
+      window.addEventListener("pagehide", saveMapState);
 
       // 恢复地图中心/缩放
       function restoreMapCenter() {
@@ -5313,7 +5342,10 @@
           }
           syncAllGroupStatus();
           syncSelectAllStatus();
+          _mapStateReady = true; // 初始化完成，允许保存地图状态
         });
+      } else {
+        _mapStateReady = true; // 无已保存图层，直接允许保存
       }
 
       initClusterToggle();

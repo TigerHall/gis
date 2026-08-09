@@ -1,5 +1,14 @@
 # 更新记录
 
+## 2026-08-09 — iOS 地图状态持久化修复
+
+### Bug 修复
+
+- **地图状态保存不可靠（iOS）**：原来仅依赖 `pagehide` 事件保存地图中心/缩放，iOS Safari 上 `pagehide` 可能不触发或来不及写 localStorage。升级为三层策略：`moveend` 防抖 500ms 实时落地 + `visibilitychange`(hidden) 即时保存 + `pagehide` 兜底（`geojsonloader.js` → `saveMapState`/`saveMapStateDebounced`）
+- **初始化覆盖风险**：新增 `_mapStateReady` 标志，恢复弹窗解决前禁止保存，防止 visibilitychange 在初始化期间把默认坐标覆盖掉用户上次的真实位置
+
+---
+
 ## 2026-08-07 — 图层不可选中 + 弹窗按钮外移 + 用户图层永久持久化
 
 ### 图层不可选中
