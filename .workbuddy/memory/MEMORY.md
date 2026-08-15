@@ -150,3 +150,25 @@
 - 字符串前缀碰撞：`"dupal_user_layers".indexOf("dupal_user_layer_")===0` 为真 → 清除循环曾误删清单。两处清除逻辑都已 `key !== "dupal_user_layers"` 显式排除
 - `restoreUserLayers` 的 `wasChecked` 原被 `isRememberLayerEnabled` 纠缠（关→强制不勾选）；现改为严格读 `dupal_user_layer_<id>`
 - 上传时需主动 `setItem("dupal_user_layer_<id>", ...)`，否则「恢复」读不到初始打开状态
+
+## 经纬度格网（2026-08-15 新增）
+
+- **插件**：[leaflet/Leaflet.Graticule](https://github.com/leaflet/Leaflet.Graticule) 官方 `L.Layer.extend`，Canvas 全幅绘制 + `showLabel` 边缘经纬度刻度。17.6KB 单文件无依赖，工厂函数 `L.latlngGraticule(opts)`。下载源 jsDelivr: `https://cdn.jsdelivr.net/gh/leaflet/Leaflet.Graticule@master/Leaflet.Graticule.js`
+- **集成**：index.html head 在 MousePosition.js 后引入；app.js TOGGLE_GROUPS「显示」分组加 `graticuleToggle`，toggleConfig 加 enable/disable + 顶层 `rebuildGraticuleTheme()` 函数（深色模式联动）
+- **zoomInterval 分级**：1-3:30° / 4-5:10° / 6-7:5° / 8-9:1° / 10+:0.5°（适配海洋站位图视野）
+- **`latLineCurved: 4`**：Web Mercator 下纬线略弯，4 段折线贴合底图；`lngLineCurved: 0`（经线是直线）
+- **配色**：浅色 `#6b6b6b` opacity 0.55；深色 `#9aa0a6` opacity 0.7（中性灰两主题都清晰）
+- **深色模式联动**：插件无 setStyle，改色只能重建。在 darkModeToggle enable/disable 末尾调 `rebuildGraticuleTheme()`（disable → enable）
+- **验证**：playwright-core + 系统 Chrome（沙箱阻断 agent-browser Chromium 下载）跑端到端断言，0 JS 错误
+- **DPR 修复**（v2）：`_reset` canvas.width = size.x * dpr，绘制前 ctx.setTransform(dpr,0,0,dpr,0,0)；容器角点 latlng 必须用 size（CSS）而非 canvas.width（DPR 后）
+- **DOM 标签层**（v2）：新增 `graticule-labels.js` 替换插件 `showLabel`，fixed 定位地图外侧，pointer-events:none，z-index 1050。格式 `120°E`/`30°N`/`0°`；MIN_GAP=26 防重叠
+- **地图让出边距**（v2）：格网开启时 `#map.graticule-active` 类 → `margin: 20px 40px; height: calc(100% - 40px)`，关闭时移除并 invalidateSize。窄屏 <768px 缩到 12/8
+- **备案号位置**（v2 → v3 调整）：`#beianBar` 从 `right:8` → `left:8; bottom:30`（v2）→ `bottom:50`（v3 进一步避开底部经度标签行）
+- **深色模式联动**（v2）：标签层 `setDark()` 只换主题不重建；Canvas 网格线继续重建换色
+- **缩放分级细化**（v3）：原 0.5°@zoom10-20 太稀，14/15 一屏没线。改为 ≥2 条/视口：10-11:0.25° / 12-13:0.1° / 14:0.05° / 15-16:0.02° / 17-18:0.01° / 19-20:0.005°
+- **左右纬度标签竖排**（v3）：CSS transform 旋转 90°/-90°（`.gl-left{transform:translate(-50%,-50%) rotate(90deg)}`，`.gl-right{rotate(-90deg)}`）。文字沿边框方向阅读
+- **边距收紧**（v3）：左右 40→22px（竖排后宽度=文字高，22px 容纳 15px 文字）、上下 20→18px
+- **回退到官方用法**（v4，2026-08-15 终版）：用户要求改用原生 `showLabel:true`（标签画在地图内边缘），撤销 v2/v3 的 DOM 标签层 + 让边距方案。`#map.graticule-active` 类规则删除；`graticule-labels.js` 保留为停用存档（文件头注明）
+- **浮点累加 bug 修复**（v4）：Leaflet.Graticule 的 `__format_lat/__format_lng` 直接 `''+lng+'E'`，高 zoom 累加 0.05° 时显示成 `106.99999999999607E`。加 `Math.round(lng*1000)/1000` 修复（保留 0.001° 精度覆盖到 zoom20 的 0.005° 间隔）
+- **官方插件标签格式**：`120E` / `30N` / `0`（无 ° 符号，简洁 GIS 风格）。字号 11px，DPR 高清（canvas.width × dpr），`#6b6b6b`/`#9aa0a6` 双主题
+- **标签颜色加深**（v5，2026-08-15）：原浅色 `#6b6b6b` + opacity 0.55 字偏淡。改为：网格线 `#8a8a8a`（保持低调）+ 标签文字独立 `fontColor` 浅色 `#333` / 深色 `#eef0f3` + canvas opacity 0.8。线不抢眼但文字清晰

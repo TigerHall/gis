@@ -36,6 +36,11 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             desc: "开启后在地图正中心渲染十字标记，帮助直观定位当前地图中心位置；关闭时移除",
           },
           {
+            id: "graticuleToggle",
+            label: "经纬度格网",
+            desc: "开启后在地图上显示经纬度网格线，并在边缘标注坐标，随缩放自动调整网格密度",
+          },
+          {
             id: "optimizeSearchToggle",
             label: "优化搜索",
             desc: "开启后点击搜索结果缩放至目标时，仅突出显示该目标（隐藏同图层其他目标、淡化其他图层），移动或缩放地图后自动恢复",
@@ -1002,6 +1007,17 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   }
 
   // 开关配置：cbId → { storageKey, control?, enable?, disable? }
+  // 深色模式切换时重建格网（换配色；仅当格网已开启）
+  function rebuildGraticuleTheme() {
+    var cb = document.getElementById("graticuleToggle");
+    if (!cb || !cb.checked) return;
+    // Canvas 网格线：插件无 setStyle，重建换色
+    if (window._graticuleLayer) {
+      toggleConfig.graticuleToggle.disable();
+      toggleConfig.graticuleToggle.enable();
+    }
+  }
+
   var toggleConfig = {
     isLocationTracking: {
       storageKey: TOGGLE_PREFIX + "isLocationTracking",
@@ -1079,11 +1095,64 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         document.documentElement.setAttribute("data-theme", "dark");
         document.documentElement.style.colorScheme = "dark";
         syncThemeColorMeta();
+        rebuildGraticuleTheme();
       },
       disable: function () {
         document.documentElement.removeAttribute("data-theme");
         document.documentElement.style.colorScheme = "light";
         syncThemeColorMeta();
+        rebuildGraticuleTheme();
+      },
+    },
+    graticuleToggle: {
+      storageKey: TOGGLE_PREFIX + "graticule",
+      enable: function () {
+        if (window._graticuleLayer) return;
+        if (typeof L.latlngGraticule !== "function") {
+          window.showToast("❌ 格网插件未加载", { duration: 3000 });
+          var cb = document.getElementById("graticuleToggle");
+          if (cb) {
+            cb.checked = false;
+            localStorage.setItem(TOGGLE_PREFIX + "graticule", "false");
+          }
+          return;
+        }
+        // 深色模式用浅色网格线，浅色模式用深灰网格线；
+        // 标签文字单独用深色/亮色保证清晰（fontColor 独立于 color）
+        var isDark =
+          document.documentElement.getAttribute("data-theme") === "dark";
+        var lineColor = isDark ? "#a0a6ad" : "#8a8a8a";
+        var labelColor = isDark ? "#eef0f3" : "#333333";
+        var lineOpacity = 0.8;
+        var zoomInterval = [
+          { start: 1, end: 3, interval: 30 },
+          { start: 4, end: 5, interval: 10 },
+          { start: 6, end: 7, interval: 5 },
+          { start: 8, end: 9, interval: 1 },
+          { start: 10, end: 11, interval: 0.25 },
+          { start: 12, end: 13, interval: 0.1 },
+          { start: 14, end: 14, interval: 0.05 },
+          { start: 15, end: 16, interval: 0.02 },
+          { start: 17, end: 18, interval: 0.01 },
+          { start: 19, end: 20, interval: 0.005 },
+        ];
+        // 官方用法：网格线 + 内置边缘坐标标签（canvas 绘制在地图内边缘）
+        window._graticuleLayer = L.latlngGraticule({
+          showLabel: true,
+          zoomInterval: zoomInterval,
+          color: lineColor,
+          weight: 0.8,
+          opacity: lineOpacity,
+          font: "11px system-ui, sans-serif",
+          fontColor: labelColor,
+          latLineCurved: 4, // Web Mercator 下纬线略弯，4 段折线贴合底图
+        }).addTo(map);
+      },
+      disable: function () {
+        if (window._graticuleLayer) {
+          map.removeLayer(window._graticuleLayer);
+          window._graticuleLayer = null;
+        }
       },
     },
     mouseCoordToggle: {

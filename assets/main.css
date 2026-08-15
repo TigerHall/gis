@@ -84,11 +84,11 @@
   color-scheme: dark;
 }
 
-/* 备案号悬浮条（固定右下角，合规要求） */
+/* 备案号悬浮条（固定左下角，合规要求） */
 #beianBar {
   position: fixed;
-  bottom: 6px;
-  right: 8px;
+  bottom: 8px;
+  left: 8px;
   z-index: 1100;
   font-size: 11px;
   line-height: 1.4;
