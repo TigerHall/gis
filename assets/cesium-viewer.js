@@ -341,12 +341,8 @@
     if (!content) return;
 
     var el = ensurePopupEl();
-    el.innerHTML =
-      content +
-      '<div class="cesium-popup-actions">' +
-      '<button class="cesium-popup-btn" data-act="zoom">⚲ 缩放至</button>' +
-      '<button class="cesium-popup-btn" data-act="detail">📋 详情</button>' +
-      "</div>";
+    // buildPopupContent 已内含 [⚲ 缩放至] [📋 详情] 按钮，无需再追加
+    el.innerHTML = content;
 
     // 绑定按钮
     var zoomBtn = el.querySelector('[data-act="zoom"]');

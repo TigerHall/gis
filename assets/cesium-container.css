@@ -160,6 +160,25 @@ body.view-3d-active #beianBar {
   background: #7da0d8;
 }
 
+/* buildPopupContent 内含的 .popup-ext-btn 在 3D 弹窗中的样式覆盖（与原 cesium-popup-btn 一致） */
+.cesium-feature-popup .popup-ext-btn-wrap {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.cesium-feature-popup .popup-ext-btn {
+  background: #6b8ec4;
+}
+.cesium-feature-popup .popup-ext-btn:hover {
+  background: #7da0d8;
+}
+.cesium-feature-popup .popup-ext-btn.popup-detail-btn {
+  background: #6b8ec4;
+}
+.cesium-feature-popup .popup-ext-btn.popup-detail-btn:hover {
+  background: #7da0d8;
+}
+
 /* 深色模式适配 */
 [data-theme="dark"] #cesiumLoadingOverlay {
   background: rgba(17, 17, 17, 0.8);

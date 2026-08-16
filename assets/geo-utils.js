@@ -146,7 +146,7 @@
       layerDisplayName
         ? `<div class="feature-popup-footer">📂 ${layerDisplayName}</div>`
         : ""
-    }</div>`;
+    }<div class="popup-ext-btn-wrap"><button class="popup-ext-btn" data-act="zoom">⚲ 缩放至</button><button class="popup-ext-btn popup-detail-btn" data-act="detail">📋 详情</button></div></div>`;
   }
   function buildHighlightStyle(origStyle) {
     return Object.assign({}, origStyle, {

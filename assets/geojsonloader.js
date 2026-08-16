@@ -510,6 +510,7 @@
           weight: 2.5,
           opacity: layerOpacity,
           fillOpacity: 0,
+          dashArray: null, // 显式清除高亮残留的虚线（Leaflet setStyle 用 L.extend 合并）
         };
       }
 
@@ -522,6 +523,7 @@
           opacity: layerOpacity,
           fillOpacity: layerOpacity,
           radius: isVolcano ? 5 : 8,
+          dashArray: null,
         };
       }
 
@@ -531,6 +533,7 @@
         weight: 1,
         opacity: layerOpacity,
         fillOpacity: Math.min(layerOpacity, 0.45),
+        dashArray: null,
       };
     }
 
@@ -580,6 +583,70 @@
       try {
         map.closeTooltip();
       } catch (e) {}
+    });
+
+    // ========== 悬浮窗按钮接线（缩放至 / 详情） ==========
+    // 统一处理所有弹窗路径（Canvas、bindPopup marker、bindPopup layer）的按钮点击
+    map.on("popupopen", function (e) {
+      var popup = e.popup;
+      var popupEl = popup.getElement();
+      if (!popupEl) return;
+
+      var btnZoom = popupEl.querySelector('.popup-ext-btn[data-act="zoom"]');
+      var btnDetail = popupEl.querySelector(
+        '.popup-ext-btn[data-act="detail"]',
+      );
+      if (!btnZoom && !btnDetail) return;
+
+      // 获取要素与图层信息：优先从 popup 对象（Canvas 弹窗），回退到 _source（bindPopup）
+      var feature = popup._featureRef;
+      var layerId = popup._ogvLayerId;
+      var layerName = popup._ogvLayerName;
+
+      if (!feature && popup._source) {
+        feature = popup._source.feature;
+        layerId = popup._source._ogvLayerId;
+        layerName = popup._source._ogvLayerName;
+      }
+      if (!feature) return;
+
+      if (btnZoom) {
+        btnZoom.onclick = function (ev) {
+          ev.preventDefault();
+          map.closePopup(popup);
+          // 3D 模式：飞至要素
+          if (window.CesiumViewer && window.CesiumViewer.isActive) {
+            try {
+              window.CesiumViewer.flyToFeature(feature);
+            } catch (err) {}
+            return;
+          }
+          // 2D 模式：基于要素几何缩放
+          try {
+            var b = window.GeoUtils.computeBounds({
+              type: "FeatureCollection",
+              features: [feature],
+            });
+            if (b && b.isValid && b.isValid()) {
+              map.fitBounds(b, {
+                padding: [50, 50],
+                maxZoom: 14,
+                animate: true,
+              });
+            }
+          } catch (err) {}
+        };
+      }
+
+      if (btnDetail) {
+        btnDetail.onclick = function (ev) {
+          ev.preventDefault();
+          map.closePopup(popup);
+          if (typeof window.openFeatureDetail === "function") {
+            window.openFeatureDetail(feature, layerId, layerName);
+          }
+        };
+      }
     });
 
     // ========== 创建 GeoJSON 图层 ==========
@@ -862,10 +929,10 @@
                   .setLatLng(latlng)
                   .setContent(content)
                   .openOn(map);
-                // 存储要素引用，供「查看详情」按钮使用
+                // 存储要素引用，供 popupopen 按钮使用
                 popup._featureRef = f;
-                popup._layerId = checkboxId;
-                popup._layerName = layerDisplayName || "";
+                popup._ogvLayerId = checkboxId;
+                popup._ogvLayerName = layerDisplayName || "";
               }
             };
 
@@ -906,6 +973,10 @@
                 );
                 if (content && layerSelectableMap[checkboxId] !== false)
                   marker.bindPopup(content, { maxWidth: 300 });
+
+                // 存储图层信息，供 popupopen 按钮使用
+                marker._ogvLayerId = checkboxId;
+                marker._ogvLayerName = layerDisplayName || "";
 
                 marker.on("click", function (e) {
                   if (layerSelectableMap[checkboxId] === false) {
@@ -980,6 +1051,9 @@
                 );
                 if (layerSelectableMap[checkboxId] === false)
                   marker.unbindPopup();
+                // 存储图层信息，供 popupopen 按钮使用
+                marker._ogvLayerId = checkboxId;
+                marker._ogvLayerName = layerDisplayName || "";
                 return marker;
               },
             });
@@ -1021,6 +1095,9 @@
               );
               if (layerSelectableMap[checkboxId] === false)
                 marker.unbindPopup();
+              // 存储图层信息，供 popupopen 按钮使用
+              marker._ogvLayerId = checkboxId;
+              marker._ogvLayerName = layerDisplayName || "";
               return marker;
             },
             style: function (feature) {
@@ -1035,6 +1112,10 @@
               const geomType = (feature.geometry?.type || "").toLowerCase();
               const isPoint = geomType === "point" || geomType === "multipoint";
               if (isPoint) return;
+
+              // 存储图层信息，供 popupopen 按钮使用
+              layer._ogvLayerId = checkboxId;
+              layer._ogvLayerName = layerDisplayName || "";
 
               // 标签：permanent tooltip（由 labelEnabled 全局开关控制，与点要素标签同步）
               _bindPermanentLabel(layer, labelField);
