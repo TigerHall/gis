@@ -252,6 +252,13 @@
     const _layerIdByFileName = {}; // fileName → checkboxId 反向映射（供 feature-panel 使用）
     window._featureCache = featureCache;
     window._layerIdByFileName = _layerIdByFileName;
+    // ========== Cesium 3D 状态桥接 ==========
+    // 将内部状态暴露给 CesiumGeoJsonAdapter 读取（只读引用，不修改原对象）
+    window._ogv_layerColorMap = layerColorMap;
+    window._ogv_colorMode = colorMode;
+    window._ogv_fieldKey = fieldKey;
+    window._ogv_layerOpacityMap = layerOpacityMap;
+    window._ogv_cesiumConfig = {}; // checkboxId → geo-config.cesium 配置
     const layerSearchPriorityMap = {}; // 搜索优先图层（如海底地名集）：检索时优先返回，且未勾选也可被搜索
     const layerSourceMap = {}; // 图层级数据来源（geo-config 的 source）：注入要素属性后显示在弹窗「数据源」
     const layerSelectableMap = {}; // checkboxId → boolean，localStorage 优先于 geo-config
@@ -1143,6 +1150,17 @@
               optimizedFitBounds(b, { padding: [30, 30], animate: true });
           } catch (e) {}
         }
+        // 通知 3D 引擎（如果已激活）— 从 featureCache 取已缓存的数据
+        if (
+          window.CesiumViewer &&
+          window.CesiumViewer.isActive &&
+          featureCache[checkboxId]
+        ) {
+          window.CesiumViewer.addLayer(checkboxId, {
+            type: "FeatureCollection",
+            features: featureCache[checkboxId],
+          });
+        }
         fireLoadedCallback(checkboxId);
         return;
       }
@@ -1239,6 +1257,13 @@
           if (data_.features) {
             // 无论索引是否构建成功，始终缓存原始 features 供要素搜索兜底
             featureCache[checkboxId] = data_.features;
+            // 通知 3D 引擎（如果已激活）
+            if (window.CesiumViewer && window.CesiumViewer.isActive) {
+              window.CesiumViewer.addLayer(checkboxId, {
+                type: "FeatureCollection",
+                features: data_.features,
+              });
+            }
             searchIndexingCount++;
             updateSearchInputState();
             // 内置图层：用 fileName 作为 cacheKey，支持 IDB 缓存恢复
@@ -1465,6 +1490,13 @@
         layerColorMap[checkboxId] = newColor;
       if (newMode === "field") fieldKey[checkboxId] = newField;
       if (newOpacity !== undefined) layerOpacityMap[checkboxId] = newOpacity;
+
+      // 通知 Cesium 3D 刷新该图层（颜色模式/透明度变化后重建数据源）
+      if (window.CesiumViewer && window.CesiumViewer.isActive) {
+        try {
+          window.CesiumViewer.reloadLayer(checkboxId);
+        } catch (e) {}
+      }
 
       // 检测是否为 Canvas 渲染的图层（>10K 点）
       var cached = layerCache[checkboxId];
@@ -1742,6 +1774,10 @@
 
     function removeGeoJSONLayer(checkboxId) {
       clearHighlight(checkboxId);
+      // 通知 3D 引擎移除图层（如果已激活）
+      if (window.CesiumViewer && window.CesiumViewer.isActive) {
+        window.CesiumViewer.removeLayer(checkboxId);
+      }
       const state = highlightState[checkboxId];
       if (state) {
         if (state.geoLayers)
@@ -1786,6 +1822,17 @@
               loadGeoJSONLayer(cb.value, cb.id, false);
             } else if (layerCache[cb.id]) {
               layerCache[cb.id].addTo(map);
+              // 通知 3D 引擎（如果已激活）— 用户图层全选
+              if (
+                window.CesiumViewer &&
+                window.CesiumViewer.isActive &&
+                featureCache[cb.id]
+              ) {
+                window.CesiumViewer.addLayer(cb.id, {
+                  type: "FeatureCollection",
+                  features: featureCache[cb.id],
+                });
+              }
             }
           }
         });
@@ -1806,6 +1853,10 @@
                 try {
                   map.removeLayer(layerCache[cb.id]);
                 } catch (e) {}
+              }
+              // 通知 3D 引擎移除（如果已激活）— 用户图层全不选
+              if (window.CesiumViewer && window.CesiumViewer.isActive) {
+                window.CesiumViewer.removeLayer(cb.id);
               }
               // layerBoundsCache 存的是 L.latLngBounds，不是地图图层，无需 removeLayer
             } else {
@@ -2816,6 +2867,10 @@
           if (layerConfig.selectable !== undefined) {
             layerSelectableMap[checkboxId] = layerConfig.selectable;
           }
+          // Cesium 3D 专属配置（extrudeHeight, clampToGround, pointPixelSize 等）
+          if (layerConfig.cesium) {
+            window._ogv_cesiumConfig[checkboxId] = layerConfig.cesium;
+          }
 
           // 注册到搜索列表（即使图层尚未加载）
           if (
@@ -3380,8 +3435,23 @@
         if (this.checked) expandToLayerGroup(this);
         if (this.checked) {
           if (layerCache[uid]) layerCache[uid].addTo(map);
+          // 通知 3D 引擎（如果已激活）
+          if (
+            window.CesiumViewer &&
+            window.CesiumViewer.isActive &&
+            featureCache[uid]
+          ) {
+            window.CesiumViewer.addLayer(uid, {
+              type: "FeatureCollection",
+              features: featureCache[uid],
+            });
+          }
         } else {
           if (layerCache[uid]) map.removeLayer(layerCache[uid]);
+          // 通知 3D 引擎移除
+          if (window.CesiumViewer && window.CesiumViewer.isActive) {
+            window.CesiumViewer.removeLayer(uid);
+          }
         }
         scheduleLegendRefresh();
         // 持久化用户图层的勾选状态
@@ -3467,6 +3537,10 @@
       removeBtn.style.color = "#cc6666";
       removeBtn.addEventListener("click", function () {
         clearHighlight(uid);
+        // 通知 3D 引擎移除用户图层
+        if (window.CesiumViewer && window.CesiumViewer.isActive) {
+          window.CesiumViewer.removeLayer(uid);
+        }
         if (layerCache[uid]) map.removeLayer(layerCache[uid]);
         delete layerCache[uid];
         scheduleLegendRefresh();
@@ -3524,6 +3598,13 @@
 
       if (!searchRegistry.find((e) => e.checkboxId === uid)) {
         featureCache[uid] = data_.features || [];
+        // 通知 3D 引擎（如果已激活）— 用户上传图层
+        if (window.CesiumViewer && window.CesiumViewer.isActive) {
+          window.CesiumViewer.addLayer(uid, {
+            type: "FeatureCollection",
+            features: data_.features || [],
+          });
+        }
         searchRegistry.push({
           layerLabel: fileName,
           checkboxId: uid,
@@ -4906,6 +4987,17 @@
       }
 
       function highlightAndLocateFeature(cbId, feat) {
+        // 3D 模式：直接飞至要素（不隔离图层、不走 2D setView/fitBounds）
+        if (window.CesiumViewer && window.CesiumViewer.isActive) {
+          try {
+            window.CesiumViewer.flyToFeature(feat);
+          } catch (e) {
+            console.warn("[GeoJSONLoader] 3D 飞至要素失败:", e);
+          }
+          resultsBox.classList.remove("open");
+          input.blur();
+          return;
+        }
         // 优化搜索：点击结果后关闭全部图层，并新建临时单要素图层显示目标
         if (_isOptSearchOn()) {
           _isolateToLayer(cbId, feat);

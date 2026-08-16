@@ -20,6 +20,11 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         category: "显示",
         items: [
           {
+            id: "view3dToggle",
+            label: "3D 视图🧪",
+            desc: "切换到 Cesium 3D 地球，支持地形起伏和多角度查看。首次启用需加载约 4MB 引擎库",
+          },
+          {
             id: "clusterToggle",
             label: "点要素聚类",
             desc: "开启后点要素按空间距离聚合成群组显示，大幅减轻渲染压力，页面操作更流畅",
@@ -46,7 +51,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             desc: "开启后点击搜索结果缩放至目标时，仅突出显示该目标（隐藏同图层其他目标、淡化其他图层），移动或缩放地图后自动恢复",
             checked: true,
           },
-      ],
+        ],
       },
       {
         category: "控件",
@@ -630,8 +635,9 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     // iOS 16.4+ 也有了 getDisplayMedia，但唤起的是屏幕录制而不是标签页选择器，
     // 不符合我们的截图需求。iOS 先用 html-to-image 截取地图区域（避免系统截图
     // 包含手机界面元素），失败时降级到系统截图指引。
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
     if (isIOS) {
       // ----- iOS 方案：html-to-image 截取地图区域 -----
@@ -671,11 +677,14 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
               },
             })
             .then(function (dataUrl) {
-              if (tempStyle && tempStyle.parentNode) tempStyle.parentNode.removeChild(tempStyle);
+              if (tempStyle && tempStyle.parentNode)
+                tempStyle.parentNode.removeChild(tempStyle);
               restoreUI();
               var now = new Date();
               var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
-                .map(function (n) { return String(n).padStart(2, "0"); })
+                .map(function (n) {
+                  return String(n).padStart(2, "0");
+                })
                 .join("");
               var a = document.createElement("a");
               a.download = "OGV_" + ts + ".png";
@@ -685,8 +694,11 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             })
             .catch(function () {
               // html-to-image 失败 → 降级到系统截图指引
-              if (tempStyle && tempStyle.parentNode) tempStyle.parentNode.removeChild(tempStyle);
-              showToast("📱 请使用系统截图（电源键+音量上）后移动地图恢复", { duration: 0 });
+              if (tempStyle && tempStyle.parentNode)
+                tempStyle.parentNode.removeChild(tempStyle);
+              showToast("📱 请使用系统截图（电源键+音量上）后移动地图恢复", {
+                duration: 0,
+              });
               map.once("movestart zoomstart", function () {
                 restoreUI();
                 if (window._exportToast) {
@@ -722,13 +734,16 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         requestAnimationFrame(function () {
           var now = new Date();
           var ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
-            .map(function (n) { return String(n).padStart(2, "0"); })
+            .map(function (n) {
+              return String(n).padStart(2, "0");
+            })
             .join("");
 
-          navigator.mediaDevices.getDisplayMedia({
-            preferCurrentTab: true,
-            video: { width: { ideal: 99999 }, height: { ideal: 99999 } },
-          })
+          navigator.mediaDevices
+            .getDisplayMedia({
+              preferCurrentTab: true,
+              video: { width: { ideal: 99999 }, height: { ideal: 99999 } },
+            })
             .then(function (stream) {
               var video = document.createElement("video");
               video.srcObject = stream;
@@ -753,13 +768,19 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
 
                     ctx.drawImage(
                       video,
-                      mr.left * scale, mr.top * scale,
-                      mr.width * scale, mr.height * scale,
-                      0, 0,
-                      canvas.width, canvas.height,
+                      mr.left * scale,
+                      mr.top * scale,
+                      mr.width * scale,
+                      mr.height * scale,
+                      0,
+                      0,
+                      canvas.width,
+                      canvas.height,
                     );
 
-                    stream.getTracks().forEach(function (t) { t.stop(); });
+                    stream.getTracks().forEach(function (t) {
+                      t.stop();
+                    });
 
                     canvas.toBlob(function (blob) {
                       if (!blob) {
@@ -785,7 +806,9 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
                 });
               };
               video.onerror = function () {
-                stream.getTracks().forEach(function (t) { t.stop(); });
+                stream.getTracks().forEach(function (t) {
+                  t.stop();
+                });
                 showToast("❌ 截图失败", { duration: 3000 });
                 restoreUI();
               };
@@ -1019,6 +1042,25 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   }
 
   var toggleConfig = {
+    view3dToggle: {
+      storageKey: TOGGLE_PREFIX + "view3d",
+      enable: function (userInitiated) {
+        if (window.CesiumViewer) {
+          window.CesiumViewer.activate();
+        } else if (userInitiated) {
+          // 仅用户主动点击时 CesiumViewer 未就绪才报错并回退
+          window.showToast("3D 引擎模块未加载", { duration: 3000 });
+          var cb = document.getElementById("view3dToggle");
+          if (cb) cb.checked = false;
+        }
+        // 静默恢复时若 CesiumViewer 尚未加载，由 cesium-viewer.js 加载完成后自动激活
+      },
+      disable: function () {
+        if (window.CesiumViewer) {
+          window.CesiumViewer.deactivate();
+        }
+      },
+    },
     isLocationTracking: {
       storageKey: TOGGLE_PREFIX + "isLocationTracking",
       enable: function () {

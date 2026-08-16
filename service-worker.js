@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v2.0.5";
+const CACHE_NAME = "v2.2.3";
 
 // 全量预缓存：安装 PWA 后全部功能离线可用（后台静默执行，不阻塞页面）
 const STATIC_ASSETS = [
@@ -20,6 +20,7 @@ const STATIC_ASSETS = [
   "./assets/Leaflet.LegendControl.css",
   "./assets/pointdrop.css",
   "./assets/elevation-query.css",
+  "./assets/cesium-container.css",
   // 脚本
   "./assets/leaflet.js",
   "./assets/geo-utils.js",
@@ -47,6 +48,9 @@ const STATIC_ASSETS = [
   "./assets/dialog.js",
   "./assets/feature-panel.js",
   "./assets/Leaflet.LegendControl.js",
+  "./assets/cesium-terrain.js",
+  "./assets/cesium-geojson-adapter.js",
+  "./assets/cesium-viewer.js",
   "./assets/marked.min.js",
   "./assets/esri-leaflet.js",
   "./assets/echarts.min.js",

@@ -1,0 +1,166 @@
+/**
+ * cesium-container.css
+ * Cesium 3D 容器样式 — 与 #map 同位置叠放，display 切换
+ */
+
+/* 3D 容器：与 #map 完全相同的位置和尺寸 */
+#cesiumContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 400; /* 与 #map z-index 一致 */
+  display: none;
+}
+
+/* 3D 模式激活时：隐藏 2D 地图瓦片/矢量内容，但保留底图切换控件 */
+body.view-3d-active #map .leaflet-pane {
+  display: none !important;
+}
+
+/* #map 不拦截 3D 交互（控件除外），并隐藏虚线边框 */
+body.view-3d-active #map {
+  pointer-events: none !important;
+  border-color: transparent !important;
+}
+
+body.view-3d-active #cesiumContainer {
+  display: block !important;
+}
+
+/* 控件容器保持可交互（底图切换控件仍可用） */
+body.view-3d-active #map .leaflet-control-container {
+  pointer-events: auto !important;
+}
+
+/* 3D 模式下隐藏大部分 Leaflet 控件，仅保留图层切换控件（底图切换） */
+body.view-3d-active #map .leaflet-control {
+  display: none !important;
+}
+body.view-3d-active #map .leaflet-control.leaflet-control-layers {
+  display: block !important;
+}
+
+/* 备案号在 3D 下隐藏（避免遮挡） */
+body.view-3d-active #beianBar {
+  display: none !important;
+}
+
+/* Cesium 控件主题适配 */
+#cesiumContainer .cesium-viewer-bottom {
+  display: none !important; /* 隐藏默认 credits */
+}
+
+/* 3D 加载遮罩 */
+#cesiumLoadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  color: #fff;
+  font-size: 14px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+#cesiumLoadingOverlay.active {
+  display: flex;
+}
+
+#cesiumLoadingOverlay .cesium-loading-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+#cesiumLoadingOverlay .cesium-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(153, 204, 153, 0.3);
+  border-top-color: #99cc99;
+  border-radius: 50%;
+  animation: cesium-spin 0.8s linear infinite;
+}
+
+@keyframes cesium-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ========== 3D 要素拾取弹窗 ========== */
+.cesium-feature-popup {
+  background: rgba(28, 28, 40, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  max-width: 300px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+
+/* 深色弹窗下的文字配色覆盖 */
+.cesium-feature-popup .feature-popup td:first-child {
+  color: #9aa0a6;
+}
+.cesium-feature-popup .feature-popup td:last-child {
+  color: #e8eaed;
+}
+.cesium-feature-popup .feature-popup tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.04);
+}
+.cesium-feature-popup .feature-popup-title {
+  color: #99cc99;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.cesium-feature-popup .feature-popup-footer {
+  color: #8a8f98;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cesium-popup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cesium-popup-btn {
+  flex: 1;
+  background: #6b8ec4;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 0;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cesium-popup-btn:hover {
+  background: #7da0d8;
+}
+
+/* 深色模式适配 */
+[data-theme="dark"] #cesiumLoadingOverlay {
+  background: rgba(17, 17, 17, 0.8);
+}

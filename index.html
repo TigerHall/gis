@@ -61,6 +61,8 @@
     <link rel="stylesheet" href="./assets/pointdrop.css" />
     <!-- 要素详情面板样式 -->
     <link rel="stylesheet" href="./assets/feature-panel.css" />
+    <!-- Cesium 3D 容器样式 -->
+    <link rel="stylesheet" href="./assets/cesium-container.css" />
 
     <!-- WPA -->
     <link rel="manifest" href="./manifest.json" />
@@ -331,6 +333,8 @@
     </div>
     <!-- 右侧地图容器 -->
     <div id="map"></div>
+    <!-- Cesium 3D 容器（与 #map 同位置叠放，display 切换） -->
+    <div id="cesiumContainer"></div>
     <!-- 备案号（合规要求：底部可见，链接跳转工信部、公安） -->
     <div id="beianBar">
       <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener"
@@ -1045,8 +1049,21 @@
         _currentBasemapName = savedBasemap;
       }
 
-      // 暴露给 app.js 中的 toggleConfig
+      // 暴露给 app.js 中的 toggleConfig 和 Cesium 3D 底图映射
       window.rebuildLayerCtrl = rebuildLayerCtrl;
+      window._currentBasemapName = _currentBasemapName;
+
+      // 暴露当前勾选的覆盖层名称列表（供 Cesium 3D 叠加天地图覆盖层）
+      window.getCheckedOverlays = function () {
+        var result = [];
+        for (var k in allOverlays) {
+          if (map.hasLayer(allOverlays[k])) result.push(k);
+        }
+        for (var k in moreOverlays) {
+          if (map.hasLayer(moreOverlays[k])) result.push(k);
+        }
+        return result;
+      };
 
       // 初始化底图控件（自动根据更多底图开关状态选择子集）
       rebuildLayerCtrl();
@@ -1077,7 +1094,12 @@
       // 切换底图时保存选择
       map.on("baselayerchange", function (e) {
         _currentBasemapName = e.name;
+        window._currentBasemapName = e.name;
         localStorage.setItem(BASEMAP_STORAGE_KEY, e.name);
+        // 通知 Cesium 3D 同步底图（若 3D 已激活）
+        if (window.CesiumViewer && window.CesiumViewer.isActive) {
+          window.CesiumViewer.syncBasemap();
+        }
       });
 
       // 覆盖层选中/取消时保存选择
@@ -1090,6 +1112,10 @@
             localStorage.setItem(OVERLAY_STORAGE_KEY, JSON.stringify(list));
           }
         } catch (ex) {}
+        // 通知 Cesium 3D 同步覆盖层
+        if (window.CesiumViewer && window.CesiumViewer.isActive) {
+          window.CesiumViewer.syncOverlays();
+        }
       });
       map.on("overlayremove", function (e) {
         try {
@@ -1101,6 +1127,10 @@
             localStorage.setItem(OVERLAY_STORAGE_KEY, JSON.stringify(list));
           }
         } catch (ex) {}
+        // 通知 Cesium 3D 同步覆盖层
+        if (window.CesiumViewer && window.CesiumViewer.isActive) {
+          window.CesiumViewer.syncOverlays();
+        }
       });
 
       // 监听绘制完成事件，显示测量结果
@@ -1260,8 +1290,12 @@
     <script src="./assets/pointdrop.js"></script>
     <!-- 要素详情面板（属性表 + 图表） -->
     <script src="./assets/feature-panel.js"></script>
+    <!-- Cesium 3D 引擎模块（懒加载入口，Cesium 主库由 cesium-viewer.js 动态加载） -->
+    <script src="./assets/cesium-terrain.js"></script>
+    <script src="./assets/cesium-geojson-adapter.js"></script>
+    <script src="./assets/cesium-viewer.js"></script>
     <script>
-      // 悬浮窗：popup 打开时在右侧外边竖向添加缩放和详情按钮
+      // 悬浮窗：popup 打开时在内容底部（图层名下方）添加缩放和详情按钮
       map.on("popupopen", function (e) {
         var popup = e.popup;
         var container = popup._container;
@@ -1289,7 +1323,7 @@
         }
         if (!bounds && !latLng) return;
 
-        // 创建竖向按钮组容器
+        // 创建横向按钮组容器（放在内容下方，与 3D 悬浮窗一致）
         var wrap = document.createElement("div");
         wrap.className = "popup-ext-btn-wrap";
 
@@ -1297,7 +1331,7 @@
         var zoomBtn = document.createElement("button");
         zoomBtn.className = "popup-ext-btn";
         zoomBtn.title = "缩放至要素";
-        zoomBtn.innerHTML = "⚲";
+        zoomBtn.innerHTML = "⚲ 缩放至";
         zoomBtn.onclick = function (ev) {
           L.DomEvent.stop(ev);
           if (bounds) {
@@ -1312,7 +1346,7 @@
         var detailBtn = document.createElement("button");
         detailBtn.className = "popup-ext-btn";
         detailBtn.title = "查看属性与图表";
-        detailBtn.innerHTML = "📋";
+        detailBtn.innerHTML = "📋 详情";
         detailBtn.onclick = function (ev) {
           L.DomEvent.stop(ev);
           var feature = null;
@@ -1384,7 +1418,9 @@
 
         wrap.appendChild(zoomBtn);
         wrap.appendChild(detailBtn);
-        container.appendChild(wrap);
+        // 插入到 popup 内容区内部（.leaflet-popup-content），即图层名（footer）下方
+        var contentEl = container.querySelector(".leaflet-popup-content");
+        (contentEl || container).appendChild(wrap);
       });
     </script>
 
@@ -1505,14 +1541,28 @@
               <option value="pie">饼图</option>
               <option value="radar">雷达图</option>
             </select>
-            <label for="featurePanelChartX" class="chart-field-label">X 轴：</label>
+            <label for="featurePanelChartX" class="chart-field-label"
+              >X 轴：</label
+            >
             <select id="featurePanelChartX" class="chart-field-select"></select>
-            <label for="featurePanelChartY" class="chart-field-label chart-field-y-label">Y 轴：</label>
+            <label
+              for="featurePanelChartY"
+              class="chart-field-label chart-field-y-label"
+              >Y 轴：</label
+            >
             <select id="featurePanelChartY" class="chart-field-select"></select>
-            <label for="featurePanelChartGroup" class="chart-field-label chart-field-group-label">分组：</label>
-            <select id="featurePanelChartGroup" class="chart-field-select"></select>
+            <label
+              for="featurePanelChartGroup"
+              class="chart-field-label chart-field-group-label"
+              >分组：</label
+            >
+            <select
+              id="featurePanelChartGroup"
+              class="chart-field-select"
+            ></select>
             <label class="chart-check-label">
-              <input type="checkbox" id="featurePanelChartShowLegend" checked /> 图例
+              <input type="checkbox" id="featurePanelChartShowLegend" checked />
+              图例
             </label>
           </div>
           <div

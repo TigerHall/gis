@@ -1,5 +1,70 @@
 # 更新记录
 
+## 2026-08-16 — Cesium 3D 地球集成
+
+### 新功能
+
+- **3D 视图模式**：新增 Cesium 3D 地球引擎，与现有 Leaflet 2D 地图并存，通过「地图设置 → 3D 视图」开关切换
+- **数据互通**：`featureCache` 中的标准 GeoJSON 数据直接喂给 Cesium `GeoJsonDataSource.load()`，无需重新 fetch 或解压 gz 文件
+- **懒加载**：Cesium 主库（~4MB）仅在首次切换 3D 时从 CDN 动态加载，不影响首屏性能
+- **相机同步**：2D↔3D 切换时自动同步视角（Leaflet center/zoom ↔ Cesium camera lat/lng/height）
+- **底图映射**：天地图系列、ArcGIS 系列、GEBCO WMS、OSM 等 Leaflet 底图自动映射到对应 Cesium ImageryProvider
+- **图层状态同步**：2D 中已加载/勾选的图层切换到 3D 时自动渲染；3D 模式下新增/移除图层实时同步
+- **样式映射**：3D 模式复用 2D 的 colorMode（single/sequential/field）、colorField、opacity 配置
+- **可选 3D 配置**：geo-config 新增可选 `cesium: { extrudeHeight, clampToGround, pointPixelSize }` 字段
+
+### 新增文件
+
+- `assets/cesium-viewer.js` — Cesium Viewer 初始化、相机同步、图层编排
+- `assets/cesium-geojson-adapter.js` — featureCache GeoJSON → Cesium Entities 适配器
+- `assets/cesium-terrain.js` — 地形 Provider 配置（支持 Cesium World Terrain）
+- `assets/cesium-container.css` — 3D 容器样式与主题适配
+
+### 修改文件
+
+- `index.html` — 新增 `#cesiumContainer` 容器、CSS 引入、3 个 JS 脚本
+- `app.js` — TOGGLE_GROUPS 新增 `view3dToggle`，toggleConfig 新增 activate/deactivate 逻辑
+- `geojsonloader.js` — 新增 7 处 CesiumViewer 钩子（图层加载/移除/全选/用户图层），暴露内部状态桥接
+- `service-worker.js` — 缓存列表新增 4 个文件，版本号 v2.0.5 → v2.1.0
+
+### Bug 修复（同日）
+
+- **3D 视图激活失败 `Cesium.Cartesian3` undefined**：`cesium-viewer.js` 中 `Cesium.Cartesian.fromDegrees` 漏写 `3`（正确为 `Cartesian3`），导致 `undefined.fromDegrees()` 报 TypeError。新增 `getCartesian3()` 回退函数（从 `viewer.camera.position.constructor` 获取构造器），并统一所有 bare `Cesium.` 引用为 `window.Cesium.`
+- **Entity geometry outlines unsupported on terrain 警告刷屏**：贴地面要素设置 `outline: true` 触发 Cesium 限制。修复为 `clampToGround` 时 `outline = false`，仅非贴地时启用
+- **`markerSize` 不必要依赖 `Cartesian2`**：`Cesium.Cartesian2.fromElements(size, size)` 改为直接传数值 `pointPixelSize`
+- `service-worker.js` 版本号 v2.1.0 → v2.1.1
+
+### 3D 交互增强（同日第二轮）
+
+- **缩放至/选中弹窗/多颜色渲染在 3D 下生效**：
+  - 新增 `CesiumViewer.flyToFeature(feature)`：包围盒计算 → 相机 flyTo（点要素飞近、线/面飞包围盒矩形）
+  - 新增 `CesiumViewer.reloadLayer(checkboxId)`：颜色模式/透明度变更后重建 3D 数据源
+  - 新增点击拾取：`ScreenSpaceEventHandler` + `scene.pick`，实体点击弹窗（复用 `GeoUtils.buildPopupContent`，含 ⚲ 缩放至 + 📋 详情按钮）
+  - adapter 在实体上存储 `_ogv` 要素引用，颜色计算复用 `GeoUtils.getFeatureColorByIndex/Field`，与 2D 完全一致
+- **修复「缩放至导致图层关闭」**：feature-panel 缩放至不再走「隔离图层」逻辑，改为直接定位（3D 飞至 / 2D setView）
+- **底图 3D 联动**：切换 Leaflet 底图时同步切换 Cesium 底图（暴露 `window._currentBasemapName` + `baselayerchange` 钩子）；3D 下保留「图层切换控件」可见可点（隐藏 2D 瓦片与其余控件，仅保留底图切换）
+- **操作提示自动消失**：3D 提示条「拖拽旋转 · 滚轮缩放 · 右键倾斜」进入 3D 后展示 6 秒自动淡出
+- **试验标记**：「3D 视图」开关加 🧪 标记
+- **ArcGIS 高程数据源**：`cesium-terrain.js` 支持 `ArcGISTiledElevationTerrainProvider` 加载 ArcGIS World Elevation 3D（公开免费），无需 Cesium Ion Token
+- `service-worker.js` 版本号 v2.1.1 → v2.2.0
+
+### 3D 修复（同日第三轮）
+
+- **ArcGIS-影像底图报错 `getDerivedResource`**：`ArcGisMapServerImageryProvider` 在 CDN 构建下存在已知 bug（渲染停止）。改用 `UrlTemplateImageryProvider` 直接访问 ArcGIS 瓦片端点 `tile/{z}/{y}/{x}`
+- **图层加载慢（重复移除+添加）**：`addLayer` 改为幂等（已存在则跳过重复 remove+add），消除 `syncAllLayers` + `onDataLoaded` 钩子对同一图层的冗余重建
+- **3D 开关状态不一致（刷新后仍开）**：`view3dToggle` 加 `noPersist` 标记，页面刷新后不再恢复 3D 开关状态，避免「开关开、界面 2D」矛盾
+- **3D 提示条改为弹窗**：移除常驻的 `#cesiumModeIndicator` 提示条元素和 CSS 动画，改用 `showToast` 弹窗显示「拖拽旋转 · 滚轮缩放 · 右键倾斜」5 秒自动消失
+- `service-worker.js` 版本号 v2.2.0 → v2.2.1
+
+### 3D 增强（同日第四轮）
+
+- **刷新后自动进入 3D**：撤销 `noPersist`，`view3dToggle` 恢复持久化；页面加载时若开关为开，`cesium-viewer.js` 的 `autoRestore3D()` 自动激活 3D
+- **3D 叠加天地图覆盖层**：天地图全球境界（ibo_w）、地名标注（cva_w）、影像标注（cia_w）、地形标注（cta_w）等瓦片覆盖层现在会叠加到 Cesium 底图之上；切底图时自动重建覆盖层，勾选/取消时实时同步
+- **2D 弹窗按钮布局调整**：缩放至/详情按钮从右侧竖排圆形图标改为下方横排文字按钮（与 3D 悬浮窗一致），并移入悬浮窗内容区内部（图层名下方），不再悬浮在窗口外
+- `service-worker.js` 版本号 v2.2.1 → v2.2.3
+
+---
+
 ## 2026-08-09 — iOS 地图状态持久化修复
 
 ### Bug 修复
