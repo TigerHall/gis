@@ -54,18 +54,27 @@ body.view-3d-active #beianBar {
   display: none !important; /* 隐藏默认 credits */
 }
 
-/* 3D 加载遮罩 */
+/* ========== 3D 辅助控件（三视图切换 / 操作帮助）由「缩放控件」开关控制 ==========
+   zoomToggle 开启时 body 加 .ogv-zoom-ctl；全屏按钮已移除（fullscreenButton:false，不创建） */
+body:not(.ogv-zoom-ctl) #cesiumContainer .cesium-sceneModePicker-wrapper,
+body:not(.ogv-zoom-ctl) #cesiumContainer .cesium-navigationHelpButton-wrapper,
+body:not(.ogv-zoom-ctl) #cesiumContainer .cesium-navigation-help {
+  display: none !important;
+}
+
+/* 3D 加载遮罩（挂 body，加载期 #cesiumContainer 仍是 display:none 看不见） */
 #cesiumLoadingOverlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(2px);
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 2147483000;
   color: #fff;
   font-size: 14px;
   font-family:
@@ -78,11 +87,24 @@ body.view-3d-active #beianBar {
   display: flex;
 }
 
-#cesiumLoadingOverlay .cesium-loading-text {
+#cesiumLoadingOverlay .cesium-loading-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  min-width: 280px;
+  max-width: 78vw;
+  padding: 24px 28px;
+  background: rgba(26, 26, 34, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+#cesiumLoadingOverlay .cesium-loading-msg {
+  line-height: 1.5;
+  word-break: break-all;
 }
 
 #cesiumLoadingOverlay .cesium-loading-spinner {
@@ -94,10 +116,108 @@ body.view-3d-active #beianBar {
   animation: cesium-spin 0.8s linear infinite;
 }
 
+#cesiumLoadingOverlay .cesium-loading-bar {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+#cesiumLoadingOverlay .cesium-loading-bar > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: #99cc99;
+  transition: width 0.18s ease-out;
+}
+
+/* 不确定态：来回扫动的进度条 */
+#cesiumLoadingOverlay .cesium-loading-bar.indeterminate > i {
+  width: 40% !important;
+  animation: cesium-indeterminate 1.1s ease-in-out infinite;
+}
+
+@keyframes cesium-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+#cesiumLoadingOverlay .cesium-loading-pct {
+  font-size: 12px;
+  color: #b9c0c7;
+  min-height: 16px;
+}
+
+#cesiumLoadingOverlay .cesium-loading-cancel {
+  margin-top: 2px;
+  padding: 6px 18px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #d8dde2;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+#cesiumLoadingOverlay .cesium-loading-cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
 @keyframes cesium-spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ========== 轻量忙碌提示（图层设置变更等短任务，不阻塞交互） ========== */
+#cesiumBusyToast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147482000;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  max-width: 60vw;
+  padding: 10px 14px;
+  background: rgba(26, 26, 34, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  color: #e8eaed;
+  font-size: 13px;
+  line-height: 1.4;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  /* 不拦截鼠标：提示期间地图仍可继续操作 */
+  pointer-events: none;
+}
+
+#cesiumBusyToast.active {
+  display: flex;
+}
+
+#cesiumBusyToast .cesium-busy-spinner {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(153, 204, 153, 0.3);
+  border-top-color: #99cc99;
+  border-radius: 50%;
+  animation: cesium-spin 0.8s linear infinite;
 }
 
 /* ========== 3D 要素拾取弹窗 ========== */
@@ -114,7 +234,49 @@ body.view-3d-active #beianBar {
     sans-serif;
   max-width: 300px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+  /* 容器本身不拦截鼠标：让点击穿透到 Cesium 拾取层，从而触发「点空白关闭弹窗」 */
+  pointer-events: none;
+}
+
+/* 内部容器：恢复鼠标交互（文字选中、按钮点击都依赖这个） */
+.cesium-feature-popup .cesium-popup-inner {
   pointer-events: auto;
+}
+
+/* 关闭按钮：右上角 */
+.cesium-feature-popup .cesium-popup-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  color: #b9c0c7;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition:
+    background 0.12s,
+    color 0.12s;
+  pointer-events: auto;
+}
+.cesium-feature-popup .cesium-popup-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+/* 给标题留出右边空间，避免被关闭按钮盖住 */
+.cesium-feature-popup .feature-popup-title {
+  padding-right: 28px;
+  color: #99cc99;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* 深色弹窗下的文字配色覆盖 */
@@ -127,10 +289,7 @@ body.view-3d-active #beianBar {
 .cesium-feature-popup .feature-popup tr:nth-child(even) td {
   background: rgba(255, 255, 255, 0.04);
 }
-.cesium-feature-popup .feature-popup-title {
-  color: #99cc99;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
+/* feature-popup-title 样式已在上面定义（含 padding-right 避开关闭按钮） */
 .cesium-feature-popup .feature-popup-footer {
   color: #8a8f98;
   border-top: 1px solid rgba(255, 255, 255, 0.12);

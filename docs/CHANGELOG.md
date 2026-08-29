@@ -1,5 +1,614 @@
 # 更新记录
 
+## 2026-08-29 — 瓦片清晰度：八子域 + SSE=2（锐度 1.4 → 94.6，放大不再糊）
+
+### 问题
+上一轮为了压 429 把 `globe.maximumScreenSpaceError` 设成 24→12 渐进。代价是放大后
+仍显示最低级瓦片层级（拉普拉斯方差仅 1.4），用户看到的就是「糊」。
+
+### 根因
+不是 SSE 本身——而是 **天地图只用了 t0 单子域**。Cesium 的 `RequestScheduler` per-server
+并发上限默认 6，单域时所有瓦片挤一台服务器，429 限流触发了「请求多→被限流→重试→更慢」
+死循环，逼得只能降 SSE 换清晰度。
+
+### 关键实测
+| 方案 | 全球就绪 | zoom8 稳定 | 瓦片 | 429 | 锐度 | 子域 |
+|---|---|---|---|---|---|---|
+| A 现状 SSE=24→12 + t0 | 超时 | 12.6 s | 184 | 0 | **1.4** | 单域 |
+| B 清晰度优先 SSE=2 + t0 | 34.4 s | 15.1 s | 392 | 0 | 94.6 | 单域 |
+| **C 清晰 + 八子域** | **6.8 s** | **3.8 s** | 392 | 45 | **568.5** | **8 子域** |
+| D SSE=2 + 限流 (per-server=3) | 33.6 s | 14.1 s | 392 | 0 | 94.6 | 单域 |
+
+C 既**比 A 清晰 68×**，又**比 A 更快**——多 IP 并发后，429 反而变成次要因素
+（被触发但 Cesium 内置重试扛住）。D 限流方案无效：速度跟 B 一样慢。
+
+### 修复
+- `createImageryProvider` 提取 `createTdtProvider(svc, tk)` 工厂，三个底图（img_w/vec_w/ter_w）
+  + 四个覆盖层（ibo_w/cva_w/cia_w/cta_w）全部走 `subdomains: ["0"…"7"]` 八子域
+- 删除 `setupGlobeTileBudget` 的渐进逻辑，直接 `SSE=2`（Cesium 默认）
+- `maximumLevel: 18` 与 Leaflet `maxNativeZoom: 18` 对齐（**这就是用户参照的标准**）
+
+### 顺带：移除空闲预加载自动调度
+按用户反馈「本身我这个就做了 PWA，引用的 js 应该会记录在浏览器本地」——
+`service-worker.js` 动态缓存同源资源，首次开 3D 后 Cesium.js 已落到 Cache Storage，
+第二次直接秒开。空闲预加载的边际收益太小，移除自动调度。
+保留 `CesiumViewer.preloadNow()` 手动入口与 `_loadSubs` 并发安全基础设施。
+
+### 变更文件
+- `assets/cesium-viewer.js`（`TDT_SUBDOMAINS` + `createTdtProvider` + SSE 简化 + 移除自动预加载）
+- `service-worker.js`（`CACHE_NAME` v2.3.2 → **v2.3.3**）
+
+---
+
+## 2026-08-29 — 自托管 Cesium.js（点开 3D：9.9 s → 0.47 s，省 97%）
+
+### 实测修正：上一轮「解析 4.75 s」是错的
+
+在真实页面里用 Resource Timing + 轮询 `window.Cesium` 重新分段：
+
+| 阶段 | 耗时 | 占比 |
+| --- | --- | --- |
+| **下载** | **7472 ms** | **94.6%** |
+| 解析 + 执行 | 335 ms | 4.2% |
+| initViewer + 地形 | 92 ms | 1.2% |
+
+引擎耗时**几乎全是下载**，解析只有 335ms（V8 对函数体是惰性编译，顶层执行很快）。
+上一轮那句「V8 编译 4MB 花 4.75 s」不成立——当时测的是网络抖动的尾部，错记到解析头上了。
+
+顺带也证伪了另一个担心：blob 注入 vs `<script src>`，解析开销 **303ms vs 215ms**，
+只差 88ms（不是几秒），所以为进度条保留 blob 方式完全划算。
+
+### 真正的杠杆：搬走那一个文件
+
+既然 94.6% 是下载，就对比了「CDN 直连」与「同源自托管」（本地 gzip 服务模拟）：
+
+| | 各轮 | 中位数 |
+| --- | --- | --- |
+| CDN 直连（cesium.com） | 9895 / 10062 / 6686 ms | **9895 ms** |
+| 同源自托管 | 308 / 305 / 309 ms | **308 ms** |
+
+**省 97%** —— 7~10 s 里绝大部分是「cesium.com 国内访问慢」，不是文件大。
+
+### 做法：只搬 `Cesium.js`，Workers/Assets 仍走 CDN
+
+- 新增 `assets/cesium/Cesium.js`（4.90 MB，v1.125 原文件，与项目既有的
+  vendor 大 JS 做法一致：`georaster-layer-for-leaflet.min.js` 1.99 MB、`geoblaze.min.js` 1.62 MB）
+- `CESIUM_BASE_URL` **保持指向 CDN**：Cesium 用它拼 `Workers/`、`Assets/`、`ThirdParty/` 路径。
+  已验证 `window.CESIUM_BASE_URL` 的优先级高于「从 script.src 推断」，所以脚本放本地、
+  依赖走 CDN 是可行的（否则 Workers 会去 `./assets/cesium/Workers/` 全部 404）
+- 本地优先 + CDN 兜底：本地 404 时透明回退，`console.warn` 提示
+- SW **故意不预缓存**这个 5MB 文件（会让所有用户白下），走「首次按需加载 → 动态缓存」，
+  之后离线也能秒开 3D
+
+### 验证
+
+| 项 | 结果 |
+| --- | --- |
+| 点击 3D → isActive | **470 ms**（原 6.7~10.1 s）✅ |
+| Cesium.js 来源 | 本地 1 次 / CDN 0 次 ✅ |
+| Workers 基址 | 仍为 `https://cesium.com/...` ✅ |
+| 实际触发的 CDN 依赖 | `Workers/createVerticesFromHeightmap.js`、`Assets/IAU2006_XYS/…` 等 ✅ |
+| 地球确实画出来 | `tilesLoaded=true`，截图像素均值 221、非黑 100% ✅ |
+| 大气三件套 / SSE | 全关 / 24→12 ✅ |
+| 瓦片请求 / 429 | 35 个 / 0 次 ✅ |
+| DupalOcean 加入 3D | 76 ms ✅ |
+| 本地文件缺失（真实 404） | 回退 CDN，11.2 s 激活成功，无报错 ✅ |
+| 预加载 4 场景 | 全过（老用户点开 **98 ms**）✅ |
+
+### 探针坑（已踩）
+
+- **不能用 `drawImage` 读 WebGL canvas 判断画面**：未开 `preserveDrawingBuffer` 时必然全黑，
+  会误判成「3D 没渲染」。必须用 `page.screenshot()` 再解码
+- **`page.route` 拦不到 Service Worker 从 Cache Storage 返回的资源**，
+  测「本地文件缺失」必须真把文件移走，否则得到假的通过
+
+### 改动文件
+
+| 文件 | 说明 |
+| --- | --- |
+| `assets/cesium/Cesium.js` | **新增**，4.90 MB（v1.125） |
+| `assets/cesium-viewer.js` | 新增 `CESIUM_JS_LOCAL`；`loadCesiumJs` 本地优先 + CDN 兜底 |
+| `service-worker.js` | `CACHE_NAME` v2.3.1 → **v2.3.2**；注释说明为何不预缓存 Cesium.js |
+
+## 2026-08-29 — 3D 引擎空闲预加载 + 下载进度条修复（点开 3D：8 s → 0.18 s）
+
+上一轮把地球底图从 24.2 s 压到 10.0 s，剩下的最大头是**引擎加载 6~10 s**。本轮两件事：
+
+### 1️⃣ 修复：下载进度条 8 秒不动，最后瞬间跳 100%
+
+**根因**：CDN 以 `Content-Encoding: gzip` + Chunked 返回，**没有 `Content-Length`**（实测 `content-length=(none)`）。
+`fetchWithProgress()` 里 `total` 为 0 就走 `res.text()` 回退分支，整个下载期一次回调都不发，
+进度条只能走不确定态，最后在结束瞬间报一次 `onProgress(1)` → 用户看到「卡了 8 秒然后跳 100%」。
+
+**改法**：
+
+- 不再因为缺 `Content-Length` 而放弃流式读取；分母缺失时改用实测常量
+  `CESIUM_JS_BYTES = 5140708`（v1.125 解压后真实体积，约 4.9 MB）
+- 百分比封顶 98%，`100%` 留到 `r.done` 再报，避免「条子满了还在转」
+- 补一个 `parse` 阶段：4MB 脚本的解析/执行会独占主线程（冷机实测 3~5 s），
+  执行前先报「正在解析 3D 引擎（首次较慢）…」并 `nextPaint()` 让它真的画出来
+
+改后实测（新用户首次点击）：
+
+```
++   2ms  "正在下载 3D 引擎（约 4MB，首次加载较慢）…"
++ 2895ms "正在下载 3D 引擎…" 29%   ← 平滑递增
++ 6007ms "正在下载 3D 引擎…" 98%
++ 6254ms "正在下载 3D 引擎…" 100%
++ 6255ms "正在解析 3D 引擎（首次较慢）…"
++ 6547ms "正在初始化 3D 场景…"
+```
+
+### 2️⃣ 新增：只对「用过 3D 的用户」空闲预加载引擎
+
+用户此前明确要求「重新载入后 3D 不要自动加载」，所以预加载**只下载 + 解析 JS，不创建 Viewer、不切视图**。
+
+- `localStorage` 记 `dupal_3d_ever_used`，首次成功激活 3D 时写入 → **新用户首屏零开销**
+- `window.load` 后 4 s 走 `requestIdleCallback`（timeout 20 s）触发
+- 守卫：`saveData` 开启、`effectiveType` 为 2g/slow-2g → 不预加载
+- **加载订阅者模式**：后台预加载进行中用户点开 3D 时，不再被 `isLoading` 吞掉点击，
+  而是登记为订阅者共享进度与结果（实测遮罩正常显示 2%→93%→解析→初始化）
+- 预加载失败不影响手动激活（实测让首次请求 abort 后，手动点击仍正常进入 3D）
+
+验证（4 个场景全过）：
+
+| 场景 | 结果 |
+| --- | --- |
+| ① 新用户（无标记） | 等 9 s，Cesium 请求 **0 次**，首屏零开销 ✅ |
+| ② 老用户（有标记） | 空闲预加载完成，仍停在 2D（未自动进入）→ 点击 3D **183 ms** ✅ |
+| ③ 预加载中点击 | 显示完整进度序列，未被吞掉，最终 `isActive=true` ✅ |
+| ④ 预加载失败 | 预加载 `isLoading=false`，手动点击仍激活成功 ✅ |
+
+### 改动文件
+
+| 文件 | 说明 |
+| --- | --- |
+| `assets/cesium-viewer.js` | 进度分母回退 + `parse` 阶段；`_loadSubs` 订阅者模式；`mark3dUsed/canPreload/preloadCesium/schedulePreload`；`activate()` 不再被 `isLoading` 挡住；新增 `setAtmosphere()`、`preloadNow()` |
+| `service-worker.js` | `CACHE_NAME` v2.3.0 → **v2.3.1** |
+
+## 2026-08-29 — 3D 白色蒙层移除 + 地球瓦片预算调优（首屏 2.4× 加速）
+
+用户反馈两件事：①「黑色背景下的地球是不是加了白色蒙层，看起来很模糊」②「3D 渲染比 2D 慢很多，
+倒排索引都好了 3D 才慢慢出来；最后加载的那个图层只有 **1 个面**，也等了很久才进入地球」。
+
+### 诊断结论：慢的不是渲染，是「引擎」和「地球底图瓦片」
+
+实测分段（本地 1280×800，外网直连）：
+
+| 阶段 | 耗时 | 说明 |
+| --- | --- | --- |
+| Cesium 引擎下载（CDN 4MB） | 1.7 ~ 8.4 s | 网络 |
+| ~~Cesium 引擎解析 + 执行~~ | ~~4.75 s~~ | ⚠️ **该数字有误**，见下一节「实测修正」：真实解析仅 0.3 s |
+| initViewer + 地形 | 0.13 s | |
+| **地球底图瓦片加载完** | **24.2 s → 10.0 s** | 见下 |
+| 5 个 GeoJSON 图层（含 5555 点）3D 构建 | **0.30 s** | 只占全程 ~1% |
+
+**关键澄清**：用户以为慢在「数据解压」，实际数据侧早已就绪（2D 数据 + 倒排索引 1.9 s 全好），
+3D 图层构建本身只要 300 ms。用户等的是**引擎 8 s + 地球底图 24 s**，这两段与 GeoJSON 数据量无关——
+所以「只有 1 个面的图层也慢」完全符合预期。
+
+### 1️⃣ 移除白色蒙层（大气三件套）
+
+深色主题 `THEME_DARK` 原先 `skyAtmosphere / groundAtmosphere / fog` 全开。三者的区别：
+
+- `showGroundAtmosphere` —— 叠加在**地表影像之上**的大气散射，是发白、发糊的**主因**
+- `scene.fog` —— 远处雾化，同样压低对比度
+- `skyAtmosphere` —— 地球**外缘**的淡蓝光晕（在轮廓之外，不覆盖地表）
+
+深色主题下三者默认改为关闭；浅色主题原本就是关的。新增运行时开关：
+
+```js
+CesiumViewer.setAtmosphere(true);   // 强制开
+CesiumViewer.setAtmosphere(false);  // 强制关
+CesiumViewer.setAtmosphere(null);   // 恢复跟随站点黑白模式
+```
+
+### 2️⃣ 地球瓦片预算：一个参数砍掉 16 倍请求
+
+`globe.maximumScreenSpaceError`（SSE）控制「什么时候算够清晰」，SSE 越小 Cesium 往越深层级钻，
+瓦片请求量呈指数增长。原先使用 Cesium 默认的 **2**。
+
+| SSE | 3D 阶段瓦片请求 | globe.tilesLoaded | 天地图 429 |
+| --- | --- | --- | --- |
+| 2（原默认） | **566** | 24.2 s | 11 ~ 19 次 |
+| 24（首屏）→ **12**（稳定） | **35** | **10.0 s** | **0** |
+
+天地图在请求密集时返回 429 限流，形成「请求越多 → 被限流 → 重试 → 更慢」的恶性循环，
+压住瓦片数本身就是提速手段。
+
+实现为**渐进式**（`setupGlobeTileBudget()`）：首屏 SSE=24 让地球几秒成形，
+`tileLoadProgressEvent` 报排队数为 0 后降到 12（只降一次）。
+
+⚠️ **稳定档不能低于 12**，实测首屏均为 SSE=24：
+
+| 稳定档 | 瓦片请求 | 最终稳定 |
+| --- | --- | --- |
+| SSE=12 | 35 | 10.2 s |
+| SSE=8 | 168 | 15.3 s |
+| SSE=4 | 235 | 16.9 s（且 `tilesLoaded` 反复回退 30 次） |
+
+低于 12 时降级会触发新一轮大规模加载，反而更慢——最初取 4 就是这个坑。
+
+### 改动文件
+
+`assets/cesium-viewer.js`（`THEME_DARK` / `setupGlobeTileBudget()` / `setAtmosphere()`）·
+`service-worker.js`（`CACHE_NAME` v2.2.9 → **v2.3.0**）
+
+### 未处理（待用户决策）
+
+引擎加载的 6~10 s 仍是最大头，只能通过**空闲预加载**消除（`requestIdleCallback` 里提前下载 +
+解析 Cesium）。因用户此前明确要求「重新载入后 3D 不要自动加载」，未擅自加入。
+
+## 2026-08-29 — 2D 图层加载进度条 + IndexedDB 缓存可靠性修复
+
+用户反馈"要素渲染到图上很慢，第二次倒是快点了"。诊断报告见 `.workbuddy/artifacts/diag-render-perf.md`，
+核心结论：**89% 的时间花在 `new Response(stream).json()`**（必须等流读完再对完整字符串 `JSON.parse`，
+279MB JSON → 堆峰值 555MB），且**期间 20 秒零进度反馈**——用户感知的"卡"主要是这个。
+
+本次改动 = 用户选定的方案 A（加载进度提示）+ 顺带修掉的 IDB 缓存可靠性 bug。
+
+### 1️⃣ 图层加载进度条
+
+- **`Leaflet.GzIdbLoader.js`**：`fetchGz(url, onProgress)` 在 `DecompressionStream` 前插入计数
+  `TransformStream`，按 gz 字节数上报 `download` 百分比（100ms 节流）。
+  `parse` 阶段**必须放在 TransformStream 的 `flush()` 回调里**——放在 `.json()` 之后会在下载
+  刚开始时就误报"解析中"
+- **`fetchWithCache(url, onProgress)` 新增 `nextPaint()`**（双 rAF + setTimeout）：命中缓存时先让浏览器
+  把"读缓存"标签画出来，再执行紧接着的 279MB 反序列化（否则标签根本来不及绘制）
+- **`geojsonloader.js`**：新增 `updateLayerProgress(checkboxId, p)`，懒建进度条 + 文字，
+  阶段含 `读缓存 / 下载N% / 解析中 / 写缓存 / 渲染中 / 完成`
+- **`main.css`**：`.layer-item-progress` 绝对定位吸附图层行底部（2px 高，不撑高行），
+  确定态按百分比填充，不确定态走 `layerProgressSlide` 扫动动画
+
+### 2️⃣ IndexedDB 缓存可靠性（用户追问"应该调用 idb 的数据，挺快的才对"）
+
+**根因**：`fetchWithCache` 里的 `setCache(url, data)` 是 **fire-and-forget**（未 await）。
+大图层写入需 1-2s，用户在此之前刷新页面 → 缓存丢失 → 下次仍走完整下载+解压+解析。
+实测：配额 10GB 充足，等 25s 能写入，但"加载完立即刷新"缓存必丢。
+
+**修复**：改为 `await setCache(...)` 后再 resolve。修复后实测"立即刷新后缓存仍在 ✅"。
+
+### 3️⃣ 顺带发现并修复的两个问题
+
+- **进度条 DOM 泄漏**：`updateLayerProgress(id, null)` 只调了 `bar.removeAttribute("data-indeterminate")`，
+  **从未真正摘除节点** → 每个加载过的图层永久残留一个 2px 空进度条（视觉不可见但带着上次宽度）。
+  改为 `parentNode.removeChild(bar)`
+- **小字对比度不达标（WCAG AA）**：进度文字原用 `var(--accent)`(#99cc99)，在浅色底
+  `#fafafa` 上实测仅 **1.76:1**（AA 要求 4.5:1）。新增小字专用变量
+  `--c-green-text-strong`（浅色 `#3d7a3d` / 深色 `#88cc88`），实测 **4.97:1 ✅**
+
+### 浏览器实测（playwright-core + Chrome，6Mbps/40ms 限速）
+
+| 断言 | 结果 |
+|---|---|
+| 下载百分比与填充宽度一致（209 采样，pic 24.4MB） | ✅ 偏差 <1% |
+| 不确定阶段 33% + 扫动动画 | ✅ 捕获到"写缓存" |
+| 容器 absolute / 2px / 不撑高行 | ✅ 32px → 32px |
+| 文字 10px、15px 宽、不溢出 | ✅ |
+| 浅色主题对比度 | ✅ 1.76:1 → **4.97:1** |
+| 双主题 6 种底色组合 | ✅ 4.76 ~ 9.93:1 |
+| 完成后清理 + 连续开关 6 次无 DOM 泄漏 | ✅ |
+| 刷新后命中 IDB，显示"读缓存" | ✅ 21ms |
+
+`ERRORS: none`
+
+### 未采纳的优化（数据量大才是根因，进度条只是把等待变得可见）
+
+- B Web Worker 转移解压+parse
+- C 数据瘦身/分块（治本：4 个巨无霸 40s → 1-2s）
+- D 大图层二次确认
+
+### 改动文件
+
+- `assets/Leaflet.GzIdbLoader.js` — 进度回调、TransformStream 计数、`nextPaint()`、**await setCache**
+- `assets/geojsonloader.js` — `updateLayerProgress()`、进度节点**真正摘除**、`formatBytesShort()`
+- `assets/main.css` — `.layer-item-progress` / `.layer-progress-text`、新增 `--c-green-text-strong`
+- `service-worker.js` — `CACHE_NAME` v2.2.8 → v2.2.9
+
+## 2026-08-29 — 3D 弹窗清理 + 面要素外轮廓 + RangeError 复测
+
+3 个问题逐个修了，浏览器实测全过。
+
+### 1️⃣ 弹窗整体清理
+
+- **容器 `pointer-events: none` + 内容区 `pointer-events: auto`**：
+  旧实现整个弹窗 `pointer-events: auto` → 点弹窗内任何位置都不会冒泡到 Cesium，
+  Cesium 拾取不到弹窗下面被覆盖的实体，所以"点弹窗外"也常常被弹窗挡住无法关闭。
+  现在只有内容区/按钮拦截鼠标，容器不拦截；点弹窗外的画布永远能命中 Cesium。
+- **右上角 `✕` 关闭按钮**：新加 `.cesium-popup-close`，20×20px，深色模式下不挡视线
+- **`Escape` 键关闭**：全局 keydown 监听
+- **`hidePopup()` 清空 `innerHTML`**：避免下次显示时短暂闪烁旧数据
+- **`showEntityPopup` ref 无效时 `hidePopup()`**：解决"切换实体后还显示旧信息"
+
+### 2️⃣ 面要素可见性（用户感受"在底图下面"）
+
+**根因**：Cesium 的 `GroundPrimitive`（`clampToGround: true`）**不支持 outline**。
+所以面要素只有半透明填充（alpha 0.45），在颜色相近的陆地影像上几乎不可见，
+用户感觉像是"在底图下面"。
+
+**修复**：每条 polygon 自动追加一条 `Polyline` 实体（`clampToGround: true`）画同色不透明描边。
+Cesium 1.125 + `PolylineGraphics.clampToGround` 已 GA，渲染为 `GroundPolyline` 描在地面上。
+带洞的 Polygon 也支持（外环 + 每个内环都画一条 polyline）。
+
+### 3️⃣ RangeError 复测（之前测试曾抓到的 pageError）
+
+- 新增 `cesium-viewer.js` 的 hide/show 缓存后，反复 toggle / reload / 聚类点击 / reloadAllLayers
+  等 7 种动作 × 5~8 轮实测，**0 个 pageError**
+- 推测：原先的 RangeError 多半来自旧的 destroy+rebuild 路径（移除 dataSource 再重建），
+  在 toggle 时碰巧触发了 Cesium 内部某次属性枚举边界
+- 新实现：关→开走 `ds.show=false` + 隐藏缓存（瞬时 ~10ms），不再销毁数据源
+
+### 改动文件
+
+- `assets/cesium-viewer.js` — 弹窗（关闭按钮 / pointer-events / ESC / ref 无效清空 / innerHTML 清理）
+- `assets/cesium-container.css` — 关闭按钮样式 + `pointer-events` 拆分
+- `assets/cesium-geojson-adapter.js` — 面要素追加 `GroundPolyline` 描边（外环 + 洞）
+- `service-worker.js` — `CACHE_NAME` v2.2.7 → v2.2.8
+
+## 2026-08-29 — 3D 视图性能修复：点要素不再贴地 + 图层关→开瞬时复用
+
+围绕 3 个用户反馈的卡顿问题根因 + 修复，真实浏览器验证（playwright-core + Chrome swiftshader）
+
+### 根因：HeightReference.CLAMP_TO_GROUND
+
+`cesium-geojson-adapter.js` 之前把 `ent.billboard.heightReference` 与 `clampToGround` 选项绑死（`clampToGround !== false` → 默认 true）。Cesium 在每帧的 BillboardVisualizer 里会对每个 heightReference≠NONE 的 billboard 做一次 `scene.clampToHeight` 类的地形高度采样，CPU 侧 O(n)/帧。
+
+实测（1.125 + SwiftShader，1440×900）：
+
+| 场景 | n | 平均帧耗时 |
+|---|---|---|
+| 空场景基线 | 0 | 455ms |
+| **billboard·贴地** | 1116 | **5620ms** ⚠️（12× 基线）|
+| billboard·不贴地 | 1116 | 602ms ✅ |
+| point·贴地 | 1116 | 5635ms ⚠️ |
+| point·不贴地 | 1116 | 684ms ✅ |
+| 仅线面（贴地） | 1116 | 703ms ✅（GPU 侧 GroundPrimitive，开销可忽略）|
+| billboard·贴地 | 200 | 903ms |
+
+更关键的是**地形实际是平坦椭球**（实测 `clampToHeightMostDetailed` 前后高度差 = 0m），贴地付出了每帧 O(n) 采样的代价，**视觉收益却为零**。曾考虑一次性烘焙高度（`clampToHeightMostDetailed`），实测 600 点耗时 58 秒（97ms/点），完全不可用。
+
+### 修复
+
+#### A. 点要素贴地策略解耦（`assets/cesium-geojson-adapter.js`）
+
+- `heightReference` 与 `clampToGround` 解耦：线/面 `clampToGround` 默认 true（GPU 侧，几无开销），点要素 `heightReference` 默认 `NONE`
+- 新增 `groundMode` 配置：`"none"`（默认）`"live"`（小图层显式启用，受 `POINT_GROUND_LIVE_MAX=300` 上限保护，超过自动降级并 console.warn）
+- 热循环顺手优化：复用之前每要素 new 一次的 `Cs.JulianDate.now()`
+
+geo-config 用法：
+```js
+cesium: { groundMode: "live" }   // 仅限小图层
+```
+
+#### B. 图层关→开改为 hide/show 复用（`assets/cesium-viewer.js`）
+
+旧实现取消勾选时 `viewer.dataSources.remove(ds, true)` 真销毁，重新勾选走完整 `GeoJsonDataSource.load` + 两遍后处理 —— 大图层要 30 秒+。
+
+新实现：
+- `hideLayer(id)`：仅 `ds.show=false` 把数据源挪到 `cesiumHiddenCache`（LRU 上限 12）
+- `addLayer(id, geoJson)`：先查 `cesiumHiddenCache`，命中就瞬时 `ds.show=true`
+- `destroyLayer(id)`：真销毁，专供图层数据被删除（用户上传图层删除）
+- 旧 `removeLayer(id)` 保留接口 = hide（向后兼容）
+- 隐藏中的图层 `updateLayerOpacity` 也会同步生效
+
+#### C. 大图层构建加载提示（`assets/cesium-viewer.js`）
+
+`addLayer` 真实构建时（要素数 ≥ 800）走 `runWithBusy` 显示右下角忙碌卡片，文字带要素数 `正在渲染 3D 图层：ODP（1,777 个要素）`；从隐藏缓存恢复的瞬时路径不显示。
+
+#### D. 聚类参数调优（`assets/cesium-geojson-adapter.js`）
+
+- `pixelRange` 45 → 28（避免全球视角下点被吞进少数大圈）
+- `minimumClusterSize` 3 → 4
+- 聚类气泡显式设 `horizontalOrigin=CENTER` / `heightReference` 与点一致
+
+### 验证（`verify-fix.js` 浏览器实测）
+
+```
+2) 3 个图层（4186 个点）全开时帧间隔 = {avg:582ms, max:727ms}（基线 455ms）
+   修复前单层 1116 点即 5620ms/帧
+3) 各图层点要素贴地状态：clampToGround=0, none=全部 ✅
+4) 关→开 耗时：
+   layer_火山_volcanos n=1293  off=9ms  on=12ms
+   layer_dsdp n=1116  off=8ms  on=16ms
+   layer_odp n=1777  off=9ms  on=13ms
+   stats 切换 visible↔hidden 正确
+5) 大图层构建忙碌提示 = {during:正在渲染 3D 图层：ODP（1,777 个要素）} ✅
+6) 聚类参数 = {pixelRange:28, minSize:4} ✅
+ERRORS: none
+```
+
+### 改动文件
+
+- `assets/cesium-geojson-adapter.js` — 点贴地策略解耦 + 热循环优化 + 聚类调优
+- `assets/cesium-viewer.js` — hide/show 缓存 + 真实构建忙碌提示
+- `assets/geojsonloader.js` — 用户图层删除改用 `destroyLayer`（带 fallback）
+- `service-worker.js` — `CACHE_NAME` v2.2.6 → v2.2.7
+
+### 关于「聚类是不是没必要」
+
+- Cesium 渲染后端是 **WebGL**（实测 `glVersion: "WebGL 2.0 (OpenGL ES 3.0 Chromium)"`，`renderer: "WebKit WebGL"`），不是 Canvas 2D；`scene.canvas` 只是 WebGL 绘图表面
+- billboard（点图标/聚类圈）是**屏幕朝向的 2D sprite**，永远正面朝相机 —— 这是 Cesium billboard 的固有特性，不会随地球曲率变形
+- 聚类**仍有必要**：① 上万点直接渲染会撑爆纹理图集 ② 全球视角下点分布密度需要聚合才能看清 ③ 聚类气泡可点击展开
+- 「聚类的圈都不在地球表面的感觉」根因就是 CLAMP_TO_GROUND 每帧重算聚类中心位置 → 视觉抖动。改 NONE 后聚类位置稳定在椭球面（实测高度差 0m），感受明显改善
+- 后续若仍嫌聚类"飘"，可选方向：① 进一步调小 `pixelRange` ② 改用 `entity.ellipse` 画真正的"地面圆盘"代替 billboard 聚类圈（工作量较大）
+
+### 调试探针（已保存到 `.workbuddy/artifacts/`）
+
+- `perf-3d.js` — 单图层构建耗时三阶段拆解（解析/后处理/add）
+- `perf-3d2.js` — icon 形态对比（不同 SVG / 共用 SVG / 内置 PNG / 原生 point）
+- `perf-3d3.js` — 帧间隔采样（4 个变体 + 基线）
+- `perf-3d4.js` — clampToGround 假设验证（关键证据）
+- `perf-3d5.js` — 一次性烘焙贴地方案成本（确认不可行）
+- `verify-fix.js` — 修复后回归验证
+
+---
+
+## 2026-08-29 — 3D 视图：禁止自动加载 + 2D 样式全量对齐
+
+### 1. 3D 不再默认进入，刷新后不自动加载
+
+- **移除自动恢复逻辑**：删除 `cesium-viewer.js` 的 `autoRestore3D()`。改为在脚本加载时执行
+  `resetPersisted3DState()`，强制把 `localStorage["dupal_toggle_view3d"]` 复位为 `false`
+  并取消 `view3dToggle` 勾选 → 刷新页面永远以 2D 启动，不再偷偷下载 4MB 引擎
+- **加载全程有提示**：
+  - 遮罩层从 `#cesiumContainer`（加载期 `display:none`，根本看不见）改为挂到 `document.body`，
+    采用 `position:fixed` + 全屏毛玻璃卡片
+  - 三阶段提示：「正在下载 3D 引擎（约 4MB）」→「正在初始化 3D 场景」→「正在渲染图层 n/m：图层名」
+  - 下载阶段用 `fetch + ReadableStream` 读 `Content-Length` 实时上报百分比进度条
+    （失败时自动回退到普通 `<script>` 注入，不影响可用性）
+  - 新增 **取消** 按钮：通过 `_activationSeq` 自增令牌让进行中的流程立即失效，
+    并复位开关状态；关闭开关时 `app.js` 会先调 `cancelActivate()` 再 `deactivate()`
+
+### 2. 2D 图层样式在 3D 中同形式展示
+
+- **点要素图标（关键修复）**：Cesium `GeoJsonDataSource` 对 Point 生成的是 **billboard（图钉）**，
+  不是 `entity.point`，旧代码改写 `entity.point` 完全没生效 → 3D 一直是默认蓝钉。
+  现改为改写 `entity.billboard`，图标直接复用 2D 同源的 `L.GeoMarker.getIconFactory(iconType, iconSize)`，
+  把生成的 SVG 转成 data-uri。支持 volcano / hotspot / star / point / volcano-file / 外部文件图标
+- **多色显示**：按要素颜色预生成图标（每种颜色一张，20 色调色板最多 20 张），
+  single / sequential / field 三种 colorMode 与 2D `getFeatureFillColor` 完全一致
+- **图标尺寸**：`layerIconSizeMap[checkboxId] || 20`（geo-config 的 `cesium.pointPixelSize` 优先）
+- **透明度对齐**：线 = opacity；面填充 = `Math.min(opacity, 0.45)`（旧代码写死 `opacity*0.4`，
+  与 2D `fillOpacity` 不符）；点 = billboard color alpha
+- **面边界色**：与 2D 一致改为 `#555`（旧代码误用要素色）
+- **标签**：跟随 2D 的「显示标签」全局开关，取 `labelField`（或 Name/name/首字段），
+  要素数 ≤3000 才渲染，远景（>6000km）自动隐藏
+- **聚类**：跟随 2D 的「点要素聚类」开关，点要素 ≥200 时启用 `dataSource.clustering`；
+  自定义圆点气泡 + 数量文字（与 2D 聚类样式同款），**点击聚类气泡可放大展开**
+  （对应 2D 的 `zoomToBoundsOnClick`）
+- **深度测试**：保持 Cesium 默认（开启），地球背面的标记会被正确遮挡
+  （曾误设 `disableDepthTestDistance = Infinity`，会导致背面标记透视显示）
+
+### 修改文件
+
+- `assets/cesium-viewer.js` — 重写加载流程（进度/取消/遮罩挂 body）、`addLayer` 返回 Promise、
+  `syncAllLayers(onProgress)` 串行加载并上报进度、新增 `reloadAllLayers()` / `cancelActivate()`、
+  点击拾取支持聚类展开
+- `assets/cesium-geojson-adapter.js` — 重写点要素渲染（billboard + 同源 SVG 图标）、
+  透明度/边界色对齐、标签、聚类气泡、按颜色缓存图标
+- `assets/geojsonloader.js` — 新增状态桥接 `_ogv_layerIconMap` / `_ogv_layerIconSizeMap` /
+  `_ogv_labelFieldMap` / `_ogv_getLabelEnabled()` / `_ogv_getClusterEnabled()` /
+  `_ogv_getDefaultLabelField()`；新增 `syncCesiumLayerStyles()`，聚类/标签开关变化时重建 3D 图层
+- `assets/cesium-container.css` — 加载遮罩改为全屏卡片 + 进度条 + 不确定态动画 + 取消按钮
+- `assets/app.js` — `view3dToggle.disable` 先取消加载再停用；开关说明文案更新
+- `service-worker.js` — 缓存版本 v2.2.4 → v2.2.5
+
+## 2026-08-29 — 3D 视图体验优化：白底 + 聚类居中 + 设置流畅 + 定位可用
+
+围绕 4 个用户反馈的体验问题一次性修复，已在真实浏览器验证（playwright-core + Chrome swiftshader）
+
+### 1. 3D 背景白底，跟随站点黑白模式
+
+Cesium 官方没有「一键浅色模式」开关，但提供了完整 API 组合：需同时设置
+`scene.skyBox.show`（1.107+）/`backgroundColor`/`globe.baseColor`/`skyAtmosphere.show`/
+`globe.showGroundAtmosphere`/`fog.enabled`/`sun.show`/`moon.show`
+
+| 属性 | 浅色（白底） | 深色（黑底） |
+|---|---|---|
+| `scene.skyBox.show` | false | true |
+| `scene.backgroundColor` | `#ffffff` | `#000000` |
+| `scene.globe.baseColor` | `#eceff1` | `#1c1c28` |
+| `scene.skyAtmosphere.show` | false | true |
+| `scene.globe.showGroundAtmosphere` | false | true |
+| `scene.fog.enabled` | false | true |
+| `scene.sun/moon.show` | false | true |
+
+- `assets/cesium-viewer.js` 新增 `applySceneTheme()`：从 `documentElement[data-theme]` 读取当前模式
+  写入上述属性；`scene.skyBox.show` 不可用时退化为 `= undefined` 并缓存到 `_savedSkyBox`
+  以便切回深色时还原
+- `assets/app.js` 的 `darkModeToggle.enable/disable` 在 `rebuildGraticuleTheme()` 之后调
+  `window.CesiumViewer.applySceneTheme()`，未启用 3D 时内部 `if (!viewer) return` 跳过
+
+### 2. 聚类数字不在中间 — 根因 + 修复
+
+**根因**：Cesium `EntityCluster.addCluster` 中 `cluster.label = _clusterLabelCollection.add()`，
+而 `Label` 类的默认值 `horizontalOrigin = LEFT`（值 1）、`verticalOrigin = BASELINE`（值 2）、
+`pixelOffset = (0,0)`。我们只改字体/颜色/样式，没改原点 → 数量文字被画到锚点右上方
+
+**已查证**：下载 `Cesium.js` 1.125 + `@cesium/engine` 12.0.1 的 `EntityCluster.js` 源码确认
+
+**修复**：clusterEvent 回调中显式设置
+```js
+cluster.label.horizontalOrigin = Cs.HorizontalOrigin.CENTER;  // 0
+cluster.label.verticalOrigin = Cs.VerticalOrigin.CENTER;      // 0
+cluster.label.pixelOffset = new Cs.Cartesian2(0, 0);
+```
+
+**枚举值备忘**（已查 Cesium 1.125）：
+- `HorizontalOrigin = { CENTER: 0, LEFT: 1, RIGHT: -1 }`
+- `VerticalOrigin = { CENTER: 0, BOTTOM: 1, BASELINE: 2, TOP: -1 }`
+
+同时 `ent.label`（要素标签）补 `horizontalOrigin: Cs.HorizontalOrigin.CENTER`，
+否则要素名也会被画到锚点右侧半宽处
+
+### 3. ⚙️ 图层设置后 3D 反应慢
+
+**a) 旧 `updateOpacity` 是死代码**（`assets/cesium-geojson-adapter.js`）：
+判断 `if (pm.color)` — 但 `entity.polyline.material = Cs.Color.X` 实际是 `ConstantProperty`
+包裹的 `ColorMaterialProperty`，`pm.color` 是 Property，需要 `getValue()`，所以旧代码透明度轻量路径
+等于没生效，**任何**变更都全量重建
+
+重写 `updateOpacity`：
+- 新增 `resolveValue(v, time)` / `extractColor(v, time)` 通用工具
+- 兼容四种形态：裸 Color / Property / ColorMaterialProperty / `{color:…}`
+- 点/线 = opacity，面填充 = `min(opacity, 0.45)`，polygon.outlineColor 也跟新
+
+**b) 仅透明度变更走轻量路径**（`assets/geojsonloader.js` `reloadLayerWithNewMode`）：
+变更前先捕获 `oldMode / oldColor / oldField / oldOpacity`，只有 `styleUnchanged && !forceRebuild && newOpacity !== oldOpacity`
+才调 `CesiumViewer.updateLayerOpacity(...)`，否则回退 `CesiumViewer.reloadLayer(...)`
+- ⚠️ 比较时按 mode 类型相关字段比较：`(newMode !== "single" || oldColor === newColor)`、
+  `(newMode !== "field" || oldField === newField)`，避免对不上号模式时的误判
+
+**c) 重建时有可见提示**（`assets/cesium-viewer.js`）：
+- 新增 `#cesiumBusyToast` 轻量右下角 chip（`pointer-events:none` 不挡操作），
+  spinner + 文字「正在更新 3D 图层：xxx（N 个要素）」
+- `nextPaint()` = 双 `requestAnimationFrame` + `setTimeout(0)`，确保浏览器把提示 DOM
+  真正画出来后再执行阻塞任务，避免「点了没反应」
+- `runWithBusy(msg, task)` 包装：showBusy → nextPaint → task → nextPaint → hideBusy
+- `reloadLayer(checkboxId, opts)` / `reloadAllLayers(opts)` 接受 `{quiet:true}` 静默模式
+
+### 4. 🔍 定位按钮在 3D 无效
+
+**根因**：`assets/geojsonloader.js` `flyToLayer` 只调 `map.fitBounds`，3D 模式下 `map`
+是隐藏的，无视觉反馈
+
+**修复**：
+- `cesium-viewer.js` 新增 `flyToLayerBounds({west,south,east,north})` → `Rectangle.fromDegrees` + `viewer.camera.flyTo`
+- 处理退化范围（单点 / 跨度为 0 → 补 `minSpan = 0.05` 避免 Rectangle 无效）
+- 纬度硬边界 `±89.9`（Rectangle 不接受 ±90）
+- `geojsonloader.js` 提取 `getLayerBoundsRect(checkboxId)` 统一解析 `layerBoundsCache`
+  （可能是 L.LatLngBounds 或带 getBounds 的 Layer），3D 分支直接调 `flyToLayerBounds`
+- 范围缺失时 `showToast("⚠️ 该图层暂无可定位的范围", 2500ms)`
+
+### 验证（playwright-core + 系统 Chrome + swiftshader）
+
+```
+1) 火山图层要素数 = 1293
+2) 3D 已激活
+3) 浅色主题：skyBoxShow=false, bg=[1,1,1] 纯白, globeBase 浅灰, skyAtmosphere=false, sun/moon off ✅
+4) 聚类探针：hOrigin:0 (CENTER), vOrigin:0 (CENTER), pixelOffset:[0,0], billboard 40x40 CENTER ✅
+5) 透明度轻量路径：0.8 → 0.25 无重建 ✅
+6) 忙碌提示：显示「正在更新 3D 图层：火山 volcanos（1,293 个要素）」→ 完成后收起 ✅
+7) 定位按钮：相机 [1.87°, 0.56°, 4248km] → [-0.003°, 0.071°, 11994km] ✅
+8) 深色主题：skyBoxShow=true, bg=[0,0,0], skyAtmosphere=true (星空回来) ✅
+ERRORS: none
+```
+
+截图 `.workbuddy/artifacts/3d-light.png` / `3d-dark.png`：
+- 浅色：白底无星空，聚类红圈数字明显居中
+- 深色：黑底带星空，聚类红圈数字明显居中
+
+**调试聚类探针踩坑**：Cesium `EntityCluster.update()` 在相机不动时不重算聚类，
+所以注册监听后必须 `viewer.camera.zoomIn(...)` 或 `ds.clustering.enabled = false/true` 强制重算，
+否则 `clusterEvent` 不会触发（探针永远 null）
+
+### 改动文件
+- `assets/cesium-viewer.js` — 主题/忙碌提示/flyToLayerBounds/updateLayerOpacity/异步 reloadLayer
+- `assets/cesium-geojson-adapter.js` — 聚类标签居中/要素标签水平居中/重写 updateOpacity
+- `assets/geojsonloader.js` — flyToLayer 3D 分支 + reloadLayerWithNewMode 轻量路径
+- `assets/app.js` — darkModeToggle 联动 3D 场景主题
+- `assets/cesium-container.css` — `#cesiumBusyToast` 样式
+- `service-worker.js` — CACHE_NAME v2.2.5 → v2.2.6
 ## 2026-08-16 — Cesium 3D 地球集成
 
 ### 新功能

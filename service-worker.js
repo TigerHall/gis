@@ -1,7 +1,10 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v2.2.4";
+const CACHE_NAME = "v2.3.5";
 
 // 全量预缓存：安装 PWA 后全部功能离线可用（后台静默执行，不阻塞页面）
+// 注意：assets/cesium/Cesium.js（4.9MB）故意不在此列 —— 它只在用户真正打开 3D 时
+// 才需要，放进预缓存会让所有用户白下 5MB。它走「首次按需加载 → 动态缓存」，
+// 之后离线也能秒开 3D。
 const STATIC_ASSETS = [
   "./",
   "./index.html",

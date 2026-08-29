@@ -22,7 +22,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           {
             id: "view3dToggle",
             label: "3D 视图🧪",
-            desc: "切换到 Cesium 3D 地球，支持地形起伏和多角度查看。首次启用需加载约 4MB 引擎库",
+            desc: "切换到 Cesium 3D 地球，支持地形起伏和多角度查看。首次启用需下载约 4MB 引擎库（有进度提示，可取消）；刷新页面后不会自动进入",
           },
           {
             id: "clusterToggle",
@@ -71,7 +71,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           {
             id: "zoomToggle",
             label: "缩放控件",
-            desc: "开启/关闭地图左上角的加减号缩放控件（仍可用鼠标滚轮缩放）",
+            desc: "开启/关闭地图左上角的加减号缩放控件（仍可用鼠标滚轮缩放）；3D 模式下同步显示三视图切换与操作帮助按钮",
           },
           {
             id: "scaleToggle",
@@ -1053,10 +1053,13 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           var cb = document.getElementById("view3dToggle");
           if (cb) cb.checked = false;
         }
-        // 静默恢复时若 CesiumViewer 尚未加载，由 cesium-viewer.js 加载完成后自动激活
+        // 注意：刷新页面后不会自动进入 3D —— cesium-viewer.js 会在加载时
+        // 把持久化开关强制复位为「关」，只有用户主动拨动才会走到这里。
       },
       disable: function () {
         if (window.CesiumViewer) {
+          // 先取消可能正在进行的加载（下载过程中关开关要立刻中断）
+          window.CesiumViewer.cancelActivate();
           window.CesiumViewer.deactivate();
         }
       },
@@ -1138,12 +1141,14 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         document.documentElement.style.colorScheme = "dark";
         syncThemeColorMeta();
         rebuildGraticuleTheme();
+        syncCesiumSceneTheme();
       },
       disable: function () {
         document.documentElement.removeAttribute("data-theme");
         document.documentElement.style.colorScheme = "light";
         syncThemeColorMeta();
         rebuildGraticuleTheme();
+        syncCesiumSceneTheme();
       },
     },
     graticuleToggle: {
@@ -1232,7 +1237,15 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     },
     zoomToggle: {
       storageKey: TOGGLE_PREFIX + "zoom",
-      control: map.zoomControl,
+      // enable/disable 优先于 control：同时兼职 3D 辅助控件（全屏/操作帮助）开关
+      enable: function () {
+        map.zoomControl.addTo(map);
+        document.body.classList.add("ogv-zoom-ctl");
+      },
+      disable: function () {
+        map.removeControl(map.zoomControl);
+        document.body.classList.remove("ogv-zoom-ctl");
+      },
     },
     scaleToggle: {
       storageKey: TOGGLE_PREFIX + "scale",
@@ -1419,6 +1432,19 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       .getPropertyValue("--c-statusbar")
       .trim();
     if (color) meta.setAttribute("content", color);
+  }
+
+  /**
+   * 让 3D 场景配色（星空 / 背景色 / 大气）跟随当前黑白模式
+   * 未开启 3D 时 CesiumViewer.applySceneTheme() 内部会自行跳过
+   */
+  function syncCesiumSceneTheme() {
+    if (!window.CesiumViewer || !window.CesiumViewer.applySceneTheme) return;
+    try {
+      window.CesiumViewer.applySceneTheme();
+    } catch (e) {
+      console.warn("[app] 3D 场景主题同步失败:", e);
+    }
   }
 
   // 初始化主题：仅置顶开关状态，由 initToggle 同时设置 data-theme

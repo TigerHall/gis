@@ -12,6 +12,9 @@
   --c-green: #99cc99;
   --c-green-hover: #80b380;
   --c-green-text: #4a8c4a;
+  /* 绿色系「文字色」：--c-green(#99cc99) 在浅底上仅 1.8:1，不可用作小字。
+     小字（≤12px）必须用此变量，实测 #3d7a3d on #fafafa ≈ 4.96:1，满足 WCAG AA */
+  --c-green-text-strong: #3d7a3d;
   --c-gray: #ddd;
   --c-yellow: #f0c040;
   --c-blue: #1890ff;
@@ -74,6 +77,8 @@
   --c-green: #88cc88;
   --c-green-hover: #99cc99;
   --c-green-text: #88cc88;
+  /* 深色底上 #88cc88 已达 9.3:1，无需加深 */
+  --c-green-text-strong: #88cc88;
   --c-gray: #555;
   --c-yellow: #c89428;
   --c-blue: #5ab0ff;
@@ -502,6 +507,58 @@ details.layer-section[open] > summary .layer-group-arrow {
   50% {
     opacity: 0.4;
   }
+}
+
+/* ========== 图层加载进度（底部细进度条 + 状态文字）========== */
+.layer-item-progress {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  overflow: hidden;
+  background: var(--border-color, rgba(128, 128, 128, 0.25));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.layer-item[data-loading="1"] .layer-item-progress {
+  opacity: 1;
+}
+.layer-item-progress > i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.12s linear;
+}
+/* 不确定态（解析/写缓存/渲染中，无法算百分比）：扫动动画 */
+.layer-item-progress[data-indeterminate="1"] > i {
+  width: 33% !important;
+  animation: layerProgressSlide 1.1s ease-in-out infinite;
+}
+@keyframes layerProgressSlide {
+  0% {
+    transform: translateX(-105%);
+  }
+  100% {
+    transform: translateX(305%);
+  }
+}
+/* 进度文字：百分比 / 阶段名 */
+.layer-progress-text {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  /* 不用 --accent(#99cc99)：浅色底下仅 1.76:1，小字不可读 */
+  color: var(--c-green-text-strong, var(--c-green-text));
+  letter-spacing: 0.2px;
+  max-width: 52px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 组状态指示器 */

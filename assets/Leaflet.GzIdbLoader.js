@@ -279,13 +279,77 @@
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
-  function fetchGz(url) {
+  /**
+   * 让出一帧，确保之前设置的进度 UI 真的被浏览器画出来。
+   * 后续操作（279MB 反序列化 / JSON.parse）会长时间阻塞主线程，
+   * 不先让出的话这些阶段名用户根本看不到。
+   */
+  function nextPaint() {
+    return new Promise(function (resolve) {
+      if (typeof requestAnimationFrame !== "function") {
+        setTimeout(resolve, 0);
+        return;
+      }
+      requestAnimationFrame(function () {
+        setTimeout(resolve, 0);
+      });
+    });
+  }
+
+  /**
+   * 加载并解压 gz 文件，可选上报进度
+   * @param {string} url - gz 文件地址
+   * @param {Function} [onProgress] - 回调 ({ phase, loaded, total })
+   *   phase: "download" 下载中 | "parse" 字节读完，解压收尾 + JSON.parse 中
+   *   loaded/total 单位字节；total 为 0 表示服务端未提供 Content-Length（走不确定态）
+   */
+  function fetchGz(url, onProgress) {
     console.log("[GzIdbLoader] 加载 gz 文件:", url);
     return fetch(url).then(function (response) {
       if (!response.ok) throw new Error("HTTP " + response.status);
+      const total = parseInt(response.headers.get("Content-Length"), 10) || 0;
+      let loaded = 0;
+      let lastReport = 0;
+      let counted = false;
+
+      // 在解压前插入一个计数流：
+      // 仍然是流式解压（内存占用不变），只是在 gz 字节流经时累计并上报。
+      let src = response.body;
+      if (typeof TransformStream === "function") {
+        counted = true;
+        const counter = new TransformStream({
+          transform: function (chunk, ctrl) {
+            loaded += chunk.byteLength || 0;
+            // 节流上报，避免大图层每 chunk 都回调
+            const now = Date.now();
+            if (onProgress && now - lastReport > 100) {
+              lastReport = now;
+              onProgress({ phase: "download", loaded: loaded, total: total });
+            }
+            ctrl.enqueue(chunk);
+          },
+          // 字节流读完才进入解析阶段：
+          // 注意不能在调用 .json() 时就上报 parse —— 那时下载才刚开始
+          flush: function () {
+            if (onProgress) {
+              onProgress({
+                phase: "parse",
+                loaded: total || loaded,
+                total: total,
+              });
+            }
+          },
+        });
+        src = response.body.pipeThrough(counter);
+      }
+
       const ds = new DecompressionStream("gzip");
-      const decompressedStream = response.body.pipeThrough(ds);
-      return new Response(decompressedStream).json();
+      const jsonPromise = new Response(src.pipeThrough(ds)).json();
+
+      if (!counted && onProgress) {
+        onProgress({ phase: "parse", loaded: total || loaded, total: total });
+      }
+      return jsonPromise;
     });
   }
 
@@ -298,7 +362,13 @@
   }
 
   // ========== 主接口 ==========
-  function fetchWithCache(url) {
+  /**
+   * 加载 GeoJSON（IDB 缓存优先）
+   * @param {string} url
+   * @param {Function} [onProgress] - 进度回调 ({ phase, loaded, total })
+   *   phase: "cached" 命中缓存 | "download" | "parse" | "storing" 写缓存 | "done"
+   */
+  function fetchWithCache(url, onProgress) {
     const t0 = performance.now();
     // 1. 先尝试从缓存读取
     return getCache(url).then(function (cachedData) {
@@ -309,14 +379,24 @@
           "读取耗时:",
           (performance.now() - t0).toFixed(1) + "ms",
         );
-        return cachedData;
+        if (onProgress) onProgress({ phase: "cached", loaded: 1, total: 1 });
+        // 让出一帧渲染「读缓存」，否则紧接着的建图层会阻塞主线程，用户看不到提示
+        return nextPaint().then(function () {
+          return cachedData;
+        });
       }
 
       // 2. 缓存未命中，仅加载 gz
       const gzUrl = url.endsWith(".gz") ? url : url + ".gz";
-      return fetchGz(gzUrl).then(function (data) {
-        setCache(url, data);
-        return data;
+      return fetchGz(gzUrl, onProgress).then(function (data) {
+        if (onProgress) onProgress({ phase: "storing", loaded: 1, total: 1 });
+        // 等写入完成再返回：
+        // 原先这里是 fire-and-forget，大图层（279MB 对象图）写入需 1-2s，
+        // 用户在此之前刷新页面会导致缓存丢失，下次仍走完整下载+解压+解析。
+        return setCache(url, data).then(function () {
+          if (onProgress) onProgress({ phase: "done", loaded: 1, total: 1 });
+          return data;
+        });
       });
     });
   }
@@ -326,6 +406,8 @@
     /**
      * 加载 GeoJSON 文件（自动处理 gz 压缩和缓存）
      * @param {string} url - 文件 URL（不含 .gz 后缀）
+     * @param {Function} [onProgress] - 进度回调 ({ phase, loaded, total })
+     *   phase: "cached" 命中缓存 | "download" 下载+解压 | "parse" 解析 | "storing" 写缓存 | "done"
      * @returns {Promise<Object>} GeoJSON 数据
      */
     fetch: fetchWithCache,

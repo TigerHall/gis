@@ -259,6 +259,34 @@
     window._ogv_fieldKey = fieldKey;
     window._ogv_layerOpacityMap = layerOpacityMap;
     window._ogv_cesiumConfig = {}; // checkboxId → geo-config.cesium 配置
+    // 点要素图标配置（与 2D 同源于 L.GeoMarker，保证 3D 图标/尺寸一致）
+    window._ogv_layerIconMap = layerIconMap;
+    window._ogv_layerIconSizeMap = layerIconSizeMap;
+    window._ogv_labelFieldMap = labelFieldMap;
+    // labelEnabled / clusterEnabled / DEFAULT_LABEL_FIELD 为模块内变量，
+    // 用 getter 暴露（延后读取，避免 TDZ）
+    window._ogv_getLabelEnabled = function () {
+      return labelEnabled;
+    };
+    window._ogv_getClusterEnabled = function () {
+      return clusterEnabled;
+    };
+    window._ogv_getDefaultLabelField = function () {
+      return DEFAULT_LABEL_FIELD;
+    };
+
+    /**
+     * 通知 Cesium 3D 重建全部图层
+     * 聚类/标签开关等全局样式变化后调用，保证 2D/3D 表现一致
+     */
+    function syncCesiumLayerStyles() {
+      if (window.CesiumViewer && window.CesiumViewer.isActive) {
+        try {
+          window.CesiumViewer.reloadAllLayers();
+        } catch (e) {}
+      }
+    }
+    window._ogv_syncCesiumLayerStyles = syncCesiumLayerStyles;
     const layerSearchPriorityMap = {}; // 搜索优先图层（如海底地名集）：检索时优先返回，且未勾选也可被搜索
     const layerSourceMap = {}; // 图层级数据来源（geo-config 的 source）：注入要素属性后显示在弹窗「数据源」
     const layerSelectableMap = {}; // checkboxId → boolean，localStorage 优先于 geo-config
@@ -1197,8 +1225,114 @@
 
     // ========== 图层加载 ==========
     // 使用 Leaflet.GzIdbLoader 加载（仅 gz，自动解压 + IDB 缓存）
-    function fetchGzGeoJSON(filePath) {
-      return L.GzIdbLoader.fetch(filePath);
+    function fetchGzGeoJSON(filePath, onProgress) {
+      return L.GzIdbLoader.fetch(filePath, onProgress);
+    }
+
+    /** 字节数简写：用于加载进度文字 */
+    function formatBytesShort(bytes) {
+      if (!bytes || bytes < 0) return "0 B";
+      const mb = bytes / 1048576;
+      if (mb >= 1) return mb.toFixed(1) + " MB";
+      return Math.max(1, Math.round(bytes / 1024)) + " KB";
+    }
+
+    /**
+     * 更新图层加载进度：底部进度条 + 状态圆点旁的简短文字
+     * @param {string} checkboxId
+     * @param {Object|null} p - { phase, loaded, total }；传 null 表示结束并清理
+     *   phase: cached 命中缓存 | download 下载解压中 | parse 解析中
+     *          storing 写缓存中 | render 渲染中 | done
+     */
+    function updateLayerProgress(checkboxId, p) {
+      const li = document.querySelector(
+        `.layer-item[data-layer-id="${checkboxId}"]`,
+      );
+      if (!li) return;
+
+      // 结束：移除进度条与文字
+      if (!p) {
+        li.removeAttribute("data-loading");
+        // 注意：必须真正摘除节点，仅清 data-indeterminate 会让 2px 的空进度条
+        // 永久残留在 DOM 里（每个加载过的图层一个），下次再开还会带着上次的宽度。
+        const bar0 = li.querySelector(".layer-item-progress");
+        if (bar0 && bar0.parentNode) bar0.parentNode.removeChild(bar0);
+        const txt0 = li.querySelector(".layer-progress-text");
+        if (txt0 && txt0.parentNode) txt0.parentNode.removeChild(txt0);
+        return;
+      }
+
+      // 懒创建进度条
+      let bar = li.querySelector(".layer-item-progress");
+      if (!bar) {
+        bar = document.createElement("div");
+        bar.className = "layer-item-progress";
+        bar.innerHTML = "<i></i>";
+        li.appendChild(bar);
+      }
+      // 懒创建进度文字（插在状态圆点前面）
+      let txt = li.querySelector(".layer-progress-text");
+      if (!txt) {
+        txt = document.createElement("span");
+        txt.className = "layer-progress-text";
+        const st = li.querySelector(".layer-status");
+        if (st && st.parentNode) st.parentNode.insertBefore(txt, st);
+        else li.appendChild(txt);
+      }
+
+      li.setAttribute("data-loading", "1");
+
+      const pct =
+        p.total > 0
+          ? Math.max(0, Math.min(100, (p.loaded / p.total) * 100))
+          : -1;
+
+      let label = "";
+      let indeterminate = false;
+      let detail = "";
+      switch (p.phase) {
+        case "cached":
+          label = "读缓存";
+          indeterminate = true;
+          break;
+        case "done":
+          label = "完成";
+          indeterminate = false;
+          break;
+        case "download":
+          if (pct >= 0) {
+            label = Math.round(pct) + "%";
+            detail =
+              formatBytesShort(p.loaded) + " / " + formatBytesShort(p.total);
+          } else {
+            label = formatBytesShort(p.loaded);
+            indeterminate = true;
+          }
+          break;
+        case "parse":
+          label = "解析中";
+          indeterminate = true;
+          break;
+        case "storing":
+          label = "写缓存";
+          indeterminate = true;
+          break;
+        case "render":
+          label = "渲染中";
+          indeterminate = true;
+          break;
+        default:
+          label = "";
+      }
+
+      if (indeterminate) bar.setAttribute("data-indeterminate", "1");
+      else bar.removeAttribute("data-indeterminate");
+
+      const fill = bar.firstElementChild;
+      if (fill && pct >= 0) fill.style.width = pct.toFixed(1) + "%";
+
+      txt.textContent = label;
+      txt.title = detail ? "加载进度：" + label + "（" + detail + "）" : label;
     }
 
     function loadGeoJSONLayer(filePath, checkboxId, fitBoundsAfterLoad) {
@@ -1222,6 +1356,7 @@
             } catch (e) {}
           });
         updateLayerItemStatus(checkboxId, "loaded");
+        updateLayerProgress(checkboxId, null);
         var _cb = document.getElementById(checkboxId);
         if (_cb) _cb.style.background = layerColorMap[checkboxId] || "#8B4513";
         if (fitBoundsAfterLoad) {
@@ -1250,6 +1385,9 @@
       updateLayerItemStatus(checkboxId, "loading");
 
       function onDataLoaded(data) {
+        // 数据已到手，进入建图层阶段（该函数同步阻塞，进度停在"渲染中"）
+        updateLayerProgress(checkboxId, { phase: "render", loaded: 1, total: 1 });
+
         const data_ = data;
         // 图层级数据来源 → 要素属性「数据源」，弹窗/tooltip 中展示
         if (layerSourceMap[checkboxId] && data_ && data_.features) {
@@ -1312,6 +1450,8 @@
           } catch (e) {}
         }
         updateLayerItemStatus(checkboxId, "loaded");
+        // 图层已上图，清理加载进度
+        updateLayerProgress(checkboxId, null);
         var _cb2 = document.getElementById(checkboxId);
         if (_cb2)
           _cb2.style.background = layerColorMap[checkboxId] || "#8B4513";
@@ -1377,7 +1517,11 @@
         }
       }
 
-      fetchGzGeoJSON(filePath)
+      var onProgress = function (p) {
+        updateLayerProgress(checkboxId, p);
+      };
+
+      fetchGzGeoJSON(filePath, onProgress)
         .then(onDataLoaded)
         .catch(function (error) {
           if (localFallback) {
@@ -1385,10 +1529,11 @@
               "[GeoJSONLoader] 主路径加载失败，回退备选路径:",
               filePath,
             );
-            fetchGzGeoJSON(localFallback)
+            fetchGzGeoJSON(localFallback, onProgress)
               .then(onDataLoaded)
               .catch(function (err) {
                 console.error("GeoJSON加载失败：", err);
+                updateLayerProgress(checkboxId, null);
                 updateLayerItemStatus(checkboxId, "error");
                 var cb2 = document.getElementById(checkboxId);
                 if (cb2) {
@@ -1400,6 +1545,7 @@
               });
           } else {
             console.error("GeoJSON加载失败：", error);
+            updateLayerProgress(checkboxId, null);
             updateLayerItemStatus(checkboxId, "error");
             const checkbox = document.getElementById(checkboxId);
             if (checkbox) {
@@ -1565,6 +1711,12 @@
       newOpacity,
       forceRebuild,
     ) {
+      // 先记录旧值，用于判断 3D 是否可以走「只改透明度」的轻量路径
+      var oldMode = colorMode[checkboxId];
+      var oldColor = layerColorMap[checkboxId];
+      var oldField = fieldKey[checkboxId];
+      var oldOpacity = layerOpacityMap[checkboxId];
+
       // 更新颜色模式
       colorMode[checkboxId] = newMode;
       if (newMode === "single" && newColor)
@@ -1572,11 +1724,32 @@
       if (newMode === "field") fieldKey[checkboxId] = newField;
       if (newOpacity !== undefined) layerOpacityMap[checkboxId] = newOpacity;
 
-      // 通知 Cesium 3D 刷新该图层（颜色模式/透明度变化后重建数据源）
+      // 通知 Cesium 3D 刷新该图层
       if (window.CesiumViewer && window.CesiumViewer.isActive) {
-        try {
-          window.CesiumViewer.reloadLayer(checkboxId);
-        } catch (e) {}
+        // 只有当前生效的配色参数没变、且图标没换 → 只改透明度，不重建数据源
+        // （重建大图层要重新解析 GeoJSON + 生成图标，动辄卡顿数秒）
+        var styleUnchanged =
+          oldMode === newMode &&
+          (newMode !== "single" || oldColor === newColor) &&
+          (newMode !== "field" || oldField === newField);
+        var onlyOpacity =
+          styleUnchanged &&
+          !forceRebuild &&
+          newOpacity !== undefined &&
+          oldOpacity !== newOpacity;
+
+        var handled = false;
+        if (onlyOpacity && window.CesiumViewer.updateLayerOpacity) {
+          handled = window.CesiumViewer.updateLayerOpacity(
+            checkboxId,
+            newOpacity,
+          );
+        }
+        if (!handled) {
+          try {
+            window.CesiumViewer.reloadLayer(checkboxId);
+          } catch (e) {}
+        }
       }
 
       // 检测是否为 Canvas 渲染的图层（>10K 点）
@@ -1826,7 +1999,64 @@
     }
 
     // ========== 图层操作 ==========
+    /**
+     * 取出图层的经纬度范围（统一成 {west,south,east,north}）
+     * layerBoundsCache 里可能存 L.LatLngBounds，也可能存带 getBounds() 的 Layer
+     */
+    function getLayerBoundsRect(checkboxId) {
+      function toRect(b) {
+        if (!b || typeof b.getWest !== "function") return null;
+        try {
+          if (b.isValid && !b.isValid()) return null;
+        } catch (e) {
+          return null;
+        }
+        return {
+          west: b.getWest(),
+          south: b.getSouth(),
+          east: b.getEast(),
+          north: b.getNorth(),
+        };
+      }
+
+      var o = layerBoundsCache[checkboxId];
+      var r = toRect(o);
+      if (r) return r;
+
+      if (o && typeof o.getBounds === "function") {
+        try {
+          r = toRect(o.getBounds());
+          if (r) return r;
+        } catch (e) {}
+      }
+      var layerObj = layerCache[checkboxId];
+      if (layerObj && typeof layerObj.getBounds === "function") {
+        try {
+          r = toRect(layerObj.getBounds());
+          if (r) return r;
+        } catch (e) {}
+      }
+      return null;
+    }
+
     function flyToLayer(checkboxId) {
+      // ---- 3D 模式：直接飞到图层范围（2D 地图此时不可见，无需再 fitBounds）----
+      if (window.CesiumViewer && window.CesiumViewer.isActive) {
+        var rect = getLayerBoundsRect(checkboxId);
+        if (
+          rect &&
+          window.CesiumViewer.flyToLayerBounds &&
+          window.CesiumViewer.flyToLayerBounds(rect)
+        ) {
+          return;
+        }
+        if (window.showToast) {
+          window.showToast("⚠️ 该图层暂无可定位的范围", { duration: 2500 });
+        }
+        return;
+      }
+
+      // ---- 2D 模式 ----
       const boundsObj = layerBoundsCache[checkboxId];
       // layerBoundsCache 存的是 L.LatLngBounds 对象（小数据）或直接是 Layer（旧逻辑）
       if (boundsObj && boundsObj.isValid && boundsObj.isValid()) {
@@ -3618,9 +3848,10 @@
       removeBtn.style.color = "#cc6666";
       removeBtn.addEventListener("click", function () {
         clearHighlight(uid);
-        // 通知 3D 引擎移除用户图层
+        // 通知 3D 引擎销毁用户图层（数据已删除，不能只隐藏到复用缓存里）
         if (window.CesiumViewer && window.CesiumViewer.isActive) {
-          window.CesiumViewer.removeLayer(uid);
+          var CV = window.CesiumViewer;
+          (CV.destroyLayer || CV.removeLayer).call(CV, uid);
         }
         if (layerCache[uid]) map.removeLayer(layerCache[uid]);
         delete layerCache[uid];
@@ -5237,6 +5468,7 @@
         clusterEnabled = this.checked;
         localStorage.setItem("dupal_cluster_enabled", String(clusterEnabled));
         rebuildLoadedPointLayers();
+        syncCesiumLayerStyles();
       });
     }
 
@@ -5256,6 +5488,7 @@
         labelEnabled = this.checked;
         localStorage.setItem("dupal_label_enabled", String(labelEnabled));
         rebuildLoadedPointLayers();
+        syncCesiumLayerStyles();
       });
     }
 
