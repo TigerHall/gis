@@ -1,2 +1,19 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# 文本文件统一 LF 行尾
+# eol=lf 优先级高于 core.autocrlf：无论本机 autocrlf 如何设置，
+# checkout 一律输出 LF，消除「LF 将被转成 CRLF」的 GitHub 提示，
+# 也避免 Windows 工作区 CRLF 文件流向 Linux/工具链时的混合行尾问题。
+* text=auto eol=lf
+
+# 二进制文件显式声明，防止 text=auto 启发式误判
+# （gzip 压缩数据含随机字节，误判会导致行尾转换损坏数据）
+*.gz binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.gif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.map binary
