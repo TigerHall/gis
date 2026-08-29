@@ -512,6 +512,15 @@
       return window.GeoUtils.getFeatureColorByIndex(featureIndex || 0);
     }
 
+    // ========== 线要素点击热区 ==========
+    // 视觉线 weight 2.5 太细难点中：onEachFeature 为线要素附加一条透明宽线（weight 14）
+    // 承载 click/dblclick，视觉线本身 interactive:false 不响应。透明线不设 feature 属性，
+    // 因此按 layer.feature 匹配的高亮/换色/清除遍历会自动跳过它；applyLayerOpacity
+    // 靠 _isHitLayer 标记显式跳过，防止透明度滑杆把透明粗线调出颜色。
+    // 命中依赖 className "hit-area" + CSS pointer-events:stroke（geojsonloader.css），
+    // 复用 tthh 项目已验证方案（Leaflet.UserLayers.js 同款 weight 14）。
+    const LINE_HIT_WEIGHT = 14;
+
     function getGeoJsonStyle(feature, checkboxId, fileName, featureIndex) {
       const geomType = (feature.geometry?.type || "").toLowerCase();
       const isPolygon = geomType === "polygon" || geomType === "multipolygon";
@@ -538,6 +547,8 @@
           weight: 2.5,
           opacity: layerOpacity,
           fillOpacity: 0,
+          // 视觉线不参与交互：点击由 onEachFeature 附加的透明热区线承载
+          interactive: false,
           dashArray: null, // 显式清除高亮残留的虚线（Leaflet setStyle 用 L.extend 合并）
         };
       }
@@ -1090,6 +1101,9 @@
           }
         } else {
           // 面/线要素 + 点要素（聚类关闭时）
+          // 线要素点击热区收集（透明宽线，onEachFeature 中 push，构造后统一 add，
+          // 避免在 L.geoJSON 构造期间访问尚未赋值的 geoLayer）
+          const lineHitLayers = [];
           const geoLayer = L.geoJSON(shifted, {
             pointToLayer: function (feature, latlng) {
               const idx = feature._featureIndex || 0;
@@ -1147,6 +1161,91 @@
 
               // 标签：permanent tooltip（由 labelEnabled 全局开关控制，与点要素标签同步）
               _bindPermanentLabel(layer, labelField);
+
+              const isLine =
+                geomType === "linestring" || geomType === "multilinestring";
+
+              if (isLine) {
+                // 线要素点击热区：视觉线 weight 2.5 太细难点中，附加一条透明宽线
+                // 承载 click/dblclick。透明线不带 feature 属性 → 按 layer.feature 遍历
+                // 的高亮/换色/清除逻辑自动跳过它；applyLayerOpacity 靠 _isHitLayer 跳过，
+                // 防止透明度滑杆把透明粗线调出颜色。构造完成后统一 add 进 geoLayer。
+                const hit = L.polyline(layer.getLatLngs(), {
+                  color: "#000",
+                  weight: LINE_HIT_WEIGHT,
+                  opacity: 0,
+                  fillOpacity: 0,
+                  interactive: true,
+                  className: "hit-area", // 配合 geojsonloader.css 的 pointer-events:stroke
+                  bubblingMouseEvents: false,
+                });
+                hit._isHitLayer = true;
+                hit._ogvLayerId = checkboxId;
+                hit._ogvLayerName = layerDisplayName || "";
+
+                hit.on("click", function (e) {
+                  if (layerSelectableMap[checkboxId] === false) {
+                    L.DomEvent.stop(e);
+                    return;
+                  }
+                  const idx = feature._featureIndex || 0;
+                  const baseStyle = getGeoJsonStyle(
+                    feature,
+                    checkboxId,
+                    fileName,
+                    idx,
+                  );
+                  const hlStyle = window.GeoUtils.buildHighlightStyle(baseStyle);
+                  applyHighlight(checkboxId, feature._featureIndex, hlStyle);
+                  const content = window.GeoUtils.buildPopupContent(
+                    feature,
+                    fileName,
+                    labelField,
+                    layerDisplayName,
+                  );
+                  if (content)
+                    layer.bindPopup(content, { maxWidth: 300 }).openPopup();
+                  L.DomEvent.stop(e);
+                });
+
+                hit.on("dblclick", function (e) {
+                  if (layerSelectableMap[checkboxId] === false) {
+                    L.DomEvent.stop(e);
+                    return;
+                  }
+                  const idx = feature._featureIndex || 0;
+                  const baseStyle = getGeoJsonStyle(
+                    feature,
+                    checkboxId,
+                    fileName,
+                    idx,
+                  );
+                  const hlStyle = window.GeoUtils.buildHighlightStyle(baseStyle);
+                  applyHighlight(checkboxId, feature._featureIndex, hlStyle);
+                  try {
+                    if (layer.getBounds) {
+                      const bounds = layer.getBounds();
+                      if (bounds.isValid())
+                        map.fitBounds(bounds, {
+                          padding: [50, 50],
+                          maxZoom: 12,
+                        });
+                    }
+                  } catch (err) {}
+                  const content = window.GeoUtils.buildPopupContent(
+                    feature,
+                    fileName,
+                    labelField,
+                    layerDisplayName,
+                  );
+                  if (content)
+                    layer.bindPopup(content, { maxWidth: 300 }).openPopup();
+                  L.DomEvent.stop(e);
+                });
+
+                lineHitLayers.push(hit);
+                return; // 视觉线已由透明热区线接管交互，不再绑定
+              }
 
               layer.on("click", function (e) {
                 if (layerSelectableMap[checkboxId] === false) {
@@ -1206,6 +1305,13 @@
               });
             },
           });
+
+          // 把线要素的透明热区线挂到同一 geoLayer（随图层一起 add/remove）
+          if (lineHitLayers.length) {
+            for (let i = 0; i < lineHitLayers.length; i++) {
+              geoLayer.addLayer(lineHitLayers[i]);
+            }
+          }
 
           // 注意：不在这里 addTo(map)，统一由层组管理，避免重复添加/移除混乱
           geoLayers.push(geoLayer);
@@ -1660,6 +1766,9 @@
     // 确保单个图形（三角形/星/热点等）也能即时响应透明度调整。
     function applyLayerOpacity(layer, op) {
       if (!layer) return;
+      // 跳过线要素透明热区线：它本身 opacity 必须恒为 0，
+      // 若被 setStyle 调成 op 会露出一条粗黑线
+      if (layer._isHitLayer) return;
       // 1. 嵌套组：递归子层
       if (typeof layer.eachLayer === "function") {
         layer.eachLayer(function (child) {
