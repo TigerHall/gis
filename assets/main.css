@@ -1391,3 +1391,22 @@ body.sidebar-pinned .layer-trigger {
   font-size: 12px;
   background: #fff;
 }
+
+/* ========== Leaflet 图层控件（底图切换）：去掉文本光标 ==========
+   浏览器给 <a> / <label> 的默认 cursor 是 auto，在控件上常被解析成
+   I 型「文本光标」。这里显式指定：折叠按钮与选项为手型，面板其余区域
+   为默认箭头，并禁用文本选中，避免点击时误选文字。 */
+.leaflet-control-layers,
+.leaflet-control-layers * {
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+.leaflet-control-layers a,
+.leaflet-control-layers label,
+.leaflet-control-layers input,
+.leaflet-control-layers button {
+  cursor: pointer;
+}
