@@ -284,9 +284,16 @@
 /* 内容区 */
 .app-dialog .dialog-body {
   padding: 24px;
-  max-height: min(80vh, 600px);
+  /* 上限同时受视口高度约束：扣掉对话框头部(~57px)与 dialog 的上下留白(40px)。
+     原为 min(80vh,600px)，没算头部 → 视口 <525px 时 .app-dialog 自身也会溢出，
+     于是出现「对话框滚动 + 正文滚动」两层嵌套滚动条，且外层滚动条一出现
+     就会把正文推窄 15px。改为扣紧后内层滚动是唯一滚动条，口径恒定。
+     视口 ≥700px 时取值与原先完全一致。 */
+  max-height: min(600px, calc(100vh - 140px));
   overflow-y: auto;
   overflow-x: hidden;
+  /* 滚动条槽位由 [data-scroll-guttered] 懒预留（见 main.css）：
+     首次溢出后才常驻占位，短文档不会白留一条右侧空隙 */
   line-height: 1.7;
   color: var(--dlg-body-text);
   word-break: break-word;
@@ -351,6 +358,10 @@
   padding: 14px;
   border-radius: 8px;
   overflow-x: auto;
+  /* 显式关闭纵向滚动：只写了 overflow-x:auto 时，浏览器会把 overflow-y 由
+     visible 计算成 auto，扫描工具会误判成「一个没预留槽位的纵向滚动容器」。
+     代码块高度由内容决定（无 max-height），本来就永远不会纵向滚动。 */
+  overflow-y: hidden;
   font-size: 13px;
   border: 1px solid var(--dlg-pre-border);
   word-break: break-word;
@@ -413,6 +424,33 @@
   color: var(--dlg-blockquote-text);
 }
 
+/* ----- Markdown 正文图片（CHANGELOG 对照图等） ----- */
+.app-dialog .dialog-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 12px 0;
+  border: 1px solid var(--dlg-th-border);
+  border-radius: 8px;
+  background: var(--dlg-code-bg);
+  cursor: zoom-in;
+}
+/* 点击放大：改回原始像素，对话框同步撑宽，仍超出则横向滚动（对照图看细节用） */
+.app-dialog .dialog-body img.md-zoom {
+  max-width: none;
+  cursor: zoom-out;
+}
+.app-dialog.md-zoomed {
+  width: min(1840px, 96vw);
+  transition: width 0.18s ease;
+}
+/* 平时 .dialog-body 是 overflow-x: hidden（防宽表格撑破弹窗），
+   但放大态下必须放开，否则大图右侧部分用户拖不到 —— 只能程序化 scrollLeft，
+   鼠标/触控板都滚不动。 */
+.app-dialog.md-zoomed .dialog-body {
+  overflow-x: auto;
+}
+
 /* ----- Markdown 折叠目录 ----- */
 .md-toc {
   margin-bottom: 16px;
@@ -466,6 +504,7 @@
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
+  /* 槽位由 [data-scroll-guttered] 懒预留（见 main.css） */
 }
 
 .md-toc-item {
@@ -912,6 +951,8 @@
   max-height: 200px;
   overflow-y: auto;
   scrollbar-width: thin;
+  /* 槽位由 [data-scroll-guttered] 懒预留：要素弹窗每次都是新建的，
+     属性条数少时不该白留空隙 */
 }
 .feature-popup-body::-webkit-scrollbar {
   width: 4px;

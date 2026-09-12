@@ -11,43 +11,63 @@
 var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
 (function () {
   // ========== 数据驱动渲染（必须在 toggleConfig 执行前创建 DOM）==========
+  // 面板分两层，解决「设置项太多、找东西靠翻」的问题：
+  //   ① #quickBar    —— 常用功能图标快捷区，置顶、一屏可达（quick: true 的项）
+  //   ② #toggleBody  —— 全量开关按分类收进二级折叠 <details>
+  // 两者不是两份设置：② 里才是真正持有状态的主控件（带 id，toggleConfig 按 id 注册、
+  // geojsonloader 按 id 恢复），① 只是它的快捷入口 —— 读它的状态、点击时转发 change。
+  // 所以 ① 里绝不能出现同 id 元素：重复 id 会让 getElementById 静默抓到错误的那一个。
   (function () {
+    var quickBar = document.getElementById("quickBar");
     var body = document.getElementById("toggleBody");
     if (!body || body.children.length > 0) return;
 
+    // 字段说明：
+    //   id       —— 必须是 toggleConfig 中的键（控件开关已按 id 注册）
+    //   icon     —— 纯装饰性图标，语义由可见文字/aria-label 承担
+    //   quick    —— true 时额外在快捷区放一个入口（二级折叠里依然保留，见上方说明）
+    //   type     —— "button" 表示动作按钮（无开关状态），默认是开关
     var TOGGLE_GROUPS = [
       {
         category: "显示",
         items: [
           {
             id: "view3dToggle",
-            label: "3D 视图🧪",
+            label: "3D 视图",
+            icon: "🌐",
             desc: "切换到 Cesium 3D 地球，支持地形起伏和多角度查看。首次启用需下载约 4MB 引擎库（有进度提示，可取消）；刷新页面后不会自动进入",
           },
           {
             id: "clusterToggle",
             label: "点要素聚类",
+            icon: "🧩",
+            quick: true,
             desc: "开启后点要素按空间距离聚合成群组显示，大幅减轻渲染压力，页面操作更流畅",
             checked: true,
           },
           {
             id: "labelToggle",
             label: "显示标签",
+            icon: "🏷️",
+            quick: true,
             desc: "开启后在地图上显示各点要素的名称标签，便于识别站位和热点位置",
-          },
-          {
-            id: "centerCrossToggle",
-            label: "中心十字",
-            desc: "开启后在地图正中心渲染十字标记，帮助直观定位当前地图中心位置；关闭时移除",
           },
           {
             id: "graticuleToggle",
             label: "经纬度格网",
+            icon: "▦",
             desc: "开启后在地图上显示经纬度网格线，并在边缘标注坐标，随缩放自动调整网格密度",
+          },
+          {
+            id: "centerCrossToggle",
+            label: "中心十字",
+            icon: "✛",
+            desc: "开启后在地图正中心渲染十字标记，帮助直观定位当前地图中心位置；关闭时移除",
           },
           {
             id: "optimizeSearchToggle",
             label: "优化搜索",
+            icon: "🎯",
             desc: "开启后点击搜索结果缩放至目标时，仅突出显示该目标（隐藏同图层其他目标、淡化其他图层），移动或缩放地图后自动恢复",
             checked: true,
           },
@@ -58,40 +78,50 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         items: [
           {
             id: "legendToggle",
-            label: "图例🧪",
+            label: "图例",
+            icon: "🗂️",
             desc: "开启后在地图左下角显示当前可见图层的图例，包含颜色图块和图层名称",
             checked: true,
           },
           {
             id: "mouseCoordToggle",
             label: "鼠标坐标",
+            icon: "🖱️",
+            quick: true,
             desc: "开启/关闭鼠标位置经纬度坐标显示控件，实时查看光标所在位置的经纬度",
             checked: true,
           },
           {
             id: "zoomToggle",
             label: "缩放控件",
+            icon: "➕",
             desc: "开启/关闭地图左上角的加减号缩放控件（仍可用鼠标滚轮缩放）；3D 模式下同步显示三视图切换与操作帮助按钮",
           },
           {
             id: "scaleToggle",
             label: "比例尺",
+            icon: "📏",
             desc: "开启/关闭地图左下角的比例尺条，直观显示当前缩放级别下的距离比例",
           },
           {
             id: "geomenToggle",
             label: "编辑测量",
-            desc: "开启/关闭要素编辑与测量工具栏（绘制、修改、删除、测距、测面）",
+            icon: "📐",
+            quick: true,
+            desc: "开启/关闭要素编辑与测量工具栏（绘制、修改、删除、测距、测面）；绘制结果可用「测量转图层」导出为 GeoJSON",
           },
           {
             id: "layerCtrlToggle",
             label: "图层控件",
+            icon: "🧭",
             desc: "开启/关闭右上角的图层切换控件，可切换天地图不同底图图层",
             checked: true,
           },
           {
             id: "moreBasemapToggle",
             label: "更多底图",
+            icon: "🗺️",
+            quick: true,
             desc: "开启后显示更多底图和覆盖层选项（ArcGIS扩展、天地图标注等）",
           },
         ],
@@ -102,12 +132,15 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           {
             id: "clipboardToggle",
             label: "识别粘贴",
+            icon: "📋",
+            quick: true,
             desc: "开启后自动读取剪贴板中的坐标/CSV数据并解析为投点图层；关闭后需手动粘贴",
             checked: true,
           },
           {
             id: "rememberLayerToggle",
             label: "记住图层",
+            icon: "💾",
             desc: "开启后记住用户上传的图层和勾选状态，刷新页面自动恢复",
             checked: true,
           },
@@ -119,26 +152,32 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           {
             id: "isLocationTracking",
             label: "显示位置",
+            icon: "📍",
             desc: "开启后持续获取设备 GPS 位置，在地图上实时显示当前位置标记",
           },
           {
             id: "elevationReadToggle",
-            label: "读取高程🧪",
+            label: "读取高程",
+            icon: "⛰️",
+            quick: true,
             desc: "开启后点击地图任意位置，实时查询该坐标的高程/水深（数据源可切换，默认 GEBCO）",
           },
           {
             id: "darkModeToggle",
             label: "深色模式",
+            icon: "🌙",
             desc: "开启后切换为深色主题，适合弱光环境使用，减少屏幕眩光",
           },
           {
             id: "premiumToggle",
-            label: "高级功能🕹️",
+            label: "高级功能",
+            icon: "🕹️",
             desc: "开启后进入激活流程，输入激活码解锁下载 GeoJSON 等高级功能",
           },
           {
             id: "linkJumpToggle",
-            label: "链接跳转🧪",
+            label: "链接跳转",
+            icon: "🔗",
             desc: "开启后注册 web+dupal 协议，可从地址栏 / 网页链接 / Win+R 直接打开 web+dupal://focus/南海 并自动聚焦对应区域（仅 Chrome/Edge 有效，且需在 https 下）",
           },
         ],
@@ -151,42 +190,174 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             id: "exportMapBtn",
             label: "导出图片",
             icon: "📷",
-            desc: "将当前地图截图导出为 PNG 图片",
+            quick: true,
+            desc: "将当前地图截图导出为 PNG 图片（快捷键 Ctrl/⌘ + E）",
           },
         ],
       },
     ];
 
+    function escapeAttr(s) {
+      return String(s === undefined || s === null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    // ---- 渲染 ①：常用功能快捷区（图标 + 文字）----
+    var quickHtml = "";
+    var quickNum = 0;
+    for (var qg = 0; qg < TOGGLE_GROUPS.length; qg++) {
+      var qItems = TOGGLE_GROUPS[qg].items;
+      for (var qi = 0; qi < qItems.length; qi++) {
+        var q = qItems[qi];
+        if (!q.quick) continue;
+        quickNum++;
+        // 统一用原生 <button>：
+        //   ① 快捷区不是独立的表单控件，只是「地图设置」里那个开关的快捷入口，
+        //      用 aria-pressed 表达开关状态，语义比「第二个 checkbox」准确
+        //   ② button 自带 :active / :focus-visible / 键盘 Enter·Space，
+        //      按压反馈由 CSS 直接给，不必再靠透明 checkbox 铺满整块
+        if (q.type === "button") {
+          quickHtml +=
+            '<button type="button" class="quick-item" id="' +
+            q.id +
+            '" data-action="' +
+            q.id +
+            '" title="' +
+            escapeAttr(q.desc) +
+            '">' +
+            '<span class="quick-icon" aria-hidden="true">' +
+            (q.icon || "•") +
+            "</span>" +
+            '<span class="quick-text">' +
+            q.label +
+            "</span>" +
+            "</button>";
+        } else {
+          quickHtml +=
+            '<button type="button" class="quick-item" id="' +
+            q.id +
+            'Quick" data-quick-for="' +
+            q.id +
+            '" aria-pressed="false" title="' +
+            escapeAttr(q.desc) +
+            '">' +
+            '<span class="quick-icon" aria-hidden="true">' +
+            (q.icon || "•") +
+            "</span>" +
+            '<span class="quick-text">' +
+            q.label +
+            "</span>" +
+            "</button>";
+        }
+      }
+    }
+    quickHtml =
+      '<div class="quick-bar-title" id="quickBarTitle"' +
+      ' title="这里只是下方「地图设置」里对应开关的快捷方式，状态与那边完全同步">' +
+      "⚡ 常用功能</div>" +
+      '<div class="quick-grid">' +
+      quickHtml +
+      "</div>";
+    if (quickBar) {
+      quickBar.innerHTML = quickHtml;
+
+      // 快捷区的状态单向来源于「地图设置」里的 checkbox（唯一数据源）。
+      // 做成可重复调用的全局函数：有些开关（点聚类、显示标签）不在 toggleConfig 里，
+      // 由 geojsonloader.js 在更晚的时机按 localStorage 恢复；地图设置那边也可能
+      // 被程序化改动（搜索框清空、退出 3D 等），所以任何时刻都能重算一次。
+      window._syncQuickStates = function () {
+        var items = quickBar.querySelectorAll("[data-quick-for]");
+        for (var i = 0; i < items.length; i++) {
+          var master = document.getElementById(
+            items[i].getAttribute("data-quick-for"),
+          );
+          var on = !!(master && master.checked);
+          items[i].classList.toggle("is-on", on);
+          items[i].setAttribute("aria-pressed", on ? "true" : "false");
+        }
+      };
+      window._syncQuickStates();
+
+      // 点快捷项 = 拨动地图设置里的那个开关，让它走完整流程
+      // （localStorage 持久化 / enable·disable / 分类徽标刷新都挂在那一边）
+      quickBar.addEventListener("click", function (e) {
+        var btn = e.target && e.target.closest && e.target.closest("[data-quick-for]");
+        if (!btn || !quickBar.contains(btn)) return;
+        var master = document.getElementById(btn.getAttribute("data-quick-for"));
+        if (!master) return;
+        master.checked = !master.checked;
+        master.dispatchEvent(new Event("change", { bubbles: true }));
+        window._syncQuickStates();
+      });
+
+      // 反向兜底：地图设置里的开关被别处改动时，快捷区跟着变
+      document.addEventListener("change", function (e) {
+        if (e.target && e.target.type === "checkbox") window._syncQuickStates();
+      });
+
+      // 补齐「加载后才被其他模块恢复」的开关状态
+      window.addEventListener("load", function () {
+        setTimeout(window._syncQuickStates, 0);
+        setTimeout(window._syncQuickStates, 900);
+      });
+    }
+
+    // ---- 渲染 ②：地图设置（全量开关）→ 按分类的二级折叠 ----
+    // 快捷区是「地图设置」的快捷方式，不是另一份设置：每个开关在这里都有实体，
+    // 快捷项额外在置顶区有一个入口。面板这一份才是主控件（在 toggleConfig 里注册、
+    // 带 id），快捷区只读它的状态、点它来切换。
     var html = "";
     for (var gi = 0; gi < TOGGLE_GROUPS.length; gi++) {
       var group = TOGGLE_GROUPS[gi];
-      html += '<div class="toggle-category">' + group.category + "</div>";
-      for (var ii = 0; ii < group.items.length; ii++) {
-        var item = group.items[ii];
+      if (!group.items.length) continue;
+
+      html +=
+        '<details class="toggle-sub" id="toggleSub' +
+        gi +
+        '" data-persist-details>' +
+        '<summary>' +
+        '<span class="toggle-sub-name">' +
+        group.category +
+        "</span>" +
+        '<span class="toggle-sub-badge" id="toggleSubBadge' +
+        gi +
+        '"></span>' +
+        "</summary>" +
+        '<div class="toggle-sub-body">';
+
+      for (var jj = 0; jj < group.items.length; jj++) {
+        var item = group.items[jj];
         if (item.type === "button") {
+          // 动作按钮：快捷区那份带 id，这里的镜像靠 data-action 绑定
           html +=
             '<div class="toggle-bar" id="' +
             item.id +
             'Bar" title="' +
-            (item.desc || "") +
+            escapeAttr(item.desc) +
             '">' +
-            '<button class="action-btn" id="' +
+            '<button class="action-btn" data-action="' +
             item.id +
             '">' +
-            (item.icon || "") +
-            " " +
+            (item.icon ? item.icon + " " : "") +
             item.label +
             "</button>" +
             "</div>";
         } else {
+          // 开关一律带 id：这一份是「主控件」（toggleConfig 按 id 注册、
+          // geojsonloader 按 id 恢复），快捷区只是它的另一个入口。
+          // 也正因如此，同一个 id 只能出现在这里 —— 快捷区用的是 <button>，不带 checkbox。
           html +=
             '<div class="toggle-bar" id="' +
             item.id +
             'Bar" title="' +
-            item.desc +
+            escapeAttr(item.desc) +
             '">' +
             '<label class="cluster-toggle-label">' +
             '<span class="cluster-toggle-text">' +
+            (item.icon ? item.icon + " " : "") +
             item.label +
             "</span>" +
             '<input type="checkbox" id="' +
@@ -199,15 +370,55 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             "</div>";
         }
       }
+      html += "</div></details>";
     }
     body.innerHTML = html;
 
-    // 绑定导出图片按钮事件
-    var exportBtn = document.getElementById("exportMapBtn");
-    if (exportBtn) {
-      exportBtn.addEventListener("click", function () {
-        exportMapImage();
-      });
+    // 主控件就位后补一次同步：渲染①时地图设置还没生成，快捷区拿不到状态
+    if (window._syncQuickStates) window._syncQuickStates();
+
+    // 子分组徽标：显示「已开 / 总数」，让折叠状态下也能一眼看出哪里开着东西
+    function updateSubBadges() {
+      var subs = body.querySelectorAll("details.toggle-sub");
+      for (var i = 0; i < subs.length; i++) {
+        var sub = subs[i];
+        var boxes = sub.querySelectorAll('input[type="checkbox"]');
+        var badge = sub.querySelector(".toggle-sub-badge");
+        if (!badge) continue;
+        var on = 0;
+        for (var b = 0; b < boxes.length; b++) if (boxes[b].checked) on++;
+        if (boxes.length) {
+          badge.textContent = on + "/" + boxes.length;
+          badge.classList.toggle("has-on", on > 0);
+        } else {
+          // 纯动作按钮的分类（「操作」）没有开关可统计，
+          // 退化成项目数，避免折叠标题右侧空着一块
+          var acts = sub.querySelectorAll(".action-btn").length;
+          badge.textContent = acts ? acts + " 项" : "";
+          badge.classList.remove("has-on");
+        }
+      }
+    }
+    body.addEventListener("change", function (e) {
+      if (e.target && e.target.type === "checkbox") updateSubBadges();
+    });
+    updateSubBadges();
+
+    // 动作按钮：快捷区和地图设置里各有一个入口，用 data-action 统一绑定，
+    // 不再依赖 id（面板里那个是镜像，不能重复用 id）
+    var ACTION_HANDLERS = {
+      exportMapBtn: exportMapImage,
+    };
+    var actionEls = document.querySelectorAll("[data-action]");
+    for (var ai = 0; ai < actionEls.length; ai++) {
+      (function (el) {
+        var fn = ACTION_HANDLERS[el.getAttribute("data-action")];
+        if (fn) {
+          el.addEventListener("click", function () {
+            fn();
+          });
+        }
+      })(actionEls[ai]);
     }
   })();
 
@@ -609,6 +820,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     var panel = document.getElementById("layerPanel");
     var trigger = document.getElementById("layerTrigger");
     var controlContainer = document.querySelector(".leaflet-control-container");
+    var waybackBar = document.getElementById("waybackBar");
 
     // 记录原始状态用于恢复
     var panelWasActive = panel && panel.classList.contains("active");
@@ -620,16 +832,18 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       if (panelWasActive && panel) panel.classList.add("active");
       if (trigger) trigger.style.display = "";
       if (controlContainer) controlContainer.style.display = "";
+      if (waybackBar) waybackBar.style.display = "";
       map.invalidateSize();
       // 移除降级监听（如果有）
       map.off("movestart zoomstart", restoreUI);
     }
 
-    // 隐藏侧边栏 + 触发按钮 + 地图控件
+    // 隐藏侧边栏 + 触发按钮 + 地图控件 + 底部时相条
     if (panelWasActive) panel.classList.remove("active");
     if (panel) panel.style.display = "none";
     if (trigger) trigger.style.display = "none";
     if (controlContainer) controlContainer.style.display = "none";
+    if (waybackBar) waybackBar.style.display = "none";
 
     // ----- iOS 检测（必须放在 getDisplayMedia 前面）-----
     // iOS 16.4+ 也有了 getDisplayMedia，但唤起的是屏幕录制而不是标签页选择器，
@@ -1467,6 +1681,14 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     var checked = saved !== null ? saved === "true" : defaultChecked;
     cb.checked = checked;
 
+    // 快捷区那个按钮的选中态跟着这里走。
+    // 快捷区不带自己的 checkbox，状态只存在于这一个 cb 上，
+    // 所以每次状态变化都让快捷区重算一遍（含 aria-pressed）。
+    function syncQuickState() {
+      if (window._syncQuickStates) window._syncQuickStates();
+    }
+    syncQuickState();
+
     // 同步控件状态：勾选时创建（懒加载），未勾选时移除
     // 恢复已保存状态用静默模式（userInitiated=false），避免每次进入都弹提示
     if (checked) {
@@ -1479,6 +1701,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
 
     cb.addEventListener("change", function () {
       localStorage.setItem(cfg.storageKey, String(this.checked));
+      syncQuickState();
       // 用户主动拨动开关才视为 userInitiated，触发注册与提示
       if (this.checked) {
         if (cfg.enable) cfg.enable(true);

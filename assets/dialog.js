@@ -278,6 +278,49 @@
 
   // ==================== 模态弹窗（加载 MD） ====================
 
+  /**
+   * 把 Markdown 正文里的【相对】图片路径按【文档自身所在目录】解析。
+   *
+   * 为什么需要：marked.parse() 产出的 <img src="shots/x.png"> 是直接塞进
+   * 对话框 DOM 的，浏览器会拿【页面 URL】当基准 —— docs/CHANGELOG.md 里写
+   * shots/a.png 会去请求站点根的 /shots/a.png，必然 404。
+   * 按 Markdown 语义应相对文档解析 → docs/shots/a.png。
+   *
+   * 绝对路径（/、//、https:、data:、#）原样保留。
+   */
+  function resolveRelativeImages(root, docUrl) {
+    var base = String(docUrl || "")
+      .replace(/[?#][\s\S]*$/, "")
+      .replace(/[^/]*$/, "");
+    if (!base) return;
+    var imgs = root.querySelectorAll("img[src]");
+    for (var i = 0; i < imgs.length; i++) {
+      var src = imgs[i].getAttribute("src");
+      if (!src || /^([a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(src)) continue;
+      imgs[i].setAttribute("src", base + src);
+    }
+  }
+
+  /**
+   * 正文图片点击放大 / 还原。
+   * 对照图这类「大尺寸 + 细标注」的图，缩到弹窗宽度后细节看不清 ——
+   * 点一下切到原始像素（对话框同步撑宽，仍不够则横向滚动），再点还原。
+   * 图片是 2 倍图（如 3420×1860），原始像素显示约等于逻辑 1:1。
+   */
+  function bindImageZoom(body) {
+    if (body._mdZoomBound) return;
+    body._mdZoomBound = true;
+    body.addEventListener("click", function (e) {
+      var img = e.target.closest ? e.target.closest("img") : null;
+      if (!img || !body.contains(img)) return;
+      img.classList.toggle("md-zoom");
+      // 有任意一张处于放大态 → 对话框撑宽；全部还原 → 收回原宽
+      var dlg = body.closest("dialog");
+      if (dlg) dlg.classList.toggle("md-zoomed", !!body.querySelector("img.md-zoom"));
+      if (img.classList.contains("md-zoom")) img.scrollIntoView({ block: "start" });
+    });
+  }
+
   function showMarkdown(url, title) {
     var dialog = document.getElementById("_mdDialog");
     if (!dialog) {
@@ -310,6 +353,10 @@
         })
         .then(function (md) {
           body.innerHTML = marked.parse(md);
+          // 相对图片路径按文档目录解析（不然 docs/ 下的图会 404）
+          resolveRelativeImages(body, url);
+          // 大图点击放大 / 还原
+          bindImageZoom(body);
           // 渲染完成后构建折叠式目录
           buildTOC(body, dialog);
           // 添加回到顶部按钮

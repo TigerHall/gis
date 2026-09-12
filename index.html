@@ -169,6 +169,13 @@
           <span class="search-clear" id="searchClear" title="清空搜索">❌</span>
           <div class="search-results" id="searchResults"></div>
         </div>
+        <!-- 常用功能快捷区（内容由 app.js 数据驱动渲染，置顶便于一屏可达） -->
+        <div
+          class="quick-bar panel-module"
+          id="quickBar"
+          role="group"
+          aria-label="常用功能"
+        ></div>
         <!-- 地图设置（由标题行 ⚙️ 按钮控制） -->
         <details
           class="toggle-section panel-module"
@@ -178,7 +185,7 @@
           <summary>⚙️ 地图设置</summary>
           <div class="toggle-body" id="toggleBody"></div>
         </details>
-        <!-- 静态矢量要素图层组 -->
+        <!-- 数据图层组 -->
         <details
           class="layer-section panel-module"
           id="dataLayerSection"
@@ -187,14 +194,14 @@
         >
           <summary id="dataLayerSummary">
             <span class="layer-group-arrow">▶</span>
-            <span class="summary-title">📑 静态矢量要素</span>
+            <span class="summary-title">📑 数据图层</span>
             <span
               class="help-icon"
               id="dataHelpIcon"
               tabindex="0"
               role="button"
               data-dialog="docs/static-vector-help.md"
-              data-dialog-title="📑 静态矢量要素 — 帮助"
+              data-dialog-title="📑 数据图层 — 帮助"
               title="查看使用说明及数据来源"
               >?</span
             >
@@ -276,7 +283,7 @@
           id="demSection"
           data-persist-details
         >
-          <summary>🏔️ DEM高程渲染（实验中）</summary>
+          <summary>🏔️ DEM高程渲染（测试中）</summary>
           <div class="dem-controls">
             <div class="dem-upload-row">
               <label class="dem-upload-btn" for="demFileInput"
@@ -335,6 +342,11 @@
     <div id="map"></div>
     <!-- Cesium 3D 容器（与 #map 同位置叠放，display 切换） -->
     <div id="cesiumContainer"></div>
+    <!-- Esri 历史影像时相条（底部居中，仅当底图选中「Esri 历史影像」时显示） -->
+    <div id="waybackBar" class="wb-hidden">
+      <label class="wb-title" for="wbSelect">🛰 历史影像</label>
+      <select id="wbSelect" title="选择历史影像时相"></select>
+    </div>
     <!-- 备案号（合规要求：底部可见，链接跳转工信部、公安） -->
     <div id="beianBar">
       <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener"
@@ -365,6 +377,19 @@
         zoomControl: true,
         attributionControl: false,
       }).setView([32, 107], 3);
+
+      // ========== 自定义 pane：分层控制栅格与矢量的叠放顺序 ==========
+      // Leaflet 默认层级：tilePane(200) < overlayPane(400) < shadowPane(500)
+      //                     < markerPane(600) < tooltipPane(650) < popupPane(700)
+      // 这里补两个夹在中间的层，解决「DEM 被底图压住 / 影像底图被矢量遮挡」的问题：
+      //   baseImagePane(250) —— ETOPO 等整幅影像底图（必须高于瓦片、低于矢量）
+      //   demPane(350)       —— DEM 栅格（需稳定显示在底图之上，矢量图层仍在其上层）
+      map.createPane("baseImagePane");
+      map.getPane("baseImagePane").style.zIndex = 250;
+      map.getPane("baseImagePane").style.pointerEvents = "none";
+
+      map.createPane("demPane");
+      map.getPane("demPane").style.zIndex = 350;
 
       // ========== 底图图层定义 ==========
       // 0. 天地图全球境界底图
@@ -572,6 +597,9 @@
         var west = bounds[0][1];
         var north = bounds[1][0];
         var east = bounds[1][1];
+        // 整幅影像属于「底图」，统一放到 baseImagePane(250)：
+        // 高于瓦片层，低于 DEM(350) 与矢量(400)，避免压住上层要素
+        var opts = Object.assign({ pane: "baseImagePane" }, options || {});
         return L.layerGroup([
           L.imageOverlay(
             url,
@@ -579,7 +607,7 @@
               [south, west - 360],
               [north, east - 360],
             ],
-            options,
+            opts,
           ),
           L.imageOverlay(
             url,
@@ -587,7 +615,7 @@
               [south, west],
               [north, east],
             ],
-            options,
+            opts,
           ),
           L.imageOverlay(
             url,
@@ -595,7 +623,7 @@
               [south, west + 360],
               [north, east + 360],
             ],
-            options,
+            opts,
           ),
         ]);
       }
@@ -835,6 +863,39 @@
         },
       );
 
+      // ========== 9. Esri Wayback 历史影像（时相由底部时间条控制） ==========
+      // 瓦片路径中的 releaseNum 是 Esri 的发布编号（不是日期），由时间条动态写入
+      // window.__waybackRelease，因此同一个图层实例即可切换任意历史时相。
+      const WAYBACK_TILE_BASE =
+        "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/";
+      const WAYBACK_CONFIG_URL =
+        "https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/waybackconfig.json";
+      const WAYBACK_BASE_KEY = "Esri 历史影像";
+      const WAYBACK_STORAGE_KEY = "dupal_wayback_release";
+      const _WAYBACK_FALLBACK_RELEASE = 56102; // 2023-12-07，确定存在的兜底版本
+      window.__waybackRelease = _WAYBACK_FALLBACK_RELEASE;
+
+      const WaybackTileLayer = L.TileLayer.extend({
+        getTileUrl: function (coords) {
+          return (
+            WAYBACK_TILE_BASE +
+            window.__waybackRelease +
+            "/" +
+            coords.z +
+            "/" +
+            coords.y +
+            "/" +
+            coords.x
+          );
+        },
+      });
+      const waybackLayer = new WaybackTileLayer(null, {
+        minNativeZoom: 0,
+        maxNativeZoom: 19,
+        maxZoom: 22,
+        attribution: '<a href="https://livingatlas.arcgis.com/wayback/" target="_blank">Esri Wayback</a>',
+      });
+
       // ========== 控件配置 ==========
       // 所有底图统一放在 allBaseLayers 对象中（单一数据源，避免与 L.control 定义不同步）
       // 注意顺序：先天地图系列，再 ArcGIS 系列，再水深/地质系列，最后 OSM
@@ -870,6 +931,8 @@
       allBaseLayers["GEBCO2025-TID着色"] = gebco2025TidColorLayer;
       allBaseLayers["EMODnet-多色水深"] = emodnetLayer;
       allBaseLayers["Macrostrat-全球地质"] = macrostratLayer;
+      // Esri Wayback 历史影像（时相由底部时间条切换）
+      allBaseLayers[WAYBACK_BASE_KEY] = waybackLayer;
       // OSM 放到最后
       allBaseLayers["OpenStreetMap"] = osmLayers;
 
@@ -980,6 +1043,7 @@
           "ArcGIS-影像",
           "ArcGIS-海洋",
           "GEBCO2025-水深地形",
+          "Esri 历史影像",
           "OpenStreetMap",
         ];
         keys.forEach(function (k) {
@@ -1132,6 +1196,128 @@
           window.CesiumViewer.syncOverlays();
         }
       });
+
+      // ========== Esri 历史影像时间条（底部居中，仅选中该底图时显示）==========
+      // 独立于底图单选控件：图层控件只负责 add/remove waybackLayer，
+      // 时间条只负责改 window.__waybackRelease + redraw，两者互不耦合。
+      (function () {
+        var barEl = document.getElementById("waybackBar");
+        var sel = document.getElementById("wbSelect");
+        if (!barEl || !sel) return;
+
+        var releases = []; // [{releaseNum, date}]
+        var releasesById = {};
+
+        function showBar() {
+          barEl.classList.remove("wb-hidden");
+        }
+        function hideBar() {
+          barEl.classList.add("wb-hidden");
+        }
+
+        // 切换时相：只改 release 编号并重绘，底图开关交给图层控件
+        function setRelease(releaseNum) {
+          window.__waybackRelease = Number(releaseNum);
+          try {
+            localStorage.setItem(WAYBACK_STORAGE_KEY, String(releaseNum));
+          } catch (e) {}
+          if (map.hasLayer(waybackLayer)) waybackLayer.redraw();
+          // 3D 已激活时同步切换影像时相
+          if (window.CesiumViewer && window.CesiumViewer.isActive) {
+            window.CesiumViewer.syncBasemap();
+          }
+        }
+
+        // 解析 Esri 官方配置：{ "26334": { itemTitle: "World Imagery (Wayback 2026-08-05)" } }
+        function parseConfig(obj) {
+          var list = [];
+          for (var k in obj) {
+            var it = obj[k];
+            var m = (it && (it.itemTitle || "")).match(
+              /Wayback\s+(\d{4}-\d{2}-\d{2})/,
+            );
+            if (!m) continue;
+            list.push({ releaseNum: Number(k), date: m[1] });
+          }
+          list.sort(function (a, b) {
+            return a.date < b.date ? -1 : 1;
+          });
+          return list;
+        }
+
+        // 下拉：日期降序（最新在上），并让记住的时相保持选中
+        function populateSelect() {
+          if (!releases.length) return;
+          var sorted = releases.slice().sort(function (a, b) {
+            return a.date < b.date ? 1 : -1;
+          });
+          var frag = document.createDocumentFragment();
+          sorted.forEach(function (r) {
+            var o = document.createElement("option");
+            o.value = String(r.releaseNum);
+            o.textContent = r.date;
+            frag.appendChild(o);
+          });
+          sel.innerHTML = "";
+          sel.appendChild(frag);
+          var cur = releasesById[window.__waybackRelease]
+            ? window.__waybackRelease
+            : Number(sorted[0].releaseNum);
+          window.__waybackRelease = cur;
+          sel.value = String(cur);
+        }
+
+        function applyList(list) {
+          releases = list || [];
+          releasesById = {};
+          releases.forEach(function (r) {
+            releasesById[r.releaseNum] = r;
+          });
+          populateSelect();
+          if (map.hasLayer(waybackLayer)) waybackLayer.redraw();
+        }
+
+        sel.addEventListener("change", function () {
+          var n = Number(sel.value);
+          if (n) setRelease(n);
+        });
+
+        // 图层控件切底图：选中历史影像才显示时间条，切走即隐藏
+        map.on("baselayerchange", function (e) {
+          if (e.layer === waybackLayer) showBar();
+          else hideBar();
+        });
+
+        // 恢复上次选择的时相（须在 populateSelect 之前）
+        var savedRelease = null;
+        try {
+          savedRelease = localStorage.getItem(WAYBACK_STORAGE_KEY);
+        } catch (e) {}
+        if (savedRelease) window.__waybackRelease = Number(savedRelease);
+
+        // 优先官方实时列表，失败回退到随包内置的静态列表
+        fetch(WAYBACK_CONFIG_URL)
+          .then(function (res) {
+            return res.ok ? res.json() : Promise.reject();
+          })
+          .then(function (obj) {
+            applyList(parseConfig(obj));
+          })
+          .catch(function () {
+            fetch("./assets/wayback-releases.json")
+              .then(function (res) {
+                return res.ok ? res.json() : Promise.reject();
+              })
+              .then(function (data) {
+                applyList(data.releases || []);
+              })
+              .catch(function () {});
+          });
+
+        // 初始显隐：恢复记忆后若底图就是历史影像，则显示时间条
+        if (map.hasLayer(waybackLayer)) showBar();
+        else hideBar();
+      })();
 
       // 监听绘制完成事件，显示测量结果
       map.on("pm:create", function (e) {
@@ -1288,6 +1474,9 @@
     </script>
     <!-- 投点功能（独立模块） -->
     <script src="./assets/pointdrop.js"></script>
+    <!-- 测量/绘制结果 → GeoJSON 用户图层（依赖 pointdrop 的按钮锚点） -->
+    <script src="./assets/measure-export.js"></script>
+    <script src="./assets/scroll-gutter-guard.js"></script>
     <!-- 要素详情面板（属性表 + 图表） -->
     <script src="./assets/feature-panel.js"></script>
     <!-- Cesium 3D 引擎模块（懒加载入口，Cesium 主库由 cesium-viewer.js 动态加载） -->

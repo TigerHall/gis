@@ -13,8 +13,10 @@
   --c-green-hover: #80b380;
   --c-green-text: #4a8c4a;
   /* 绿色系「文字色」：--c-green(#99cc99) 在浅底上仅 1.8:1，不可用作小字。
-     小字（≤12px）必须用此变量，实测 #3d7a3d on #fafafa ≈ 4.96:1，满足 WCAG AA */
-  --c-green-text-strong: #3d7a3d;
+     小字（≤12px）必须用此变量。取 #3a743a 而非更浅的绿：
+       白底 5.62:1 · #fafafa 5.38:1 · #eee(选中态底色) 4.84:1  —— 三档均过 WCAG AA 4.5:1
+     （曾用 #3d7a3d，在 #eee 上只有 4.47:1，差一点点不达标） */
+  --c-green-text-strong: #3a743a;
   --c-gray: #ddd;
   --c-yellow: #f0c040;
   --c-blue: #1890ff;
@@ -32,7 +34,7 @@
   --section-header-bg: var(--c-bg-alt);
   --section-header-hover: var(--c-bg-hover);
   --section-border: var(--c-border);
-  --section-text: var(--c-green-text);
+  --section-text: var(--c-green-text-strong);
   --section-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   --group-bg: var(--c-bg);
   --group-header-bg: var(--c-bg-alt);
@@ -178,12 +180,25 @@ body {
   line-height: normal;
 }
 
+/* ===== 滚动条槽位：懒预留（配合 assets/scroll-gutter-guard.js）=====
+   容器「第一次真的溢出」时才由 JS 打上 data-scroll-guttered，从此常驻预留槽位。
+   打标记那一刻滚动条已经在占位，所以引入 stable 这一步零视觉变化；
+   之后内容变短也不会把宽度还回去，于是既无来回抖动、也无「用不上却占着」的浪费。
+
+   为什么不在这里直接写 scrollbar-gutter: stable：
+   那会让几乎不溢出的容器（如图例只有几条时）永久空出一条 10~15px 的右侧留白。 */
+[data-scroll-guttered] {
+  scrollbar-gutter: stable;
+}
+
 /* 面板滚动容器：地图设置 + 搜索栏 + 图层列表统一滚动 */
 .panel-scroll {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
+  /* 槽位由上面的 [data-scroll-guttered] 懒预留。
+     注意：不要用 overflow-y:scroll 替代 —— 那会连轨道一起画出来。 */
 }
 
 /* 【修复】提升active类优先级，明确覆盖默认transform */
@@ -298,7 +313,7 @@ body.resizing-panel {
 }
 
 /* ========== 图层组面板视觉层次 ========== */
-/* 主折叠区（"静态矢量要素"） */
+/* 主折叠区（"数据图层"） */
 details.layer-section {
   border: 1px solid var(--section-border);
   border-radius: 8px;
@@ -381,7 +396,7 @@ details.layer-group > summary:hover {
 .layer-group-arrow {
   display: inline-block;
   font-size: 9px;
-  color: var(--accent-lighter);
+  color: var(--c-green-text-strong);
   transition: transform 0.2s;
   flex-shrink: 0;
   width: 12px;
@@ -731,6 +746,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   box-shadow: 0 4px 12px var(--panel-shadow);
   max-height: 65vh;
   overflow-y: auto;
+  /* 槽位交给 [data-scroll-guttered] 懒预留（首次溢出后才常驻） */
   position: absolute;
   top: calc(100% + 4px);
   left: 5px;
@@ -873,7 +889,7 @@ details.layer-section[open] > summary .layer-group-arrow {
 .toggle-section summary::before {
   content: "▶";
   font-size: 10px;
-  color: var(--accent-lighter);
+  color: var(--c-green-text-strong);
   transition: transform 0.2s;
   display: inline-block;
 }
@@ -995,7 +1011,7 @@ details.layer-section[open] > summary .layer-group-arrow {
   flex: 0 0 100%;
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent-lighter);
+  color: var(--c-green-text-strong);
   padding: 5px 2px 2px;
   margin-top: 2px;
   border-top: 1px solid var(--border-light);
@@ -1006,6 +1022,245 @@ details.layer-section[open] > summary .layer-group-arrow {
   border-top: none;
   margin-top: 0;
   padding-top: 0;
+}
+
+/* ========== 常用功能快捷区（面板置顶，图标 + 文字）========== */
+.quick-bar-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-green-text-strong);
+  letter-spacing: 0.3px;
+  padding: 1px 2px 5px;
+  user-select: none;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+/* 快捷项是 <button>：整块可点，触控目标 ≥ 48px（WCAG 2.5.8 Target Size） */
+.quick-item {
+  /* button 默认不继承字体，必须显式 font: inherit 再用下面的 font-size 覆盖 */
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 48px;
+  padding: 5px 2px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  /* 手感三件套：
+     ① transform 进过渡 → 按下/松手有回弹，而不是单纯变色
+     ② touch-action: manipulation → 移动端不再等 300ms 判断双击缩放，点按即刻响应
+     ③ user-select: none → 快速连点不会误选中图标文字 */
+  transition:
+    background-color 0.15s ease-out,
+    border-color 0.15s ease-out,
+    color 0.15s ease-out,
+    transform 0.12s ease-out;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* hover 只在真有悬停能力的设备上生效：触摸屏点完不会「粘」着高亮不散 */
+@media (hover: hover) {
+  .quick-item:hover {
+    background: var(--content-hover-bg);
+  }
+}
+
+/* 按压反馈：按下时把过渡归零，位移与底色一步到位（跟手感来自「立刻」，不是「更快」）；
+   松手后由上面的规则接管，0.12s 弹回 */
+.quick-item:active {
+  transform: scale(0.94);
+  background: var(--content-active-bg);
+  transition-duration: 0s;
+}
+
+.quick-item .quick-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.quick-item .quick-text {
+  font-size: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 选中态由 JS 同步 class（快捷项是 <button aria-pressed>，不是 checkbox）。
+   边框不用 --accent(#99cc99)：与选中底色 #eee 对比度仅 1.58:1，不满足
+   WCAG 1.4.11 非文本对比 3:1；快捷项又没有开关的「滑块位移」这类非颜色线索，
+   故用 --c-green-text-strong（浅底 4.84:1 / 深底 8.06:1） */
+.quick-item.is-on {
+  background: var(--content-active-bg);
+  border-color: var(--c-green-text-strong);
+  color: var(--c-green-text-strong);
+  font-weight: 600;
+}
+
+/* 键盘焦点可见（WCAG 2.4.7 Focus Visible）。
+   用 :focus-visible 而不是 :focus-within —— 鼠标点完不留焦点环，只有键盘 Tab 才显示；
+   环色同样避开浅绿（对 #fafafa 只有 1.8:1，达不到 2.4.11 focus appearance 的 3:1） */
+.quick-item:focus-visible {
+  outline: 2px solid var(--c-green-text-strong);
+  outline-offset: 2px;
+}
+
+/* ========== 地图设置内的二级折叠（分类）========== */
+.toggle-body .toggle-sub {
+  flex: 1 1 100%;
+  width: 100%;
+  border: 1px solid var(--border-light);
+  border-radius: 5px;
+  background: var(--content-bg);
+}
+
+.toggle-sub > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: 5px;
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.12s;
+}
+
+.toggle-sub > summary::-webkit-details-marker {
+  display: none;
+}
+
+.toggle-sub > summary::before {
+  content: "▶";
+  font-size: 9px;
+  color: var(--c-green-text-strong);
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.toggle-sub[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.toggle-sub > summary:hover {
+  background: var(--content-hover-bg);
+}
+
+.toggle-sub-name {
+  flex: 1;
+}
+
+/* 折叠状态下也能一眼看出该分类里开着几项 */
+.toggle-sub-badge {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  /* 用 --text-secondary 而非 --text-muted(#999)：#999 on #f5f5f5 仅 2.61:1，
+     不满足 WCAG 1.4.3；#666 为 4.79:1 */
+  color: var(--text-secondary);
+  background: var(--content-hover-bg);
+  border-radius: 8px;
+  padding: 1px 6px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.toggle-sub-badge.has-on {
+  color: var(--c-green-text-strong);
+  background: var(--content-active-bg);
+  font-weight: 600;
+}
+
+.toggle-sub-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 0 6px 6px;
+}
+
+/* 二级折叠里改成一行一项：文字太长时两列并排会把标题折成两行，反而更难扫读
+   （`.toggle-sub-body` 与 `.toggle-section` 特异性相同，靠出现顺序覆盖） */
+.toggle-sub-body .toggle-bar {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-item,
+  .toggle-sub > summary,
+  .toggle-sub > summary::before {
+    transition: none;
+  }
+}
+
+/* ========== Esri 历史影像时相条（底部居中）========== */
+/* 只在底图选中「Esri 历史影像」时显示，跟随主题变量，无需单独适配深色 */
+#waybackBar {
+  position: fixed;
+  bottom: max(34px, calc(env(safe-area-inset-bottom) + 26px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 6px 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-toggle);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* 用 class 而非 [hidden]，避免被 fixed 定位覆盖 display */
+#waybackBar.wb-hidden {
+  display: none;
+}
+
+#waybackBar .wb-title {
+  font-weight: 600;
+  color: var(--c-green-text-strong);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+#waybackBar select {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--input-color);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  max-width: 42vw;
+  outline: none;
+  cursor: pointer;
+}
+
+#waybackBar select:focus-visible {
+  border-color: var(--c-green-text-strong);
+  outline: 2px solid var(--c-green-text-strong);
+  outline-offset: 1px;
 }
 
 /* ========== 加载缓冲动画 ========== */
@@ -1135,7 +1390,10 @@ details.layer-section[open] > summary .layer-group-arrow {
   height: 18px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  /* 字形用深色而非 #fff：白字压 #99cc99 仅 1.83:1（WCAG 1.4.3 需 4.5:1）。
+     深色 #1a1a2e 在 #99cc99 上 9.30:1、在深色主题 #88cc88 上 9.12:1，
+     且与 feature-panel.css 既有的「绿底深字」（#9c9 + #1a1a2e）范式一致。 */
+  color: #1a1a2e;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;

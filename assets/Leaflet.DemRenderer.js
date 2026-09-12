@@ -328,6 +328,47 @@
   }
 
   /**
+   * 取得（必要时创建）DEM 专用 pane
+   *
+   * 为什么需要独立 pane：GeoRasterLayer 默认落在 overlayPane(400)，与矢量图层
+   * 同层，谁后加谁在上面，DEM 容易被瓦片/影像底图或后加载的矢量压住。
+   * 这里固定到 zIndex 350 —— 高于 tilePane(200) 与 baseImagePane(250)，
+   * 低于矢量 overlayPane(400)，保证「DEM 稳定显示在底图之上、要素之下」。
+   * @param {Object} map - Leaflet 地图实例
+   * @returns {HTMLElement|null} pane 容器
+   */
+  function _getDemPane(map) {
+    if (!map) return null;
+    var pane = map.getPane("demPane");
+    if (!pane) {
+      pane = map.createPane("demPane");
+      pane.style.zIndex = 350;
+    }
+    return pane;
+  }
+
+  /**
+   * 兜底：GeoRasterLayer 若不认 pane 选项，则把它的 canvas 手动挪进 demPane
+   * @param {Object} map
+   */
+  function _moveCanvasToDemPane(map) {
+    if (!map || !_layer) return;
+    var pane = _getDemPane(map);
+    if (!pane) return;
+    var el = null;
+    try {
+      if (typeof _layer.getContainer === "function")
+        el = _layer.getContainer();
+      if (!el) el = _layer._canvas || null;
+    } catch (e) {
+      el = null;
+    }
+    if (el && el.parentNode !== pane) {
+      pane.appendChild(el);
+    }
+  }
+
+  /**
    * 创建 GeoRasterLayer 并绑定地图事件
    * @param {Object} georaster - 解析后的 georaster 对象
    * @param {Object} map - Leaflet 地图实例
@@ -350,8 +391,10 @@
     // 根据色带模式创建渲染函数
     const colorFn = _createColorFn(_colorMode, georaster);
 
-    // 创建 GeoRasterLayer
+    // 创建 GeoRasterLayer（固定落在 demPane，确保浮在底图之上）
+    _getDemPane(map);
     _layer = new GeoRasterLayer({
+      pane: "demPane",
       georaster: georaster,
       opacity: opts.opacity !== undefined ? opts.opacity : 0.85,
       pixelValuesToColorFn: colorFn,
@@ -359,6 +402,7 @@
     });
 
     _layer.addTo(map);
+    _moveCanvasToDemPane(map);
 
     // 自动缩放到 DEM 范围
     try {
@@ -726,12 +770,14 @@
 
       var colorFn = _createColorFn(mode, _georaster);
       _layer = new GeoRasterLayer({
+        pane: "demPane",
         georaster: _georaster,
         opacity: opacity,
         pixelValuesToColorFn: colorFn,
         resolution: resolution,
       });
       _layer.addTo(_map);
+      _moveCanvasToDemPane(_map);
 
       console.log("[DemRenderer] 色带模式已切换为:", mode);
     },

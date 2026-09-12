@@ -105,6 +105,8 @@
   flex: 1 1 auto;
   overflow-y: auto;
   min-height: 0;
+  /* 槽位由 [data-scroll-guttered] 懒预留：切标签页时内容高度变化会让滚动条闪现，
+     懒预留能在首次溢出后把宽度锁住，不再带着整页文字横向抖 */
   padding: 16px 18px;
 }
 .layer-dialog .dialog-header {

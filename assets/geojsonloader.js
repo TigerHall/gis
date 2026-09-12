@@ -3150,9 +3150,12 @@
       // 帮助图标（已通过 data-dialog 属性在 dialog.js 声明式绑定）
 
       window.geoJsonGroups.forEach(function (group) {
+        // geo-config 的 group.hidden：整组不在面板渲染（数据仍保留在配置里，便于恢复）
+        if (group.hidden) return;
         const isPlain = !group.groupName; // 无分组名 = 直接显示图层
         var groupDetails = null;
         var children;
+        var visibleLayerCount = 0;
 
         if (!isPlain) {
           groupDetails = document.createElement("details");
@@ -3233,6 +3236,9 @@
         }
 
         group.layers.forEach(function (layerConfig) {
+          // geo-config 的 layer.hidden：单图层不在面板渲染，也不注册搜索索引
+          if (layerConfig.hidden) return;
+          visibleLayerCount++;
           var idx = globalLayerIndex++;
           var stableName = makeLayerStableId(
             layerConfig.name,
@@ -3393,6 +3399,9 @@
 
           children.appendChild(layerItem);
         });
+
+        // 全部图层都被 hidden 时不生成空分组/空容器
+        if (visibleLayerCount === 0) return;
 
         if (groupDetails) {
           groupDetails.appendChild(children);

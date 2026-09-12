@@ -75,6 +75,10 @@
  *                    指定后每个不同字段值自动分配独立颜色
  *                    示例：{ colorMode: "field", colorField: "Contractor" }
  *
+ * hidden          |  否  | 置 true 时该图层不在图层面板中渲染（数据仍在配置里，
+ *                    便于随时恢复）。写在 group 上则整组隐藏。
+ *                    示例：{ name: "PIC 45万点", file: "pic.geojson", hidden: true }
+ *
  * ==========================================================
  */
 (function () {
@@ -167,18 +171,11 @@
           name: "盆地 (Evenick2021)",
           file: "global_basins_Evenick2021.geojson",
         },
-        { name: "盆地 (CGG)", file: "Sedimentary_CGG.geojson" },
+        // 盆地只保留一个数据源：CGG 数据集体积过大（10MB gz），统一并入 Evenick2021
         {
-          name: "海底光缆 Submarine Cables",
-          file: "TeleGeography_Cables.geojson.gz",
-          labelField: "name",
-          color: "#00ACC1",
-        },
-        {
-          name: "光缆登陆点 Landing Points",
-          file: "TeleGeography_LandingPoints.geojson.gz",
-          labelField: "name",
-          color: "#00897B",
+          name: "盆地 (CGG)",
+          file: "Sedimentary_CGG.geojson",
+          hidden: true,
         },
         {
           name: "海底地名点 Gazetteer_point",
@@ -206,6 +203,46 @@
           file: "Gazetteer_multipolygon.geojson.gz",
           labelField: "name",
           defaultOpacity: 0.35,
+          searchPriority: true,
+        },
+      ],
+    },
+    {
+      // 海洋地理信息：以「人在海上活动的痕迹与区划」为主
+      // —— 海运（港口）、海域区划（海区）、安全事件（海盗）、通信（光缆/登陆点）
+      groupName: "海洋地理信息",
+      layers: [
+        {
+          name: "全球海盗事件 ASAM Piracy Events",
+          file: "All_ASAM_Events.geojson.gz",
+          labelField: "hostility_",
+          colorMode: "field",
+          colorField: "hostility_",
+        },
+        {
+          name: "海底光缆 Submarine Cables",
+          file: "TeleGeography_Cables.geojson.gz",
+          labelField: "name",
+          color: "#00ACC1",
+        },
+        {
+          name: "光缆登陆点 Landing Points",
+          file: "TeleGeography_LandingPoints.geojson.gz",
+          labelField: "name",
+          color: "#00897B",
+        },
+        {
+          name: "海区 geography_marine_polys",
+          file: "geography_marine_polys.geojson.gz",
+          labelField: "name_zh",
+          source: "https://www.naturalearthdata.com/",
+          searchPriority: true,
+        },
+        {
+          name: "港口 ports",
+          file: "ports.geojson.gz",
+          labelField: "name",
+          source: "https://www.naturalearthdata.com/",
           searchPriority: true,
         },
       ],
@@ -270,32 +307,39 @@
         { name: "SEIR_rock", file: "SEIR_ridge.geojson" },
         { name: "SEIR_offaxis_rock", file: "SEIR_offaxis.geojson" },
         { name: "RedSea_rock", file: "RedSea_rift.geojson" },
-        { name: "古生物学 PBDB", file: "PBDB.geojson" },
-        { name: "气候岩性指标 PBDB", file: "Boucot.geojson" },
+        // 以下两个图层暂与海洋地质主题无关（古生物 / 气候岩性指标），先隐藏保留
+        { name: "古生物学 PBDB", file: "PBDB.geojson", hidden: true },
+        { name: "气候岩性指标 PBDB", file: "Boucot.geojson", hidden: true },
       ],
     },
     {
-      groupName: "社会热点专题",
+      // 陆地地理信息：以陆地国家/行政区为主体（海洋相关内容见「海洋地理信息」组）
+      groupName: "陆地地理信息",
       layers: [
+        // 2026 世界杯系列与海洋地质主题无关，先隐藏保留
         {
           name: "2026世界杯8强",
           file: "wc2026_round8_teams.geojson",
           labelField: "name_zh",
+          hidden: true,
         },
         {
           name: "2026世界杯16强",
           file: "wc2026_round16_teams.geojson",
           labelField: "name_zh",
+          hidden: true,
         },
         {
           name: "2026世界杯32强",
           file: "wc2026_round32_teams.geojson",
           labelField: "name_zh",
+          hidden: true,
         },
         {
           name: "2026世界杯48强",
           file: "wc2026_48_teams.geojson",
           labelField: "name_zh",
+          hidden: true,
         },
         {
           name: "世界各国",
@@ -334,13 +378,6 @@
           color: "#C62828",
         },
         {
-          name: "全球海盗事件 ASAM Piracy Events",
-          file: "All_ASAM_Events.geojson.gz",
-          labelField: "hostility_",
-          colorMode: "field",
-          colorField: "hostility_",
-        },
-        {
           name: "中国县城名称 China County",
           file: "ChinaCounty.geojson.gz",
           labelField: "NAME",
@@ -361,20 +398,6 @@
         //   source: "https://www.naturalearthdata.com/",
         //   searchPriority: true,
         // },
-        {
-          name: "海区 geography_marine_polys",
-          file: "geography_marine_polys.geojson.gz",
-          labelField: "name_zh",
-          source: "https://www.naturalearthdata.com/",
-          searchPriority: true,
-        },
-        {
-          name: "港口 ports",
-          file: "ports.geojson.gz",
-          labelField: "name",
-          source: "https://www.naturalearthdata.com/",
-          searchPriority: true,
-        },
         // {
         //   name: "省级行政区 states_provinces",
         //   file: "states_provinces.geojson.gz",
@@ -383,13 +406,16 @@
         // },
       ],
     },
+    // 测试数据整组隐藏（PIC 45 万点仅用于压力测试，不对公众开放）
     {
       groupName: "测试数据",
+      hidden: true,
       layers: [{ name: "PIC 45万点", file: "pic.geojson" }],
     },
+    // Dupal异常区已由「大型异常区 → Dupal异常洋 DupalOcean」承载，此处重复项隐藏
     {
       groupName: null,
-      layers: [{ name: "Dupal异常区", file: "DupalOcean.geojson" }],
+      layers: [{ name: "Dupal异常区", file: "DupalOcean.geojson", hidden: true }],
     },
   ];
 

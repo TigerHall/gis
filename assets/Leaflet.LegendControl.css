@@ -12,6 +12,12 @@
   max-width: 240px;
   max-height: 55vh;
   overflow-y: auto;
+  /* 槽位走懒预留（见 main.css 的 [data-scroll-guttered]）：
+     图例通常只有几条，滚动条绝大多数时候不出现 —— 无条件预留就等于右侧白留 10px。
+     等它真溢出过一次，JS 会打标记常驻预留，之后再变短也不会把宽度还回去。
+     thin 只为跟其它面板的滚动条观感一致，与槽位无关。 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(106, 170, 106, 0.3) transparent;
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-primary, #333);

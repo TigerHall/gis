@@ -25,6 +25,19 @@
   background: var(--content-hover-bg);
 }
 
+/* ========== 并排按钮行（"📐 测量转图层" + "⬇️ 导出JSON"） ========== */
+.pd-btn-pair {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.pd-btn-pair .pd-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 9px 6px;
+  white-space: nowrap;
+}
+
 /* ========== 投点表格容器 ========== */
 .pd-table-container {
   margin: 6px 0 8px;
@@ -161,6 +174,7 @@
   overflow: auto;
   border: 1px solid var(--border-light);
   border-radius: 3px;
+  /* 槽位由 [data-scroll-guttered] 懒预留（见 main.css） */
 }
 
 /* ========== 投点表格 ========== */

@@ -154,7 +154,8 @@
   color: var(--text-primary, #333);
 }
 .feature-panel-tab.active {
-  color: #9c9;
+  /* 不用 #9c9：绿字压白底仅 1.83:1，不达 WCAG 1.4.3 */
+  color: var(--c-green-text-strong);
   border-bottom-color: #9c9;
   font-weight: 600;
 }
@@ -242,6 +243,7 @@
   overflow-y: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* 槽位由 [data-scroll-guttered] 懒预留：行数少时表宽本来就够，不该白留 15px */
 }
 .feature-panel-table {
   width: 100%;
@@ -398,7 +400,8 @@
 
 /* URL 链接样式 */
 .feature-panel-table a {
-  color: #9c9;
+  /* 链接正文不能用 #9c9（白底 1.83:1） */
+  color: var(--c-green-text-strong);
   text-decoration: none;
 }
 .feature-panel-table a:hover {

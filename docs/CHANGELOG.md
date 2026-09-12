@@ -1,5 +1,455 @@
 # 更新记录
 
+## 2026-09-12（e）— 「更新记录」内嵌对照图 + 弹窗图片查看
+
+> 本版起版本号定为 **v2.4.0**（正式发布号）。此前 v2.3.9 / v2.3.10 / v2.3.11
+> 是同日中间态，未单独发布。
+
+### 起因
+
+`docs/shots/` 里攒了 14 张验证截图（1.49 MB），但正文里只用反引号写了路径 ——
+在 App 弹窗里就是一行纯文本，读者看不到图。改成 Markdown 图片语法。
+
+改的过程中撞到一个必然踩的坑：**`marked` 不做路径重写**。
+
+### 坑：Markdown 里的相对图片路径按「页面 URL」解析，不是按文档
+
+`showMarkdown()` 的实现是 `body.innerHTML = marked.parse(md)` —— 产出的
+`<img src="shots/x.png">` 直接进弹窗 DOM，浏览器拿**页面 URL** 当基准，
+于是去请求站点根的 `/shots/x.png`，必然 404。
+
+- **没有**改成 `docs/shots/x.png` 绕过 —— 那样在 GitHub 上（文件本身在 `docs/`）
+  会解析成 `docs/docs/shots/`，同样裂
+- 正解：新增 `resolveRelativeImages(root, docUrl)`，按**文档自身所在目录**补前缀。
+  这是 Markdown 语义，于是 App 内（`docs/shots/`）与 GitHub（`docs/shots/`）
+  **两边同时成立**，以后 `docs/` 下任何文档写相对图都不用再关心
+- 只处理相对路径；`/`、`//`、`http:`、`data:`、`#` 一律不动
+
+### 弹窗图片查看
+
+对照图是 2 倍图（`legend-gutter-compare.png` 达 **3420×1860**），
+塞进 680px 弹窗只显示 617px ≈ 18% → 标注基本看不清。故加点击放大：
+
+| 状态 | 对话框宽 | 图片显示宽 |
+|---|---|---|
+| 默认（适应宽度） | 680px（`max-width:100%`） | 617px |
+| 点击放大（原始像素） | **1344px** = `min(1840px, 96vw)` | **3422px**，超出部分横向拖动 |
+
+- `bindImageZoom(body)`：点击切 `img.md-zoom`，并按「是否还有放大图」给
+  `<dialog>` 加/去 `.md-zoomed`；再点还原
+- **顺带修掉一个隐藏阻断**：`.dialog-body` 原本是 `overflow-x: hidden`
+  （防止宽表格撑破弹窗），放大态下用户**根本拖不到大图右侧**。
+  ⚠️ 注意 `overflow: hidden` 的盒子 `scrollLeft` 仍可被脚本改写 ——
+  只断言 `scrollLeft` 会把它漏判成「能滚」。判据必须是 `overflow-x` 真的变成 `auto`。
+  已补 `.app-dialog.md-zoomed .dialog-body { overflow-x: auto }`
+
+### 验证（playwright-core + 系统 Chrome，1400×900）
+
+- 弹窗内 **6 张图全部加载成功**，0 个 4xx/5xx，0 console error
+- 放大态 `dlgW 680 → 1344 → 680`（点两次还原）、`maxWidth none`、`cursor zoom-out`
+- 放大态 `overflow-x: auto`、`maxScrollLeft 2781` → 用户可拖动 ✅
+- ⚠️ 踩坑：`.md-zoomed` 带 `transition: width .18s`，点击后**立即**量宽度会拿到
+  插值起点 680px，误判成「规则没生效」。断言样式/尺寸前必须等过渡结束
+
+### 变更文件
+
+- `docs/CHANGELOG.md`（2 处路径引用 → 图片语法；4 张单图改为 2×2 表格并排；
+  给（b）补「截图」一节）
+- `assets/dialog.js`（新增 `resolveRelativeImages` / `bindImageZoom`）
+- `assets/dialog.css`（`.dialog-body img`、`img.md-zoom`、`.app-dialog.md-zoomed`）
+
+### 待定
+
+- `docs/shots/` 是否入库（14 张 / 1.49 MB）—— 目前仍 **untracked**。
+  `docs/` 本身随站点发布（`app.js` 运行时 fetch 本文件），入库与上线是同一件事
+- 顺手给（b）补了「截图」一节（`quickbar-{light,dark,pressed}.png`），
+  至此仅剩 `wayback-bar.png`（历史影像时相条，1440×900）未被引用
+
+---
+
+## 2026-09-12（d）— 滚动条槽位改为「懒预留」
+
+> 取代上一条（c）的无条件 `scrollbar-gutter: stable`。
+
+### 为什么要改
+
+上一条给 9 个滚动容器**无条件**加了 `scrollbar-gutter: stable`，代价是
+「几乎不溢出」的容器也永久空出一条右侧留白。实测图例：只有 6 条时并不溢出，
+但箱子外框仍被撑到 95px（内容其实只要 85px），右侧一条 **10px 纯空白**；
+`.leaflet-legend-control` 实测 6 条 → 外框 95 / 行右侧留白 11px。
+
+判定标准应该是「**该容器会不会经常在 溢出↔不溢出 之间往返**」，而不是
+「它有没有 `overflow-y: auto`」。据此重新实测各容器：
+
+| 容器 | 实测溢出情况 | 结论 |
+|---|---|---|
+| `.panel-scroll` | 默认就溢出（scrollH 1010 / clientH 825） | 无条件预留 ≈ 零成本 |
+| `.search-results` | 51 / 20 条结果均溢出 | 同上 |
+| `.app-dialog .dialog-body` | 帮助文档 scrollH 4979 / clientH 600 | 同上 |
+| `.md-toc-list` | scrollH 519 / clientH 240 | 同上 |
+| `.feature-panel-table-wrap` | **会往返**：2 行不溢出，20 长行溢出（预留 15px） | 需要，但只在溢出后 |
+| `.leaflet-legend-control` | **很少溢出**：视口 900px 时需 ≥20 条才出现滚动条 | 无条件预留是纯浪费 |
+
+### 新做法：懒预留
+
+新增 `assets/scroll-gutter-guard.js`。容器**第一次真的溢出**时才打上
+`data-scroll-guttered`，此后常驻预留槽位（CSS 只有一条 `[data-scroll-guttered]
+{ scrollbar-gutter: stable }`）。
+
+关键性质：**打标记那一刻滚动条已经在占位**，所以引入 stable 这一步零视觉变化；
+之后内容再变短也不会把宽度还回去 —— 既没有来回来去的抖动，也不再有
+「用不上却一直占着」的浪费。这正是「挤占了之后不再回去」的效果。
+
+发现「第一次溢出」的两条路径：
+
+1. 文档级 `MutationObserver`（`childList` + `subtree`）：只对新增子树做定向
+   `querySelectorAll`，并对 `rec.target.closest(SELECTOR)` 判一次，
+   不做全文档扫描；回调合并到 `requestAnimationFrame` 里执行（仍在本帧绘制前，
+   不会产生可见跳动）。
+2. 粗粒度全量扫描：`DOMContentLoaded` / `load` / `resize`（防抖 150ms）/
+   600·2000·5000ms 三个延迟点 —— 覆盖「尺寸变化导致溢出」和不经过本模块的内容更新。
+
+标记过的容器进 `WeakSet`，`check()` 先查后量，不会反复触发重排。
+公开 `window.ScrollGutterGuard.sweep()` / `.markedCount()` 便于调试。
+
+### 实测（playwright + Chrome，1280×900）
+
+| 场景 | 标记 | gutter | 外框宽 | 预留 |
+|---|---|---|---|---|
+| 图例 6 条（本就不溢出） | 否 | auto | **85px** | **0** |
+| 图例 25 条（首次溢出） | 是 | stable | 95px | 10px |
+| 图例回到 6 条（溢出已消失） | 是 | stable | 95px | 10px ← 不还回去 |
+| 属性表格 2 行 | 否 | auto | — | 0 |
+| 属性表格 20 长行 | 是 | stable | — | 15px |
+| 属性表格再回到 2 行 | 是 | stable | — | 15px ← 不还回去 |
+| `.panel-scroll`（加载后自动标记） | 是 | stable | 视口 1500→520px 下 `clientW` 恒为 **273** | 10px |
+
+对照图见下（图例三态：本就不溢出 → 首次溢出 → 溢出消失后不还回）：
+
+![图例懒预留三态对照，红色带标出滚动条槽位](shots/legend-gutter-compare.png)
+
+### 顺带
+
+- 图例补 `scrollbar-width: thin` + `scrollbar-color`，与 `.md-toc-list` 等小面板统一
+  （原先它用的是系统默认粗滚动条，240px 宽的箱子里占 1/6 很突兀）。
+- 上一版对 `.dialog-body` 的 `max-height` 修正与 `pre` 的 `overflow-y: hidden` 保留不动。
+
+### 变更文件
+
+- `assets/scroll-gutter-guard.js`（**新增**）
+- `assets/main.css`（新增 `[data-scroll-guttered]` 规则；`.panel-scroll` / `.search-results` 撤掉无条件 stable）
+- `assets/dialog.css`、`assets/geojsonloader.css`、`assets/feature-panel.css`、`assets/pointdrop.css`（撤掉无条件 stable）
+- `assets/Leaflet.LegendControl.css`（撤掉 stable，补 thin + color）
+- `index.html`（引入新脚本）、`service-worker.js`（`CACHE_NAME` v2.3.10 → **v2.4.0**，新文件进预缓存）
+  - v2.3.9 / v2.3.10 / v2.3.11 是本次发布前的同日中间态，未单独发布；**v2.4.0 为正式版本号**。
+
+---
+
+## 2026-09-12（c）— 滚动条槽位常驻预留（消除界面收窄抖动）
+
+> ⚠️ 本条的无条件 `scrollbar-gutter: stable` 已被上一条（d）的「懒预留」取代。
+> 下面记录的问题分析、对话框嵌套滚动条与 `pre` 假阳性两处修复仍然有效。
+
+### 问题
+
+侧栏面板宽 300px 固定，内容区 `.panel-scroll` 是唯一滚动容器。当内容从「一屏放得下」
+变成「放不下」（展开地图设置、切分类、图层增多）时，滚动条出现会让内容可用宽度
+**从 283px 变成 273px**，快捷区的 4 列网格、开关文字、图层名整体横向抖一下；
+反向收起时再抖一次。桌面端 Chrome/Windows 下这个跳动是 10px。
+
+### 修复
+
+统一用 `scrollbar-gutter: stable` 常驻预留槽位（**不是** `overflow-y: scroll`
+—— 那会连滚动条轨道一起画出来，视觉更脏）。槽位宽度 = 滚动条宽度，配合已有的
+`scrollbar-width: thin` 只需 ~10px。
+
+| 滚动容器 | 文件 | 说明 |
+|---|---|---|
+| `.panel-scroll` | `main.css` | **主因**：常用功能 + 地图设置 + 图层列表 |
+| `.search-results` | `main.css` | 搜索结果下拉，避免结果项文字换行点跳动 |
+| `.app-dialog .dialog-body` | `dialog.css` | MD 文档 / 激活弹窗正文 |
+| `.md-toc-list` | `dialog.css` | 目录列表 |
+| `.feature-popup-body` | `dialog.css` | 要素弹窗属性 |
+| `.layer-dialog .dlg-tab-content` | `geojsonloader.css` | 图层设置弹窗页签内容 |
+| `.feature-panel-table-wrap` | `feature-panel.css` | 属性表格（表头/列宽会跟着抖） |
+| `.pd-table-wrap` | `pointdrop.css` | 投点表格 |
+| `.leaflet-legend-control` | `Leaflet.LegendControl.css` | 图例面板 |
+
+### 顺带修掉的两处
+
+1. **对话框嵌套滚动条**：`.app-dialog .dialog-body` 的上限是 `min(80vh, 600px)`，
+   没算对话框头部（~57px）。视口 < 525px 时 `.app-dialog` 自身也会溢出，于是同时存在
+   「对话框滚动 + 正文滚动」两层滚动条，且外层滚动条一出现就把正文推窄 15px。
+   改为 `min(600px, calc(100vh - 140px))` —— 内层成为唯一滚动容器，
+   视口 ≥ 700px 时取值与原先**完全一致**（已实测对话框在 900→380px 视口下
+   `clientHeight === scrollHeight`，恒不溢出）。
+2. **`pre` 的假阳性**：`.app-dialog .dialog-body pre` 只声明了 `overflow-x: auto`，
+   浏览器会把 `overflow-y` 由 `visible` 计算成 `auto`，在审计里被误判成
+   「未预留槽位的纵向滚动容器」。显式补 `overflow-y: hidden` —— 代码块高度由内容决定
+   （无 `max-height`），本来就永远不会纵向滚动。
+
+### 未改（有意）
+
+- **供应商样式表**不动：`leaflet.css` 的 `.leaflet-popup-scrolled`（需 `L.popup` 的
+  `maxHeight` 选项才激活）与 `.leaflet-control-layers-scrollbar`（需 `L.control.layers`）
+  本项目都没用到；后者还是 `overflow-y: scroll`，恒占位、天然不跳。
+- `.layer-dialog` 本体仅在视口 < 266px 时可能溢出 —— 不值得为它加死代码。
+
+### 验证（playwright-core + 系统 Chrome）
+
+> ⚠️ Playwright 默认给 Chromium 传 `--hide-scrollbars`，headless 下滚动条**根本不渲染**，
+> `scrollbar-gutter: auto` 永远不占位 —— 不加 `ignoreDefaultArgs: ["--hide-scrollbars"]`
+> 会得到「抖动 0px」的假阴性。这个坑写在脚本注释里了。
+
+同一份内容只改视口高度，扫描 1500/1400/1300/1200/1150/1100/1050/1000/900/700：
+
+| 状态 | 不溢出 | 溢出 | 结论 |
+|---|---|---|---|
+| `auto`（改前） | clientW **283**，gridW 283，快捷项 67.75px | clientW **273**，gridW 273，快捷项 65.25px | **跳 10px** |
+| `stable`（改后） | clientW **273** | clientW **273** | **恒定** |
+
+- 溢出阈值在视口 1100↔1050 之间，跨过该点 `auto` 的 clientW/gridW/子元素右边缘全部跳变
+- 全量审计（双通道）：DOM 实测 6 OK / 1 N-A / **0 BAD**；
+  CSSOM 静态 9 条含 `overflow-y` 的规则 **9/9 合规**
+- 功能回归（快捷区改造那一套）全绿，0 console error
+
+### 变更文件
+
+- `assets/main.css`（`.panel-scroll`、`.search-results`）
+- `assets/dialog.css`（`.dialog-body` 上限 + gutter、`pre`、`.md-toc-list`、`.feature-popup-body`）
+- `assets/geojsonloader.css`、`assets/feature-panel.css`、`assets/pointdrop.css`、
+  `assets/Leaflet.LegendControl.css`
+- `service-worker.js`（`CACHE_NAME` v2.3.9 → **v2.3.10**）
+
+### 截图
+
+四态 2×2 对照（红线标出内容右边缘）：
+
+![滚动条槽位 auto/stable × 不溢出/溢出 四态对照](shots/gutter-compare.png)
+
+单态细看：
+
+| 不溢出 | 溢出 |
+|---|---|
+| ![auto 不溢出](shots/gutter-auto-fit.png) | ![auto 溢出](shots/gutter-auto-over.png) |
+| ![stable 不溢出](shots/gutter-stable-fit.png) | ![stable 溢出](shots/gutter-stable-over.png) |
+
+---
+
+## 2026-09-12（b）— 快捷区回归「快捷键」定位 + 点击手感
+
+### 1. 快捷区重新定位：只做「地图设置」的快捷方式
+
+上一轮把 3D 视图 / 深色模式 / 经纬度格网 / 显示位置 放进了置顶区，但这几个都不是高频
+操作；而且置顶后它们就从「地图设置」里消失了 —— 等于把同一组设置劈成了两处。
+
+改成单一数据源模型：
+
+- **地图设置里保留全部 21 项**（5 个分类，含所有快捷项）
+- **快捷区是纯快捷键**，8 项：🧩 点要素聚类 · 🏷️ 显示标签 · 🖱️ 鼠标坐标 ·
+  📐 编辑测量 · 🗺️ 更多底图 · 📋 识别粘贴 · ⛰️ 读取高程 · 📷 导出图片
+- 移出置顶区：🌐 3D 视图 · ▦ 经纬度格网 · 🌙 深色模式 · 📍 显示位置（回到各自分类）
+- 状态**只存一份**（地图设置里的 `<input type="checkbox">`），快捷区读它、点它、跟随它：
+  - 快捷项由 `<label>` + 铺满的透明 checkbox 改为 `<button aria-pressed>`
+    —— 不再需要「第二个 checkbox」，语义从「复选框」变成「切换按钮」，贴合它实际的角色
+  - 正向：点击转发 `master.checked = !master.checked` + `dispatchEvent("change")`，
+    持久化 / enable·disable / 徽标刷新全走原有链路，没有新增分支
+  - 反向：`document` 上一条 `change` 委托，任何地方改动开关都会刷新快捷区
+  - 顺带消掉一个隐患：原来渲染快捷区那一刻读不到最终状态（点聚类 / 显示标签由
+    `geojsonloader.js` 更晚才按 localStorage 恢复）；现在状态来源唯一，重新调用
+    `_syncQuickStates()` 幂等重算即可
+- **id 冲突**：面板里的开关一律带 id（`toggleConfig` 按 id 注册、`geojsonloader` 按 id 恢复），
+  快捷区不再持有同 id 元素 —— 实测全文档 0 重复 id
+- 动作按钮改用 `data-action` 绑定，两个入口（快捷区 + 操作分类）都能触发导出图片
+- 「操作」分类只有按钮、统计不出开关数，徽标退化成「1 项」而不是空着
+
+### 2. 点击手感
+
+原快捷项是一块铺满透明 checkbox 的 label，按下时**没有任何反馈**（原生 checkbox 的按下
+效果被透明层吃掉），加上 120 ms 线性渐变让状态切换显得发黏。
+
+- 新增 `:active` 按压态：`scale(0.94)` + `--content-active-bg`，并置 `transition-duration: 0s`
+  —— 按下瞬时到位（跟手感的来源是「立刻」而不是「更快」），松手由普通规则的 0.12 s 弹回
+- `touch-action: manipulation`：移动端不再等 300 ms 判断双击缩放
+- hover 收进 `@media (hover: hover)`：触摸屏点完不再「粘」着高亮不散
+- `:focus-within` → `:focus-visible`：鼠标点完不留焦点环，只有键盘 Tab 才显示
+- 焦点环配色由 `--accent` 改为 `--c-green-text-strong`（#99cc99 对 #fafafa 仅 1.8:1，
+  不满足 WCAG 2.4.11 focus appearance 的 3:1）；`#waybackBar select` 同步修改
+- `user-select: none` + 文字 `ellipsis`：连点不误选文字、长标签不撑破格子
+
+### 变更文件
+
+- `assets/app.js`（快捷项改 button + `data-action` 动作绑定 + 面板渲染全量 + 徽标兜底 + `initToggle` 同步）
+- `assets/main.css`（快捷项按压态 / hover 分区 / `focus-visible` / 焦点环配色）
+- `service-worker.js`（`CACHE_NAME` v2.3.8 → **v2.3.9**）
+
+### 验证（playwright-core + 系统 Chrome，127.0.0.1:8899）
+
+| 项 | 结果 |
+|---|---|
+| 快捷区 | 8 项，标签全为 `BUTTON`，内嵌 input **0** |
+| 地图设置 | 20 个开关 + 1 个动作按钮 = 21 项；全文档**重复 id 0** |
+| 移出置顶的 4 项 | `inQuickBar=false` / `inPanel=true` / id 各出现 1 次 |
+| 快捷 → 面板 | 主开关跟着翻转，`dupal_cluster_enabled` 正确落盘 |
+| 面板 → 快捷 | `aria-pressed` 与 `checked` 一致 |
+| 徽标 | 显示 2/6 · 控件 3/7 · 数据 2/2 · 高级 0/5 · 操作 1 项，随点击实时刷新 |
+| 按压态 | `matrix(0.94,0,0,0.94,0,0)` + `rgb(238,238,238)`；松手回 `none` |
+| 焦点环 | `2px solid rgb(58,116,58)` |
+| 选中态对比度 | 边框 / 文字均 **4.84:1**（AA 通过） |
+| 动作按钮 | 2 个入口均触发 `exportMapImage` |
+| 回归 | 历史影像 196 时相、测量导出 `LineString 长度=3829.258`、JSON 下载正常 |
+| console | **0 error / 0 pageerror** |
+
+### 截图（弹窗内点击可放大）
+
+| 浅色主题 | 深色主题 |
+|---|---|
+| ![快捷区浅色主题](shots/quickbar-light.png) | ![快捷区深色主题](shots/quickbar-dark.png) |
+
+快捷项按下瞬间（`:active` 的 `scale(.94)`，图为局部原尺寸截取）：
+
+![快捷项按压态](shots/quickbar-pressed.png)
+
+## 2026-09-12 — 面板瘦身 + 图层主题归并 + 历史影像 + 3D 贴地修复
+
+一次性处理 10 条反馈，分四块：设置面板重构、图层配置整理、测量导出、3D/历史影像。
+
+### 1. 设置面板：常用功能置顶 + 二级折叠
+
+改动前所有开关平铺在「⚙️ 地图设置」里（5 个分类、22 项），找东西全靠翻。
+
+- 面板顶部新增 **常用功能快捷区**（`#quickBar`，4 列图标网格，单项 68×48 px）：
+  📷 导出图片 · 🏷️ 显示标签 · 🧩 点要素聚类 · 🌐 3D 视图 · 🌙 深色模式 ·
+  📐 编辑测量 · ▦ 经纬度格网 · 📍 显示位置
+- 其余 14 项按分类收进 **二级折叠** `<details class="toggle-sub" data-persist-details>`，
+  折叠态显示 `已开/总数` 徽标（如 `控件 3/6`），不展开也知道哪边开着东西
+- 二级折叠内改为一控件一行（原来两列并排会把「优化搜索」折成两行）
+- 无障碍（对照 WCAG 2.1 AA / 2.5.8）：
+  - 快捷项保留**原生 checkbox**（键盘可 Tab、读屏可识别状态），不用自造 `role="switch"`
+  - 透明 input 铺满整块 → 整块可点，触控目标 48 px ≥ 44 px
+  - `:focus-within` 焦点环（2.4.7）、`:has(input:checked)` 选中态（单独成规则，
+    避免"选择器列表含无效选择器导致整条规则被丢弃"）、`prefers-reduced-motion` 兜底
+  - 选中态边框改用 `--c-green-text-strong` 而非 `--accent`：`--accent`(#99cc99)
+    与选中底色 #eee 对比度仅 **1.58:1**，不满足 WCAG 1.4.11 非文本对比 3:1；
+    而快捷项不像开关有「滑块位移」这类非颜色线索，只靠颜色 + 字重不够。
+    改后浅底 **4.47:1** / 深底 **8.20:1**
+- `_syncQuickStates()` 做成可重入全局函数：点聚类/显示标签不在 `toggleConfig` 里，
+  由 `geojsonloader.js` 更晚才按 localStorage 恢复，渲染那刻拿不到最终状态
+
+### 2. 图层配置整理（`assets/geo-config.js`）
+
+新增 `hidden` 配置项（可写在 group 或 layer 上），`geojsonloader.js` 跳过渲染，
+数据仍留在配置文件里，随时可恢复：
+
+| 处理 | 图层/分组 | 原因 |
+|---|---|---|
+| 隐藏整组 | 测试数据（PIC 45万点） | 压力测试数据，不面向公众 |
+| 隐藏 | Dupal异常区（无分组重复项） | 已由「大型异常区 → Dupal异常洋」承载 |
+| 隐藏 | 古生物学 PBDB、气候岩性指标 PBDB | 暂与海洋地质主题无关 |
+| 隐藏 | 2026世界杯 8/16/32/48 强 | 同上 |
+| 隐藏 | 盆地 (CGG) | 盆地只留一个数据源；CGG 是 10 MB gz，Evenick2021 仅 698 KB |
+
+- 新增分组 **🌊 海洋地理信息**：全球海盗事件、海底光缆、光缆登陆点、海区、港口
+  （光缆两项从「海底基础信息」迁入，港口/海区/海盗从原社会热点组迁入）
+- **社会热点专题 → 陆地地理信息**（保留各国参数、军事设施、中国县城、浙江适飞区）
+
+### 3. 文案与 DEM 层级
+
+- `📑 静态矢量要素` → **`📑 数据图层`**（含帮助文档标题、`main.css` 注释同步）
+- `🏔️ DEM高程渲染（实验中）` → **`（测试中）`**
+- 新增两个 pane，解决 DEM 被盖住的问题：
+  - `baseImagePane` z-index **250** —— ETOPO 等整幅影像底图（原落在 overlayPane 与矢量同层）
+  - `demPane` z-index **350** —— DEM 栅格
+  - 最终层级：瓦片 200 < 影像底图 250 < **DEM 350** < 矢量 400 < 标记 600
+  - `Leaflet.DemRenderer.js` 同时传 `pane` 选项并做 canvas 兜底搬移
+
+### 4. 测量结果导出（新增 `assets/measure-export.js`）
+
+「本地图层查看」区新增并排两个按钮（排在「现在的位置」下方）：
+
+- **📐 测量转图层** —— 收集 Geoman 绘制的点/线/面 → GeoJSON → `window.addUserLayer()`，
+  与「坐标投点 / 现在的位置」完全同一套逻辑（可定位、可查属性表、激活后可下载）
+- **⬇️ 导出JSON** —— 直接下载 `.geojson`，不依赖高级功能激活
+- 自动附带 `名称/类型/长度_km/面积_km2/来源` 属性与绘制时的原始配色
+- 未绘制内容时点击会**顺手打开「编辑测量」**并提示，而不是只报错
+- 坑：Geoman 的形状名是 `Line`/`Polygon`，**没有** `Polyline`（`enableDraw("Polyline")` 会抛错）
+
+### 5. Esri 历史影像底图 + 底部时相条（参考 tthh 项目）
+
+- 单选底图控件新增 **「Esri 历史影像」**（默认可见集合，不需要开「更多底图」）
+- 底部居中时相条 `#waybackBar`：仅在选中该底图时出现，切走自动隐藏
+- 时相列表优先拉 Esri 官方 `waybackconfig.json`（196 个版本），失败回退
+  `assets/wayback-releases.json`；时相记忆在 `dupal_wayback_release`
+- 3D 侧 `createImageryProvider` 新增该底图分支，切时相时 `syncBasemap()` 重建 provider
+- 导出图片时隐藏时相条，避免截进图里
+
+### 6. 3D 贴地与透明度修复（`cesium-geojson-adapter.js`）
+
+- **根因**：`GeoJsonDataSource` 只要读到坐标第三个分量就走 `perPositionHeight`，
+  面/线被画在各自绝对高程上；不同 SHP 的 Z 基准不统一（椭球高 / 0 / 残值），
+  于是表现为「有的图层没贴地、相邻图层接边处互相穿插重叠」
+- **修法**：加载前 `normalizeGeometryZ()` 把坐标统一压平到二维（点/线/面/含洞多边形/
+  多点/GeometryCollection 全支持）。只在真存在 Z 时克隆，纯二维数据零开销复用原对象，
+  且**不改动 2D 共用的原始数据**
+- **透明度**：聚类气泡原来固定不透明，图层调暗后气泡仍是实心 →
+  在 dataSource 上记 `_ogvOpacity`，气泡与 `updateOpacity()` 都读它
+
+### 变更文件
+
+- `index.html`（快捷区容器 / 时相条 / pane 声明 / Wayback 图层 / 数据图层文案 / 新脚本）
+- `assets/app.js`（TOGGLE_GROUPS 重构 + 快捷区渲染 + 子分组徽标 + `initToggle` 同步视觉态 + 导出时隐藏时相条）
+- `assets/main.css`（快捷区、二级折叠、时相条样式 + 绿字与帮助图标对比度）
+- `assets/feature-panel.css`（活动页签、表格链接对比度）
+- `assets/geo-config.js`（hidden 配置 + 分组调整）
+- `assets/geojsonloader.js`（hidden 跳过 + 空分组不渲染）
+- `assets/pointdrop.css`（`.pd-btn-pair`）
+- `assets/Leaflet.DemRenderer.js`（demPane）
+- `assets/cesium-geojson-adapter.js`（Z 压平 + 聚类透明度）
+- `assets/cesium-viewer.js`（历史影像 3D 底图分支）
+- `assets/measure-export.js`（**新增**）、`assets/wayback-releases.json`（**新增**）
+- `docs/static-vector-help.md`、`service-worker.js`（`CACHE_NAME` v2.3.6 → **v2.3.8**，新增两个文件到预缓存）
+
+### 7. 顺带做的对比度审查（WCAG 2.1 AA）
+
+用无头浏览器实测（不靠肉眼）全页面文字对比度，浅色主题不达标项 **16 → 7**。
+
+**已修（改动细微或本就是项目自己定的规则）：**
+
+| 位置 | 原值 | 实测 | 改后 | 实测 |
+|---|---|---|---|---|
+| 快捷项选中态边框/文字 | `--c-green-text-strong` #3d7a3d on #eee | 4.47 ❌ | 该 token 压深为 **#3a743a** | **4.84** ✅ |
+| 分组标题 / 二级分类 / 页签等绿字 | `--accent-lighter` #99cc99 | 1.68–1.83 ❌ | `--c-green-text-strong` | 5.15 ✅ |
+| `--section-text`（6 处绿字共用） | `--c-green-text` #4a8c4a | 3.75 ❌ | `--c-green-text-strong` | 5.15 ✅ |
+| 帮助图标 `?` | 白字 on #99cc99 | 1.83 ❌ | 深字 `#1a1a2e` on #99cc99 | **9.30** ✅ |
+| 二级折叠徽标 `0/3` | `--text-muted` #999 | 2.61 ❌ | `--text-secondary` #666 | 4.79 ✅ |
+| 属性面板活动页签、表格链接 | 硬编码 `#9c9` | 1.83 ❌ | `--c-green-text-strong` | 5.62 ✅ |
+
+> 「帮助图标改深字」与 `feature-panel.css` 里既有的「绿底深字」（`#9c9` + `#1a1a2e`）范式一致，品牌绿保留不变。
+> 深色主题因 `--c-green-text-strong` 在两套主题下同为 `#88cc88`，**视觉完全不变**。
+
+**未修（属可见的设计取舍，待确认）：** `--c-text-dim` 弱化文字族 ——
+`.local-hint`、本地图层空状态、`#appVersion`、属性面板未激活页签、图层操作小图标按钮等，
+浅色 `#999` 实测 2.61–2.85 ❌ / 深色 `#777` 实测 3.97–4.22 ❌。
+建议浅色改 `#6e6e6e`（4.69 ✅）、深色改 `#999`（6.23 ✅），但会让「弱化文字」明显变深，故未擅自改。
+
+另：`#beianBar` 备案号是白色半透明字直接压在**地图影像**上，对比度取决于底图明暗（实测工具只能取到 DOM 背景，判为 1:1 属误报），
+建议加一层深色半透明底或文字描边。
+
+### 验证（playwright-core + 系统 Chrome，127.0.0.1:8899）
+
+- 控制台 **0 error / 0 pageerror**
+- 快捷区 8 项、单项 68×48 px；子分组徽标 `显示1/2 控件3/6 数据2/2 高级0/3`
+- 图层分组 = 8 组，含新增「海洋地理信息」与改名「陆地地理信息」；**无**测试数据组/世界杯/古生物
+- 底图单选含「Esri 历史影像」；切过去后时相条 `display:flex`，196 个时相可选，
+  切到 2024-11-18 后 `_waybackRelease` 49849、localStorage 已记忆
+- 端到端：Geoman 画 1 条折线 → 「测量转图层」生成 `测量_20260912_085817(1 线)`，
+  属性含 `长度_km: 3829.258`、`来源: 地图测量/绘制`；「导出JSON」blob `application/geo+json:627B`
+- `normalizeGeometryZ` 单测：线/面（含洞）/多点 → 二维；纯二维复用原对象；源数据未被改动
+- ⚠️ 未验证：wayback 瓦片与 GeoTIFF DEM 在本机沙箱内不可达（`wayback.maptiles.arcgis.com`
+  全部 `Failed to fetch`），需在用户网络环境实测
+
+---
+
 ## 2026-08-29 — 瓦片清晰度：八子域 + SSE=2（锐度 1.4 → 94.6，放大不再糊）
 
 ### 问题

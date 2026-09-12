@@ -868,6 +868,17 @@
           maximumLevel: 16,
         });
 
+      // Esri Wayback 历史影像：路径中的 release 编号由 2D 侧的时间条写入
+      // window.__waybackRelease，切换时相后 syncBasemap() 重建 provider 即可生效
+      case "Esri 历史影像":
+        return new window.Cesium.UrlTemplateImageryProvider({
+          url:
+            "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/" +
+            (window.__waybackRelease || 56102) +
+            "/{z}/{y}/{x}",
+          maximumLevel: 19,
+        });
+
       // ETOPO 等本地图片底图 → 降级用 ArcGIS 影像
       default:
         return new window.Cesium.UrlTemplateImageryProvider({

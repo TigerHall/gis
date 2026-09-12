@@ -12,9 +12,12 @@
  * - colorMode "sequential" → GeoUtils.getFeatureColorByIndex 索引色
  * - colorMode "field"      → GeoUtils.getFeatureColorByField 字段分色
  * - 点要素图标            → L.GeoMarker.getIconFactory 同源 SVG（volcano/hotspot/star/point/外部文件）
- * - 点要素尺寸            → layerIconSizeMap[checkboxId] || 20
+ * - 点要素尺寸            → layerIconMap / layerIconSizeMap[checkboxId] || 20
  * - 面填充透明度          → Math.min(opacity, 0.45)（与 2D fillOpacity 一致）
  * - 线透明度              → opacity
+ * - 聚类气泡透明度        → 跟随图层 opacity（dataSource._ogvOpacity）
+ * - 坐标 Z 分量           → 加载前统一压平为二维（normalizeGeometryZ），
+ *                            消除不同 SHP 高程基准不一致导致的「不贴地 / 接边重叠」
  * - 线 / 面贴地            → clampToGround（默认 true，GPU 侧，开销可忽略）
  * - 点要素贴地            → groundMode（默认 "none"，见 POINT_GROUND_LIVE_MAX 注释）
  *
@@ -137,6 +140,131 @@
       return G.getFeatureColorByIndex(featureIndex || 0);
     }
     return DEFAULT_PALETTE[(featureIndex || 0) % DEFAULT_PALETTE.length];
+  }
+
+  // ========== 坐标压平：抹平不同数据源之间的 Z 高度差 ==========
+  // 为什么必须做：
+  //   GeoJsonDataSource 只要在坐标里读到第三个分量，就会把要素当作
+  //   perPositionHeight 处理 —— 面/线被画在各自的绝对高程上，点也浮在对应高度。
+  //   而不同 SHP 的 Z 基准并不统一（有的是椭球高、有的是 0，有的残留负值），
+  //   于是 3D 里就表现为「有的图层没贴地、相邻图层接边处互相穿插重叠」。
+  //   统一压平到二维后，线/面由 clampToGround / height=0 决定落位，
+  //   所有图层回到同一基准，接边自然对齐。
+  // 性能：只在真的存在 Z 时才克隆几何；纯二维数据（绝大多数）直接复用原对象。
+  // 注意：这里不改动 2D 共用的原始数据，只产出新的几何对象喂给 Cesium。
+
+  /**
+   * 递归压平坐标数组（最内层是 [lng, lat, (z)]）
+   * @param {Array} node
+   * @param {{changed:boolean}} out 传出：是否发生过压平
+   * @returns {Array} 压平后的坐标（未变化时返回原数组）
+   */
+  function flattenCoords(node, out) {
+    if (!Array.isArray(node) || node.length === 0) return node;
+    // 位置数组：[lng, lat] 或 [lng, lat, z]
+    if (typeof node[0] === "number") {
+      if (node.length > 2) {
+        out.changed = true;
+        return [node[0], node[1]];
+      }
+      return node;
+    }
+    var res = new Array(node.length);
+    var changedHere = false;
+    for (var i = 0; i < node.length; i++) {
+      var c = flattenCoords(node[i], out);
+      if (c !== node[i]) changedHere = true;
+      res[i] = c;
+    }
+    return changedHere ? res : node;
+  }
+
+  /**
+   * 压平单个 geometry（GeometryCollection 递归处理）
+   * @returns {Object} 新 geometry，或原对象（无需压平时）
+   */
+  function flattenGeometry(geom) {
+    if (!geom || typeof geom !== "object") return geom;
+    var t = geom.type;
+
+    if (t === "GeometryCollection") {
+      if (!Array.isArray(geom.geometries)) return geom;
+      var sub = new Array(geom.geometries.length);
+      var subChanged = false;
+      for (var g = 0; g < geom.geometries.length; g++) {
+        sub[g] = flattenGeometry(geom.geometries[g]);
+        if (sub[g] !== geom.geometries[g]) subChanged = true;
+      }
+      if (!subChanged) return geom;
+      return { type: t, geometries: sub };
+    }
+
+    if (!Array.isArray(geom.coordinates)) return geom;
+    var out = { changed: false };
+    var coords = flattenCoords(geom.coordinates, out);
+    if (!out.changed) return geom;
+    var next = {};
+    for (var k in geom) {
+      if (Object.prototype.hasOwnProperty.call(geom, k)) next[k] = geom[k];
+    }
+    next.coordinates = coords;
+    return next;
+  }
+
+  /**
+   * 压平任意形态的 GeoJSON（FeatureCollection / Feature / Geometry）
+   * @returns {Object} 可直接交给 GeoJsonDataSource.load 的对象
+   */
+  function normalizeGeometryZ(geojson) {
+    if (!geojson || typeof geojson !== "object") return geojson;
+
+    if (geojson.type === "FeatureCollection") {
+      if (!Array.isArray(geojson.features)) return geojson;
+      var changed = false;
+      var features = new Array(geojson.features.length);
+      for (var i = 0; i < geojson.features.length; i++) {
+        var f = geojson.features[i];
+        if (!f || !f.geometry) {
+          features[i] = f;
+          continue;
+        }
+        var g = flattenGeometry(f.geometry);
+        if (g === f.geometry) {
+          features[i] = f;
+          continue;
+        }
+        changed = true;
+        var nf = {};
+        for (var fk in f) {
+          if (Object.prototype.hasOwnProperty.call(f, fk)) nf[fk] = f[fk];
+        }
+        nf.geometry = g;
+        features[i] = nf;
+      }
+      if (!changed) return geojson;
+      var fc = {};
+      for (var ck in geojson) {
+        if (Object.prototype.hasOwnProperty.call(geojson, ck))
+          fc[ck] = geojson[ck];
+      }
+      fc.features = features;
+      return fc;
+    }
+
+    if (geojson.type === "Feature") {
+      if (!geojson.geometry) return geojson;
+      var ng = flattenGeometry(geojson.geometry);
+      if (ng === geojson.geometry) return geojson;
+      var nfeat = {};
+      for (var k2 in geojson) {
+        if (Object.prototype.hasOwnProperty.call(geojson, k2))
+          nfeat[k2] = geojson[k2];
+      }
+      nfeat.geometry = ng;
+      return nfeat;
+    }
+
+    return flattenGeometry(geojson);
   }
 
   /**
@@ -337,6 +465,8 @@
     }
 
     var Cs = window.Cesium;
+    // 先压平坐标 Z，抹平不同 SHP 之间的高程基准差（否则接边处会互相穿插）
+    geoJson = normalizeGeometryZ(geoJson);
     var layerConfig = buildLayerConfig(checkboxId);
     var cesiumOpts = layerConfig.cesium || {};
     // 线 / 面：保持贴地（GPU 侧 GroundPrimitive，实测开销可忽略；
@@ -731,6 +861,8 @@
     var Cs = window.Cesium;
     var entities = dataSource.entities.values;
     var fillAlpha = Math.min(opacity, 0.45);
+    // 供聚类气泡在下次重新聚合时取到最新值
+    dataSource._ogvOpacity = opacity;
     // 统一取一次时间，避免在大图层上重复构造 JulianDate
     var now = Cs.JulianDate.now();
 
@@ -767,6 +899,8 @@
     updateOpacity: updateOpacity,
     buildLayerConfig: buildLayerConfig,
     buildIconUri: buildIconUri,
+    // 暴露给调试/自检使用：压平坐标 Z，消除不同 SHP 的高度基准差
+    normalizeGeometryZ: normalizeGeometryZ,
   };
 
   window.CesiumGeoJsonAdapter = CesiumGeoJsonAdapter;
