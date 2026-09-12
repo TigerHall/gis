@@ -138,8 +138,20 @@
   `*.webp` `*.ico` `*.gif` `*.woff*` `*.ttf` `*.map`）→ 入库 PNG 不会被行尾转换损坏
 - **`docs/` 会随站点发布**：`app.js` 运行时 `fetch("docs/CHANGELOG.md")` 渲染「更新记录」，
   所以 `docs/` 下的东西既进仓库也上线上 → 「入库」与「上线」是同一件事
-- **待办**：`docs/shots/` 14 张 / 1.49 MB 仍 **untracked**，等用户自行 `git add`
-- `docs/shots/wayback-bar.png`（1440×900）**尚未被 CHANGELOG 引用**（(b) 已补 quickbar 三张）
+- **待办**：`docs/shots/` **15 张 / 约 1.50 MB** 仍 **untracked**，等用户自行 `git add`
+- `docs/shots/` 下的图**已全部被 `docs/CHANGELOG.md` 引用**，无孤儿文件
+  （新增的 `wayback-bar-2x.png` 也在内）
+
+## CHANGELOG 内嵌截图
+
+- Markdown 相对路径按**页面 URL** 解析（`marked` 不重写）→ `assets/dialog.js` 的
+  `resolveRelativeImages(root, docUrl)` 按文档所在目录补前缀，App（`docs/`）与
+  GitHub 两边同时成立
+- 图片 `max-width:100%` **只封顶不放大**；⚠️ 别把尺寸悬殊的两张图放进同一张表格 ——
+  列宽按原图比例分配，1440 与 408 并排会把 408 那张压到 **132px**（等于白截）
+- 细节图用 `deviceScaleFactor: 2` **重新渲染**，不要位图放大（203×42 的控件放大必糊）
+- 点击放大 = `.md-zoom` + `.app-dialog.md-zoomed`；`.dialog-body` 平时 `overflow-x:hidden`
+  （防宽表格撑破），放大态必须放开成 `auto`，否则右半张图鼠标拖不到（脚本仍能改 `scrollLeft`，会漏判）
 
 ## 本机工具链坑
 

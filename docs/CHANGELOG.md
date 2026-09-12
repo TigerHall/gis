@@ -54,16 +54,18 @@
 ### 变更文件
 
 - `docs/CHANGELOG.md`（2 处路径引用 → 图片语法；4 张单图改为 2×2 表格并排；
-  给（b）补「截图」一节）
+  给（b）与本轮条目补「截图」一节）
+- `docs/shots/wayback-bar-2x.png`（**新增**，时相条 2× 重渲染细节图）
 - `assets/dialog.js`（新增 `resolveRelativeImages` / `bindImageZoom`）
 - `assets/dialog.css`（`.dialog-body img`、`img.md-zoom`、`.app-dialog.md-zoomed`）
 
 ### 待定
 
-- `docs/shots/` 是否入库（14 张 / 1.49 MB）—— 目前仍 **untracked**。
+- `docs/shots/` 是否入库（**15 张 / 约 1.50 MB**）—— 目前仍 **untracked**。
   `docs/` 本身随站点发布（`app.js` 运行时 fetch 本文件），入库与上线是同一件事
 - 顺手给（b）补了「截图」一节（`quickbar-{light,dark,pressed}.png`），
-  至此仅剩 `wayback-bar.png`（历史影像时相条，1440×900）未被引用
+  给本轮条目补了时相条一节（`wayback-bar.png` + 新增 `wayback-bar-2x.png`），
+  至此 `docs/shots/` 下的图**全部被引用**，无孤儿文件
 
 ---
 
@@ -447,6 +449,21 @@
 - `normalizeGeometryZ` 单测：线/面（含洞）/多点 → 二维；纯二维复用原对象；源数据未被改动
 - ⚠️ 未验证：wayback 瓦片与 GeoTIFF DEM 在本机沙箱内不可达（`wayback.maptiles.arcgis.com`
   全部 `Failed to fetch`），需在用户网络环境实测
+
+### 截图（弹窗内点击可放大）
+
+全屏 1440×900 —— 看时相条「底部居中」的定位：
+
+![Esri 历史影像时相条（全屏 1440×900）](shots/wayback-bar.png)
+
+时相条本体 2× 重渲染（408×84）—— 看细节：
+
+![Esri 历史影像时相条（2× 细节）](shots/wayback-bar-2x.png)
+
+> 全屏图里地图区域是空白底色 —— 沙箱内瓦片不可达（见上「验证」⚠️），时相条本身的
+> 形态与交互正常；左下角 `v2.3.8` 即当时的版本号。
+> 细节图是用 `deviceScaleFactor: 2` **重新渲染**出来的（时相条本体只有约 203×42 CSS px，
+> 位图直接放大会糊），文字可直接阅读。
 
 ---
 
