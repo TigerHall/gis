@@ -1,5 +1,870 @@
 # 更新记录
 
+## 2026-09-13（j）— v3.0.4：设置面板「已开/总数」徽标计数修准
+
+> 版本号 `v3.0.3` → **`v3.0.4`**。改了 `app.js` / `geojsonloader.js`（都在 SW 预缓存清单里）。
+
+### 现象
+
+> 「高级功能激活后，高级的分组计数里还是显示 0/5，再开一个别的变成 2/5，
+> 但是再次进入后变成 0/5，虽然实际上是 2/5。」
+
+### 根因：徽标算的是「恢复前」的状态
+
+徽标读的是 checkbox 的**实时**勾选数，但开关状态是在**面板渲染之后**才恢复的：
+
+- `initToggle()` 是程序化赋值 `cb.checked = x`，**不触发 `change`**
+- `clusterToggle` / `labelToggle` 更晚，由 `geojsonloader.js` 恢复
+
+而「高级」组五项默认**全是关的**，于是「渲染时算一次 + 只监听 `change`」
+会永久停在 HTML 默认值上：激活高级功能 → 徽标没收到任何通知 → 还是 0/5；
+随手拨一个别的 → `change` 触发重算 → 跳成 2/5（这时才第一次算对）；
+刷新 → 又回到默认值 0/5。
+
+**同理「显示」组也不准**：默认 `2/6`（cluster + optimizeSearch 写了 `checked: true`），
+把聚类关掉刷新，实际 1/6，徽标仍显示 2/6 —— 只是没人注意到。
+
+### 修法（写得稳妥一点）
+
+把刷新收敛成**一个幂等入口**，而不是靠"每个改动点记得触发事件"：
+
+- `requestSubBadges()` —— **rAF 合并**，同一帧内改 20 个开关也只重算一次，重复调用零成本
+- 挂进 `window._syncQuickStates()`：快捷区和徽标读的是同一批 checkbox，一处挂钩覆盖所有调用点
+- `initToggle()` 在**副作用跑完之后**再同步一次（`premium` 未激活时 `enable()` 会把开关强制取消勾选）
+- 高级功能激活成功 / `premiumReset()` / 深色模式预设 / 跨标签 storage 同步 全部补上同步
+- `geojsonloader.js` 恢复 cluster / label 后主动触发一次
+- 兜底：`<details>` 的 `toggle` 事件**不冒泡但走捕获阶段** → 展开/收起分组时再刷一次，
+  保证「只要徽标看得见，它就是准的」
+- 对外暴露 `window._updateSubBadges`，其他模块可主动触发
+
+### 实测（29/29）
+
+| 组 | 场景 | 结果 |
+|---|---|---|
+| A | 干净首访：四个开关组徽标 = 实际勾选数 | 4/4 |
+| B | 激活高级功能 → 高级组 1/5 | 5/5 |
+| C | 再开深色模式 → 高级组 2/5 | 4/4 |
+| D | **刷新后仍是 2/5**（🔴 原为 0/5） | 5/5 |
+| E | 关掉聚类刷新 → 显示组 1/6（原来会停在 2/6） | 4/4 |
+| F | 展开分组后仍准（toggle 兜底） | 4/4 |
+| 健壮 | 无 JS 报错 | 1/1 |
+
+判据不是"等于某个固定数字"，而是**徽标文本 === 该组实际勾选数 / 总数** ——
+这样以后加开关也不会漏。脚本：`~/.workbuddy/binaries/node/workspace/badge-audit.js`
+
+## 2026-09-13（i）— v3.0.3：覆盖层记忆修复 + 底图/覆盖层叠放层级归位
+
+> 版本号 `v3.0.2` → **`v3.0.3`**。改了 `geo-config.js` / `index.html` /
+> `basemap-manager.js` / `Leaflet.DemRenderer.js`，前三个都在 SW 预缓存清单里。
+
+### 起因
+
+> 「多选图框的图没有被记忆，而且 ETOPO 和 ETOPO 2022 两个图片底图的层级太高了，
+> 覆盖层的天地图标注等应该在他上面，现在的情况是这两个图片盖在了底图上。
+> 多选图层实际上应该在单选图层上，正常来说都是。」
+
+### ① 🔴 「更多覆盖层」勾选完全不记忆
+
+**现象**：开启「更多底图」后勾选「天地图影像标注 / 地形标注 / UNEP 海岛」，刷新后全没了。
+常驻覆盖层（境界、地名标注）反而是好的 —— 所以看上去像「记忆时灵时不灵」。
+
+**根因（两条叠在一起）**：
+
+1. **恢复得太早**。`basemap-manager.js` 比 `app.js` 先加载，恢复覆盖层时
+   `#moreBasemapToggle` 还没被 app.js 设成记忆值 → `getVisibleOverlays()` 里
+   没有 `moreOverlays` → 紧接着的 `rebuildLayerCtrl()` 把它刚加上的层当
+   「隐藏项」摘掉了。等 app.js 的 `layerCtrlToggle.enable()` 再调一次 rebuild
+   时它们才可见，但那时已经不在图上了。
+2. **被动移除被当成取消勾选**。`L.Control.Layers` 是**逐图层**绑 `add/remove`
+   事件的（`onAdd` 里 `layer.on("add remove", …)`），所以 `map.removeLayer()`
+   也会触发 `overlayremove` → 收起「更多底图」时记忆被顺手清空。
+
+**修法**：
+
+- 恢复逻辑从「模块初始化时做一次」挪进 `rebuildLayerCtrl()`，每次重建都按
+  当前可见集合补回记忆里的覆盖层 —— 顺带解决「更多底图 关→开 自动恢复」
+- 摘除隐藏覆盖层时用 `_suspendPersist` 挂起写盘：被动移除 ≠ 用户取消勾选
+- `savedOverlayNames` 成为唯一真源，`persistOverlay` 只在状态真变时落盘
+
+### ② 🔴 ETOPO / ETOPO_2022 盖住瓦片覆盖层
+
+`baseImagePane` 原来是 **250**，而瓦片底图与瓦片覆盖层都在 `tilePane` **200**
+—— 于是 ETOPO 把「天地图地名标注」「天地图全球境界」整个盖住了。
+
+`L.imageOverlay` 默认落在 `overlayPane(400)`（会压住矢量），当初建这个 pane 就是为了
+把它拉下来，但拉到了 250 这个**仍在瓦片之上**的位置。
+
+**修法**：改到 **190**（低于 `tilePane`）。整幅影像底图本来就该在最底层 ——
+和瓦片底图同一档，覆盖层（多选）永远在其之上。
+
+### ③ 层级数字搬进配置
+
+`MAP_CONFIG.panes = { baseImagePane: 190, demPane: 350 }`；
+`index.html` 只负责按配置建 pane，`Leaflet.DemRenderer.js` 的兜底也改读配置。
+改叠放顺序只改 `geo-config.js` 一处。
+
+### 实测（16/16）
+
+| 组 | 场景 | 结果 |
+|---|---|---|
+| 层级 | `baseImagePane(190) < tilePane(200) < demPane(350) < overlayPane(400)` | 4/4 |
+| 层级 | 选 ETOPO → 影像落在 baseImagePane；标注层 pane 层级更高 | 2/2 |
+| 记忆 | 常驻覆盖层 勾选 → 写入 → 刷新仍勾选 | 3/3 |
+| 记忆 | 更多覆盖层 勾选 → 刷新仍勾选（🔴① 回归） | 3/3 |
+| 记忆 | 更多底图 关→开，记忆不丢且自动恢复 | 2/2 |
+| 健壮 | 无 JS 报错；干净 profile 下不写多余键 | 2/2 |
+
+脚本：`~/.workbuddy/binaries/node/workspace/diag-basemap2.js`
+
+## 2026-09-13（h）— v3.0.2：localStorage 全量收口到统一存储层 `OGVStorage`
+
+> 版本号 `v3.0.1` → **`v3.0.2`**。改了 `geo-utils.js` / `geojsonloader.js` /
+> `basemap-manager.js` / `app.js` / `cesium-viewer.js` / `feature-panel.js`，
+> 前两个都在 SW 预缓存清单里，按惯例必须 bump 才能刷新出去。
+
+### 起因
+
+> 「涉及到 localStorage 记忆的那些都排查一下看看有没有问题」
+
+全仓扫出 **21 个 localStorage 键 + 1 个 sessionStorage 键**，散落在 6 个文件里逐处手写
+`getItem/JSON.parse/setItem`，没有统一前缀常量、没有异常保护、没有坏值自愈。
+定级：**2 个 🔴 / 6 个 🟡 / 6 个 🔵**，用户选择「全部修」。
+
+### 两个 🔴 真 bug
+
+| # | 位置 | 现象 | 根因 |
+|---|---|---|---|
+| 1 | `geojsonloader.js` `hasSavedLayerState()` | 只调过颜色/透明度也会弹「是否恢复图层」；选「不恢复」还会把调好的设置一起清掉 | 前缀 `dupal_layer_` 是 `dupal_layer_set_` 的**前缀**，误匹配 |
+| 2 | `basemap-manager.js` `persistOverlay()` | 覆盖层勾选记忆**整类静默失效**，且再也写不进去 | `JSON.parse` 抛异常被 `catch(ex){}` 吞掉 → 「读-改-写」里读永远失败 |
+
+第 2 条尤其隐蔽：坏值不删掉，`JSON.parse` 每次都抛，异常每次都被吞，
+于是覆盖层状态永远停留在第一次写坏的那天。
+
+### 改动：新增 `OGVStorage`（`assets/geo-utils.js`）
+
+挂在 `geo-utils.js`（索引页第 16 行，早于所有业务模块），对外只暴露 getter/纯函数：
+
+```
+KEY.*          21 个键名常量（新增键一律 dupal_ 前缀，ogv_ 是历史遗留物理名不能改）
+safeGet/safeSet/safeRemove   一律吞异常（QuotaExceeded / Safari 隐私模式）
+getBool/getNum              非法值回退默认（Number("abc")=NaN、Infinity 也被挡）
+getJSON/setJSON             ⚠️ 解析失败即**删键**+返回兜底 —— 自愈的关键
+keysWithPrefix/removeAll/pruneOrphans
+clearResettable/clearApp    按本应用前缀清理，绝不碰同域其他页面
+dropObsoleteKeys            启动时回收 dupal_premium / dupal_toggle_sectionOpen
+```
+
+### 逐文件收口
+
+| 文件 | 改动要点 |
+|---|---|
+| `basemap-manager.js` | 失效底图名清键、覆盖层坏值自愈 + 失效名过滤写回、wayback release 挡 `NaN`（否则瓦片 URL 拼出 `/NaN/` 整图白屏） |
+| `geojsonloader.js` | `hasSavedLayerState` 排除 `dupal_layer_set_`；`clearAllLayerStates` 不再误删用户图层勾选；地图视野加经纬度/zoom 范围校验；新增孤儿键回收（图层改名后旧键残留） |
+| `app.js` | `doRefresh()` 的 `localStorage.clear()` → `S.clearResettable()`；`initTheme` **不再固化系统深色偏好**；删掉只写不读的孤儿键 `dupal_premium`；`premiumReset` 补上开关复位；sessionStorage 加防抛封装 |
+| `cesium-viewer.js` / `feature-panel.js` | 读写统一走存储层 |
+
+### 清掉的东西（内测阶段不留兼容尾巴）
+
+- `doRefresh()` 原先用 `localStorage.clear()` 按 origin 全清 —— 会连带删掉同域其他页面
+  的数据，还会删掉 `dupal_user_layers` 让用户上传的图层在 IndexedDB 里变成永久孤儿。
+- `initTheme()` 原先把「首次访问时的系统深色偏好」写进 localStorage 固化成用户选择，
+  之后用户改系统主题再也跟不动。现在只预设 checkbox、不落盘。
+- `dupal_premium` / `dupal_toggle_sectionOpen` 两个只写不读的孤儿键，启动时清掉。
+- `MAP_STATE_KEY` 等已无引用的常量直接删。
+
+### 实测
+
+| 组 | 场景 | 结果 |
+|---|---|---|
+| 单元 | OGVStorage 15 项（前缀/自愈/数字回退/资产保留/外来键不动） | **15/15** |
+| A | 干净首次访问：无报错、不误弹恢复、深色不落盘 | **5/5** |
+| B | 脏数据（坏 JSON / 纬度 999 / 失效底图名 / 幽灵键）：全部自愈 | **8/8** |
+| C | 只有 `dupal_layer_set_*` → 不弹恢复（🔴1 回归） | **1/1** |
+| D | 有真实勾选 → 正常弹恢复 | **2/2** |
+| 冒烟 | 勾选持久化 → 刷新弹恢复、底图控件、版本号 v3.0.2 | **7/7** |
+| 跨标签 | SAFE 组已同步并生效 / 无回环 / 3D 未被对侧启动 / 定位未被清 | **7/7** |
+
+### 跨标签同步（分级）
+
+新增 `storage` 事件监听（`app.js:1715`）。**值一律以后写入为准** —— 事件本身就是
+「对方已经写完」的通知，这一点没有分歧；真正的分歧是**收到后要不要在本页重放
+`enable/disable`**：
+
+| 分组 | 开关 | 行为 |
+|---|---|---|
+| 立即同步 | 深色 / 格网 / 鼠标坐标 / Geoman / 缩放 / 比例尺 / 图例 / 图层控件 / 十字丝 / 搜索优化 / 链接跳转 | 改 checkbox + 重放（纯视觉、幂等） |
+| 不参与 | `view3d` `isLocationTracking` `premium` `elevationRead` | 只认存储值，**下次加载生效** |
+
+排除这四个的理由：
+- `view3d` —— 会去拉 4.9 MB 引擎并起第二个 WebGL 场景；**更要命的是**
+  `cesium-viewer.js:1485` 每次页面加载都把开关强制复位为 `false`，一旦同步，
+  两页会互相把对方的 3D 关掉、来回震荡
+- `isLocationTracking` —— `clearWatch` 会被别的标签页关掉（等于 A 关了 B 的定位）
+- `premium` —— 会弹出激活码对话框；且 `_activated` 是闭包变量，事件里改不了
+- `elevationRead` —— 插件 `enable()` 的幂等性未验证
+
+同步只改 `cb.checked` 并直接调 `cfg.enable/disable`，**不回写存储** → 不形成回环
+（实测：B 页 `setItem` 调用次数为 0）。
+
+## 2026-09-13（g）— v3.0.1：「浙江适飞区」改为单色蓝填充
+
+> 版本号 `v3.0.0` → **`v3.0.1`**。按约定同一批未提交的改动不二次 bump，这里**破例**：
+> 改的是 `assets/geo-config.js`，它在 `STATIC_ASSETS` 预缓存清单里，而本地联调时浏览器
+> 已经装过 `v3.0.0`、缓存里存着旧的 config。SW 对同源预缓存是 **cache-first** ——
+> `CACHE_NAME` 不变就继续吐旧文件，**F5 看不到这次改色**（这个坑 2026-09-13 已经踩第三回）。
+
+### 起因
+
+> 「浙江适飞区(2026-05-12) 这个图层也改成单色，改成蓝色半透明。」
+
+配置里这条只写了 `source` 与 `selectable`，没写颜色 —— 面要素于是走引擎的默认分支
+`colorMode = "sequential"`，按要素序号取色：`getFeatureColorByIndex(0)` = `hsl(0,60%,40%)`
+= **rgb(163,41,41) 深砖红**。本图层只有一个要素（`MultiPolygon`），所以看着也是纯色，
+但那是「索引取色的副产品」，不是声明出来的。
+
+### 改动
+
+`geo-config.js` ③「社会热点专题 → 陆地地理信息」里补两行：
+
+```js
+{
+  name: "浙江适飞区(2026-05-12)",
+  file: "浙江适飞区_20260512.geojson.gz",
+  source: "浙江省交通运输厅 …2026年5月12日…公告",
+  selectable: false,
+  color: "#1976D2",      // ← 新增
+  colorMode: "single",   // ← 新增（钉住：以后数据加要素也还是同一个蓝）
+}
+```
+
+引擎侧**零改动** —— `color` + `colorMode: "single"` 是既有字段，`getGeoJsonStyle()` 原本就这么读。
+
+### 实测（改前 / 改后）
+
+| | 填充色 | 填充不透明度 | 描边 |
+|---|---|---|---|
+| 改前（sequential 第 0 号） | `rgb(163,41,41)` 深砖红 | 0.45 | `#555` @ 0.8，weight 1 |
+| 改后（single） | **`rgb(25,118,210)` `#1976D2` 蓝** | **0.45** | 不变 |
+
+- **0.45 就是「半透明」的来源**：引擎对面要素的填充有硬上限 `fillOpacity = Math.min(layerOpacity, 0.45)`
+  （`geojsonloader.js` 的 `getGeoJsonStyle()`），默认 `layerOpacity` 0.8 → 填充恒为 0.45。
+  想更淡就在图层设置弹窗里拉低透明度（会**同时**压低描边），或在配置里加 `defaultOpacity`。
+- **描边仍是全局 `#555`**：全站所有面图层共用这一个描边色，本轮不动它。若要把这片区的
+  外轮廓也改成蓝色，需要给引擎加一个 `strokeColor` 之类的字段（**待定**，未做）。
+
+### 截图（弹窗内点击可放大）
+
+![浙江适飞区(2026-05-12) 单色蓝半透明填充，z7.4](shots/zj-zone-blue.jpg)
+
+> 底图纹理仍可透出，四周非适飞空域留白 —— 这就是 45% 填充的实际观感。
+> 用 JPEG 是因为同一张图 PNG 有 1.17 MB，压到 78 质量后 **136 KB**。
+
+### 变更文件
+
+- `assets/geo-config.js` —— 「浙江适飞区(2026-05-12)」加 `color` / `colorMode`
+- `service-worker.js` —— `CACHE_NAME` v3.0.0 → **v3.0.1**（破例 bump，理由见引言）
+- `docs/shots/zj-zone-blue.jpg` —— **新增**截图（需 `git add`）
+- `docs/CHANGELOG.md` / 项目记忆
+
+---
+
+## 2026-09-13（f）— v3.0.0：配置与引擎开始分离，底图清单收进 `geo-config.js`
+
+> 版本号 **v3.0.0**。这次动的是**加载链的骨架**：`index.html` 少了 940 行、新增
+> `assets/basemap-manager.js`、`cesium-viewer.js` 的底图 `switch` 整段删除。浏览器里
+> 跑过旧版本的必须先换 `CACHE_NAME`，否则 Service Worker 仍吐旧 `index.html`。
+> 从这一版起定调：**数据和设置归配置，引擎只认字段**。
+
+### 诉求
+
+> 「3.0.0 版本开始，底图控件里的图层也放进 config 里，只留兜底的 ArcGIS 影像兜底，
+> 其他的都搬运进 config。其他应该放进配置里的也这么做。」
+
+此前 `geo-config.js` 已经收下了图层清单、地名表、站点标题与主题色，但**底图仍是硬编码**：
+30 个底图 / 8 个覆盖层的 URL 与参数写在 `index.html` 里，3D 那边又在 `cesium-viewer.js`
+里**照抄了一份 `switch`**（同样的底图，两份定义）。改一个 maxZoom 要改两处，加一个底图
+要改三处 —— 这正是「配置式定制」最该消掉的东西。
+
+### 结果
+
+| | 改前 | 改后 |
+|---|---|---|
+| `index.html` | 1788 行 | **857 行** |
+| 底图定义位置 | `index.html` 内联 940 行 | `geo-config.js` 的 `BASEMAP_CONFIG` |
+| 3D 底图映射 | `cesium-viewer.js` 里 90 行 `switch` + 覆盖层硬编码表 | 一行委托，读同一份 `cesium` 描述 |
+| 天地图 token | `index.html` 顶层常量 | `SITE_CONFIG.tiandituToken` |
+| 初始视野 | `setView([32,107], 3)` 写死 | `MAP_CONFIG.center / zoom` |
+| 硬编码图层 | 全部 | **只剩 1 个**：ArcGIS World_Imagery 影像兜底 |
+
+### 新增文件：`assets/basemap-manager.js`（底图引擎）
+
+从 `index.html` 整段搬出的底图逻辑，改为**纯配置驱动**：把描述变成 Leaflet 图层
+（`BUILDERS`）、建图层控件、管底图/覆盖层本地记忆、驱动 Esri 历史影像时相条、
+给出 2D→3D 的 ImageryProvider 映射。它**不含任何图层名与 URL**。
+
+唯一硬编码是 `FALLBACK`（ArcGIS World_Imagery），四个场景都用它：
+配置为空 / 语法写坏 / `defaultBasemap` 不存在 / 3D 那条没写 `cesium`。
+宁可退回一张固定影像，也不能给用户白屏。
+
+### `BASEMAP_CONFIG` 结构
+
+```js
+window.BASEMAP_CONFIG = {
+  defaultBasemap: "ArcGIS-海洋",     // 无本地记忆时选中谁
+  defaultSubset: [...],              // 「更多底图」关闭时控件里显示哪些
+  boundary: tdt("世界境界", "ibo_w", ...),  // 共享国界层，被 attachBoundary 引用
+  baseLayers:   [ /* 30 条，数组顺序 = 控件显示顺序 */ ],
+  overlays:     [ /* 2 条常驻覆盖层 */ ],
+  moreOverlays: [ /* 6 条，开「更多底图」才出现 */ ],
+};
+```
+
+每条底图靠 `kind` 决定渲染方式，配套字段如下（字段说明表已写进配置文件头部）：
+
+| `kind` | 用途 | 专属字段 |
+|---|---|---|
+| `tianditu` | 天地图瓦片（影像/矢量/地形/各类标注/境界） | `service` |
+| `arcgis` | ArcGIS Online 瓦片 | `serviceName`、`labelServiceName` |
+| `wms` | GEBCO / EMODnet 等 WMS | `url`、`layers` |
+| `tile` | 通用 XYZ | `url` |
+| `imageWorldCopy` | 整幅影像（自动跨 180° 复制三份） | `url`、`bounds` |
+| `wayback` | Esri 历史影像（release 由时相条动态写） | `tileBase`、`configUrl`、`fallbackRelease` |
+| `esriFeature` | ArcGIS FeatureLayer（UNEP-WCMC 海岛） | `url`、`style` |
+
+通用字段：`options`（透传 Leaflet）、`maxZoom`/`maxNativeZoom`/`minNativeZoom`/`opacity`/`pane`
+（常用项简写）、`attribution`、`attachBoundary`（在上面叠国界）、
+`cesium`（3D 用哪种 provider：`tianditu` / `urlTemplate` / `wms` / `osm` / `wayback`）。
+
+同源重复的条目用**配置里的工厂函数**压掉：`tdt()` / `arcgis()` / `gebco()` / `etopo()` /
+`esriIsland()`。13 个 GEBCO 底图因此各占一行，而不是各占 7 行。
+
+### 沿途发现并处理的三件事
+
+1. **`ref` 引用型条目被判成非法**（自测抓到）。`buildOne()` 原先先校验 `kind` 再判 `ref`，
+   而 `{ name:"天地图全球境界", ref:"boundary" }` 天生没有 `kind` → 直接被丢，覆盖层
+   少了一个、控件里也点不到。改判序即可。`findDescriptor()` 同样要顺着 `ref` 取
+   `cesium` 描述，否则该覆盖层在 3D 里叠不上。
+2. **「天地图全球境界」与 `attachBoundary` 底图共用同一实例** —— 这是**既有行为**，本次
+   特意保留并在配置里写明。Leaflet 同一图层不会重复上图，于是那个复选框天然就是
+   「国界显隐」开关：选中 ArcGIS/OSM 底图时它自动呈选中态，取消勾选会把国界从底图上摘掉
+   （切走再切回底图会恢复）。测试里已单列一条断言锁住这个语义。
+3. **Macrostrat 的 3D 瓦片 x/y 写反了**（顺手修正）。2D 用 `{z}/{x}/{y}.png`，3D 那份却写
+   成 `{z}/{y}/{x}.png` —— `UrlTemplateImageryProvider` 三个占位符都认，本来不需要换序。
+   现在 2D/3D 共用同一个模板。
+
+### 验证（无头 Chrome 实测，共 71 项断言全过）
+
+| 用例 | 覆盖 | 结果 |
+|---|---|---|
+| `regress-basemap.js` | 构建数量（30/2/6）、控件条目、切底图、勾覆盖层、`ref` 共用、更多底图展开、时相条（196 个时相）、3D provider 映射 | **41/41** |
+| `regress-3d-basemap.js` | 真进 3D：初始 ArcGIS-海洋 → 切天地图影像 → 切 GEBCO2025 → 勾覆盖层多叠一层 | **6/6** |
+| `regress-popup-buttons.js` | 四条渲染路径（SVG 面/线、DOM 点、Canvas 点）的缩放至 + 详情 | **24/24** |
+| `regress-esri-buttons.js` | esri 海岛弹窗：16 行属性 + 缩放 + 重开 + 图层名 + 详情 | 全过 |
+
+页面报错 0 条。
+
+### 变更文件
+
+- `assets/basemap-manager.js` —— **新增**（底图引擎，配置驱动）
+- `assets/geo-config.js` —— 新增 `MAP_CONFIG` / `BASEMAP_CONFIG` 两段 + 字段说明；
+  `SITE_CONFIG` 增 `tiandituToken`；文件头「四段」改「六段」
+- `index.html` —— 1788 → **857 行**；删掉整块底图定义/控件/时相条；初始视野与 token 读配置；
+  接入 `basemap-manager.js`
+- `assets/cesium-viewer.js` —— 删除底图 `switch`（90 行）与覆盖层硬编码表，改为委托
+  `BasemapManager`，兜底仍是 ArcGIS 影像
+- `service-worker.js` —— `STATIC_ASSETS` 加 `basemap-manager.js`；`CACHE_NAME` → **v3.0.0**
+- `README.md` / `docs/cesium-3d-integration.md` —— 补新模块与「改配置不改引擎」的说明
+
+
+## 2026-09-13（e）— 修掉「点要素缩放至失效 + 部分面要素详情打不开」：弹窗按钮改事件委托
+
+> 版本号 **v2.6.3**。同日第四条未发布版本仍要 bump：`geojsonloader.js` / `index.html`
+> 都被浏览器缓存过，`CACHE_NAME` 不变 Service Worker 就继续吐旧文件。
+
+### 现象
+
+- **点要素的「⚲ 缩放至」点了不动**（地图毫无反应），「📋 详情」正常。
+- **部分面要素的「📋 详情」点了没反应** —— 不是全都不行：同一个面**第一次点正常，
+  之后（第 2 次起）按钮就全废**；「缩放至」同样。
+
+### 根因：按钮的 `onclick` 挂在「随时会被重写的 DOM」上
+
+原实现是 `map.on("popupopen")` 里给两个按钮挂 `onclick`。这条链有两个断点：
+
+**断点 1 —— 内容重渲染会换掉按钮元素。** Leaflet 复用同一个 Popup 对象时，
+`setContent()` / `update()` 会重写 `_contentNode.innerHTML`，重渲染出来的按钮是**一批
+全新元素**，不带任何 `onclick`；而 popup 还在图上，`openOn()` 走 `map.addLayer()` 会命中
+`hasLayer` 直接 `return` —— **`popupopen` 不会二次触发**，连「补挂」的时机都不存在。
+
+**断点 2 —— 一次点击开了两次窗。** SVG 面/线路径的 click 处理器里写的是
+`layer.bindPopup(content, {maxWidth:300}).openPopup()`，而 `bindPopup()` 自己就会把
+`click → _openPopup` 装到 layer 上，于是同一次点击：
+
+```
+click → 业务处理器：bindPopup(新 Popup) → openPopup() → onAdd → update()      ← 第 1 次渲染，接线成功
+      → 自动 _openPopup：openPopup() → _prepareOpen() → update() → 重写 innerHTML ← 第 2 次渲染，onclick 被抹掉
+```
+
+popup 已经在图上，第二次 `openOn` 不再触发 `popupopen`。实测（`diag-poly-micro.js`，1全球洋壳）：
+
+| | 第 1 次点击 | 第 2 次点击 |
+|---|---|---|
+| `setContent` / `openOn` / `_updateContent` 次数 | 1 / 1 / 1 | 1 / 1 / **2** |
+| 按钮 `onclick` | `function` | **`object`（null）** |
+
+**根因 3 —— esri FeatureLayer 复用同一个弹窗。** UNEP-WCMC 全球海岛走 Leaflet 自带的
+`bindPopup`，只在首次打开时 `popupopen` 一次；之后换要素只更新内容，同一个弹窗对象被
+复用 → 同样抹掉 `onclick`，而且要素引用还会**停在第一个要素上**（点 B 详情出来的是 A）。
+
+### 根因：Canvas 点要素的「要素」没有几何
+
+Canvas 路径（>3000 点）里 `featuresArray` 的元素只有 `{lat, lng, color, _idx, properties}`，
+**没有 `geometry`**。而「缩放至」走 `GeoUtils.computeBounds()`，它读的是
+`f.geometry.coordinates` → 拿不到就返回 `null` → `fitBounds` 不执行 → 按钮看着像死的。
+同一个原因也让 3D 的 `CesiumViewer.flyToFeature()` 失效（它开头就是
+`if (!feature || !feature.geometry) return false`），只是以前没人报。
+
+### 修复
+
+**① 弹窗按钮改「事件委托 + 点击时现取要素」**（`geojsonloader.js:648-736`）
+
+```js
+var _popupByEl = new WeakMap();               // 弹窗容器元素 → popup 对象
+map.on("popupopen", e => _popupByEl.set(e.popup.getElement(), e.popup));
+
+document.addEventListener("click", ev => {   // 单一委托监听，按钮有没有 onclick 都无所谓
+  var btn = ev.target.closest(".popup-ext-btn[data-act]");
+  var popup = _popupByEl.get(btn.closest(".leaflet-popup"));
+  var target = resolvePopupTarget(popup);     // ← 每次点击现解析：_featureRef → _source.feature
+  ...
+});
+```
+
+关键点：**弹窗容器元素（`.leaflet-popup`）在整个 Popup 生命周期内是同一个**，
+`setContent()` 只换它内部的内容 —— 所以 element → popup 的映射不会因重渲染失效；
+要素则**每次点击现解析**，于是拿到的一定是「最新一次点击」的要素（顺带修掉根因 3 的错位）。
+
+**② 新增 `openFeaturePopup()`，取代 `bindPopup().openPopup()`**（`geojsonloader.js:743`）
+
+每次点击新建独立 Popup 再 `openOn(map)`，刻意不走 `layer.bindPopup()` ——
+从根上消除「一次点击两次开窗」。SVG 面/线 4 个调用点（`1287 / 1327 / 1362 / 1400`）全部换掉。
+
+**③ Canvas 补 `Point` 几何**（`geojsonloader.js:1038`）：把要素包成
+`{ properties, geometry:{type:"Point",coordinates:[lng,lat]}, _featureIndex, _fileName }` 再交给弹窗，
+「缩放至」与详情面板的图表（读 `feature.geometry`）同时受益。
+
+**④ 聚类分支去掉多余的一次 `marker.openPopup()`**（`geojsonloader.js:1099-1117`）：
+`bindPopup` 装的 `_openPopup` 本来就是负责开窗的那个，再手动开一次只让 `update()` 白跑一遍。
+
+**⑤ esri 图层名顺手贴到子图层**（`index.html:960`）：`_source` 是 esri 按视口动态生成的子图层，
+在渲染时把 `_ogvLayerId/_ogvLayerName` 贴上，详情面板才有「UNEP-WCMC超小海岛」这类标题
+（试过监听 `layeradd` —— esri 的内部 add 路径不经过 `FeatureGroup.addLayer`，不触发）。
+
+### 验证
+
+行为回归 `.workbuddy/artifacts/regress-popup-buttons.js`：每条路径跑 3 轮，
+每轮**真实点击要素 → 点「缩放至」看视图是否真动 → 重新开窗 → 点「详情」看面板是否真开**。
+（不再查 `onclick` —— 委托实现本来就没有 `onclick`，查它只会得到假阴性。）
+
+| 渲染路径 | 图层 | 缩放至 | 详情 |
+|---|---|---|---|
+| SVG 面 | 1全球洋壳 GlobalOceanicCrust | 3/3 ✅ | 3/3 ✅ |
+| SVG 线 | 洋中脊和转换断层 MOR&TF | 3/3 ✅ | 3/3 ✅ |
+| DOM 点（聚类关） | 火山 volcanos | 3/3 ✅ | 3/3 ✅ |
+| Canvas 点（>3000） | 海底地名点 Gazetteer_point | 3/3 ✅ | 3/3 ✅ |
+| **合计** | | **24/24 通过，页面报错 0** | |
+
+另外两项：
+- **聚类开启（默认态）**下 DOM marker：弹窗 ✅、缩放 6→14 ✅、重开 ✅、详情 ✅（`regress-cluster-marker.js`）
+- **esri FeatureLayer**（UNEP-WCMC超小海岛，马尔代夫 zoom 11）：
+  弹窗 16 行 ✅、缩放 11→14 ✅、重开 ✅、图层名 `UNEP-WCMC超小海岛` ✅、详情 ✅（`regress-esri-buttons.js`）
+
+### 变更文件
+
+- `assets/geojsonloader.js` — 弹窗按钮改事件委托（`_popupByEl` + `resolvePopupTarget`）、
+  新增 `openFeaturePopup()`、Canvas 补 Point 几何、聚类分支去掉重复 `openPopup()`
+- `index.html` — esri `createIslandLayer` 给子图层贴图层 id/名
+- `service-worker.js` — `CACHE_NAME` → **v2.6.3**
+
+---
+
+## 2026-09-13（d）— 弹窗改为「数据值一律按纯文本渲染」，修掉火山弹窗按钮错位
+
+> 版本号 **v2.6.2**。同日第三条未发布版本仍要 bump，理由与上一条相同：
+> `geo-utils.js` / `geojsonloader.js` 都已被浏览器缓存过，`CACHE_NAME` 不变就继续吐旧文件。
+
+### 现象
+
+点「火山 volcanos」的点要素，弹窗里 **「⚲ 缩放至」「📋 详情」跑到错误位置**，
+控制台另有一条 `http://www.volcano.si.edu/ge/gvplogo.png` 的 `ERR_NAME_NOT_RESOLVED`。
+
+### 根因：数据字段里的 HTML 被当成标记解析了
+
+数据侧：`volcanos.geojson` 的 `LAYER` 字段整段是 KML 导出的 HTML
+
+```html
+<table border="0" …width="320"><tr…><a href="http://www.volcano.si.edu/">
+<img src="http://www.volcano.si.edu/ge/gvplogo.png" width="227" height="43" /></a>…
+<tr align="center"><td colspan      ← 到此为止，被 DBF 的 255 字符上限截断，标签从未闭合
+```
+
+1293 个要素的这个字段**取值完全相同**（同一段样板 HTML，255 字符全部用满）。
+
+代码侧：`geo-utils.js` 的 `buildPopupContent` 把属性值直接拼进 `innerHTML`：
+
+```js
+return `<tr><td>${k}</td><td>${val}</td></tr>`;   // ← val 是数据，这里被当成了标记
+```
+
+浏览器于是照 HTML 解析，实测三个后果：
+
+| 后果 | 实测证据（修复前） |
+|---|---|
+| 未闭合标签「吃掉」其后的标记 | `.popup-ext-btn-wrap` 的祖先链 = `TD < TR < TBODY < TABLE < …` —— **按钮被塞进了表格单元格** |
+| 连带吞并后续内容 | `LAYER` 单元格文本 = `GM_TYPEUnknown Point FeatureKML_FOLDER…📂 火山 volcanos⚲ 缩放至📋 详情` |
+| 外链真的被请求 | 弹窗内 `<img>` 数 = 1，非本机外部请求 1 条（http 明文，DNS 失败） |
+
+量化指标：按钮中心相对弹窗中心偏移 **33px**，且 `wrapInsidePopup = false`。这就是
+「位置不对」的全部来源 —— 与上一条（v2.6.1）的 `popupopen` 时序问题是**两回事**。
+
+### 修复：把「数据不是代码」做成渲染不变量
+
+在唯一的弹窗内容入口 `geo-utils.js`（10 个调用点全汇聚于此）改渲染方式：
+
+1. **值一律转义**（`escapeHtml`），字段名、图层名、标题同理；
+2. 含标签的值**先剥成可读文本**再转义 —— 行内标签（`b/i/span/a…`）直接去掉不留空格
+   （否则 `<b>粗体</b>说明` → 「粗体 说明」），块级/表格标签用空格分隔
+   （否则 `<td>a</td><td>b</td>` 会粘成「ab」）；
+3. 折叠空白（数据里的换行只会把弹窗撑高）；
+4. **剥完全是空的字段整行不渲染** —— 火山那个 `LAYER` 字段正是这种纯样板，自动消失；
+5. 超长值截断到 200 字符（完整值进 `title`，悬停可看，或点「详情」）。
+
+同类问题一并收口：`geojsonloader.js` 的 `_getLabelText` / `_bindPermanentLabel` 也把
+数据字段喂给了 `innerHTML`（`bindTooltip(String)` 与 divIcon 的 `html`），加了
+`_escapeLabelText` 转义，标签与悬浮提示不会再把 `&`、`<` 当标记。
+
+**未采用**：不改数据（把 `LAYER` 从 gz 里删掉）—— 同类数据以后还会来，修渲染层才是一次性到位的；
+也不做「弹窗内容变化后重算位置」的补丁，因为转义后已不存在异步撑大布局的路径。
+
+### 新增配置：`layer.popup`（`geo-config.js`）
+
+按项目约定，动引擎就补一个配置字段，让下一个同类数据只改配置：
+
+```js
+{ name: "火山 volcanos", file: "volcanos.geojson", labelField: "NAME",
+  popup: { hideFields: ["FID", "KML_FOLDER"], maxValueLength: 200, titleField: "NAME" } }
+```
+
+三键全部可省。`geo-utils.js` 按 `file` 从 `window.geoJsonGroups` 惰性建索引查找
+（不逐调用点加参数 —— 10 个调用点挨个加参数迟早漏一个）。同时删掉了 `geo-utils.js` 里
+那个只剩空壳的硬编码 `POPUP_FIELD_CONFIG`（按图层名写在引擎里，违反「设定都在 `geo-config.js`」）。
+
+### 顺带
+
+- `<summary>⚙️ 地图设置</summary>` → **`⚙️ 设置`**（`index.html:185`）。
+  上一条记录里曾判断它「已是目标形态、无需改动」—— 那是理解偏差：用户要的是改措辞，不是怀疑缓存。
+
+### 验证
+
+单测（`.workbuddy/artifacts/verify-popup-render.js`，Node 直跑 31 项）覆盖截断 HTML、
+外链图片、`&`/`<` 转义、长值截断、三个配置键、空属性返回 null 等，**31/31 通过**。
+
+浏览器实测（`verify-popup-markup.js`，火山图层）：
+
+| 指标 | 修复前 | 修复后 |
+|---|---|---|
+| 按钮祖先链 | `TD < TR < TBODY < TABLE < …` | `DIV.feature-popup < …` |
+| 按钮中心偏移 | 33px | **0px** |
+| 按钮完整落在弹窗内 | false | **true** |
+| 弹窗内 `<img>` 数 | 1 | **0** |
+| 弹窗内嵌套 `<table>` 数 | 2 | 1 |
+| `LAYER` 行 | 吞并后续全部内容 | 整行不渲染 |
+| 页面报错 / 非本机外部请求 | 1 / 1 | **0 / 0** |
+
+既有三套回归（静态配置等价、站点配置、图层树+尺寸）与弹窗按钮端到端
+（Canvas + DOM 两条路径各 7 项）**全绿**；普通图层文本（中文、网址、`_featureIndex`）
+完整无变化，标签开启后无 HTML 实体残留。
+
+### 变更文件
+
+- `assets/geo-utils.js` — 弹窗渲染重写（转义 / 剥标签 / 折叠空白 / 截断）+ `getLayerPopupConfig`，
+  移除 `POPUP_FIELD_CONFIG`
+- `assets/geojsonloader.js` — 新增 `_escapeLabelText`，`_getLabelText`、`_bindPermanentLabel` 转义
+- `assets/geo-config.js` — 字段说明表补 `popup` 行（未给任何图层加配置，纯能力开放）
+- `index.html` — `<summary>` 文案改为 `⚙️ 设置`
+- `service-worker.js` — `CACHE_NAME` → **v2.6.2**
+
+---
+
+## 2026-09-13（c）— 修复点要素弹窗「缩放至 / 详情」按钮失效
+
+> 版本号 **v2.6.1**。纯缺陷修复，无界面变化。
+> 之所以在上一条（v2.6.0，同日未发布）之后仍要再 bump：浏览器已缓存过 v2.6.0 的
+> `geojsonloader.js`，而 Service Worker 对同源预缓存资源是 **cache-first** ——
+> `CACHE_NAME` 不变就会继续吐旧文件，普通刷新看不到修复。
+
+### 现象
+
+点要素弹窗里的 **「⚲ 缩放至」「📋 详情」两个按钮点了没反应**。
+不是所有点图层都这样：小图层（如火山，1293 点）正常，大图层（如 4.5 级以上地震
+2024–2026、PBDB 等）失效。
+
+### 根因
+
+`geojsonloader.js` 的 **Canvas 渲染分支**（要素数 > 3000）里，弹窗是手工创建的：
+
+```js
+var popup = L.popup({ maxWidth: 300 })
+  .setLatLng(latlng)
+  .setContent(content)
+  .openOn(map);            // ← 就是这一行
+popup._featureRef = f;     // ← 赋值发生在这里，已经晚了
+popup._ogvLayerId = checkboxId;
+```
+
+`openOn(map)` 内部走 `map.addLayer(popup)`，而 Leaflet 的 `Popup.onAdd()` 会
+**同步** `fire("popupopen")`。也就是说 —— **`popupopen` 事件在这三行赋值之前就已经跑完了**。
+
+而按钮接线处理器（`map.on("popupopen")`）正是在那一刻去读要素引用：
+
+```js
+var feature = popup._featureRef;      // undefined —— 还没赋值
+if (!feature && popup._source) { ... } // _source 也不存在：这个 popup 不是 bindPopup 出来的
+if (!feature) return;                  // ← 静默退出，两个按钮没挂上 onclick
+```
+
+DOM marker 路径（≤3000 点）之所以侥幸没事：它走 `marker.bindPopup(content)`，
+`popupopen` 时 `popup._source` 就是 marker，`marker.feature` 与 `marker._ogvLayerId`
+都已提前挂好，所以能正常解析出要素。
+
+### 修法
+
+把赋值挪到 `openOn` **之前**（先备好引用，最后再打开）：
+
+```js
+var popup = L.popup({ maxWidth: 300 }).setLatLng(latlng).setContent(content);
+popup._featureRef = f;
+popup._ogvLayerId = checkboxId;
+popup._ogvLayerName = layerDisplayName || "";
+popup.openOn(map);        // 现在事件触发时引用已经就位
+```
+
+全库其余 `.openOn(` 调用点（`Leaflet.DemRenderer` / `Leaflet.ElevationQuery`）已核查：
+不使用 `popup-ext-btn`，无同类隐患。
+
+### 验证
+
+无头浏览器实测，覆盖两条渲染路径：
+
+| 断言 | Canvas（地震，>3000 点） | DOM marker（火山，1293 点） |
+| --- | --- | --- |
+| 走的确实是该渲染路径 | canvas>0 且无 marker ✓ | marker>0 ✓ |
+| 弹窗含两个按钮 | ✓ | ✓ |
+| 「缩放至」已绑定 `onclick` | `function` ✓（修复前为 `undefined`） | `function` ✓ |
+| 「详情」已绑定 `onclick` | `function` ✓（修复前为 `undefined`） | `function` ✓ |
+| 真实点击「详情」→ 面板打开 | ✓ | ✓ |
+| 真实点击「缩放至」→ 弹窗关闭 | ✓ | ✓ |
+
+静态等价性、站点配置、图层树与图标尺寸三套既有回归全绿。
+
+## 2026-09-13（b）— `geo-config.js` 收归为唯一配置入口，并开放站点级配置
+
+> 版本号 **v2.6.0**。本条**取代同日上一条的「引擎 / 清单」分层方案** —— `layers.js`
+> 已合并回 `geo-config.js` 并删除。
+> 之所以仍要 bump：本次**删除了 `STATIC_ASSETS` 里的文件**，必须让 `CACHE_NAME` 变化
+> 才能触发缓存重建，否则老缓存会继续按旧清单取 `layers.js`。
+> 界面上无变化（`SITE_CONFIG` 默认全 `null`，等于完全不介入）。
+
+### 起因
+
+上一条把图层清单从 `geo-config.js` 拆到 `layers.js`。用户随后指出这件事的边界划错了：
+
+> 「`geo-config.js` 实际上就是配置文件，其他更多的是说明，地名表也是一样的……
+> 因为要定制，那就会有除了图层以外的东西，所以不需要单独做 `layers.js`」
+
+也就是说 —— **定制的最小单位是「一整份配置」（图层 + 主题 + 标题），而不是只有图层**。
+按「图层」这一个维度切分，切出来的两半仍然是同一类东西（都是配置），
+反而多出一个文件。于是：
+
+1. `layers.js` 合回 `geo-config.js`，它成为**唯一配置入口**；
+2. 顺手把 `geojsonloader.js` 里残留的图层名硬编码清干净，兑现「所有设置都在配置里」；
+3. 把用户下一阶段要做的**主题色 / 标题**做成真实可用的配置段（而不是留个注释占位）。
+
+### ① `geo-config.js` 四段结构
+
+| 段 | 内容 |
+| --- | --- |
+| ① `SITE_CONFIG` | 站点级：标题、品牌色（**本次新增**） |
+| ② 路径配置 | `geoJsonBasePath` / `geoJsonCosPath` / `geoJsonPrimaryPath` / `geoJsonFallbackPath` |
+| ③ 图层清单 | `window.geoJsonGroups`（原 `layers.js` 内容原样搬回） |
+| ④ 地名注册表 | `window.PLACE_REGISTRY` |
+
+```js
+window.SITE_CONFIG = {
+  title: null,          // null = 沿用 index.html 的 <title>
+  brandColor: null,     // null = 沿用 CSS 默认绿 #99cc99
+  brandColorDark: null, // null = 自动按「对白提亮 35%」推导
+};
+```
+
+`brandColor` **只**注入 `--c-green` / `--c-green-hover` / `--c-statusbar`
+（即 `--accent`、面板描边、开关滑块、手机状态栏），**绝不碰 `--c-green-text-strong`** ——
+文字色有自己的 WCAG 约束（`#99cc99` 在白底仅 1.8:1，远低于 AA 的 4.5:1），
+品牌色再好看也不能拿来当小字色。
+
+### ② 清掉 `geojsonloader.js` 的图层名硬编码
+
+| 位置 | 原内容 | 处理 |
+| --- | --- | --- |
+| `:557` | `fileName === "volcanos.geojson"` → 点半径 5 | 删除 |
+| `:1516-1518` | `hotspots.json` / `volcanos.json` / `hydrothermal_vents.geojson` → `colorMode="single"` | 删除分支，改由配置 `colorMode` 承担（三个图层已各自补上） |
+
+改后 `grep 'fileName === "'` 为 **0 处**。
+
+### ⚠️ 过程中发现：那条「火山半径 5」其实是死代码
+
+排查硬编码时顺带发现，**它从来没有生效过**：
+
+- 所有点图层都经 `L.GeoMarker.createPointMarkerByType()` 渲染成**图标标记**，
+  `Leaflet.GeoMarker.js` 里 `circleMarker` 出现 **0 次**；
+- 而 Leaflet 的 `style` 选项**不作用于 marker**（只作用于 `Path`），
+  所以 `getGeoJsonStyle()` 返回的 `radius` 根本没机会被画出来；
+- Canvas 路径同样写死（`Leaflet.MarkersCanvas.js:391` 的 `ctx.arc(..., 8, ...)`）。
+
+**真正生效的点尺寸旋钮是 `iconSize`**，默认 20（`layerIconSizeMap[id] || 20`），
+此前只能在图层设置弹窗里改。因此本次新增 `layer.iconSize` 配置字段：
+在图层树构建时作为默认值写入，用户在弹窗里的设置会覆盖它。
+火山图层**没有**补 `iconSize`（保持 20，视觉与改前一致）。
+
+### 两个 CSS 优先级的坑（都已修）
+
+1. **注入的 `<style>` 会被 `main.css` 压掉。**
+   `geo-config.js` 在 `<head>` 里比 `main.css` 的 `<link>` **更早**执行，
+   此刻 link 尚未解析，`document.head.appendChild(style)` 注入的样式排在它**前面**
+   —— 同优先级（都是 `:root`，0-1-0）下**后写的 `main.css` 胜出**，品牌色完全不生效。
+   → 选择器抬高一档：`:root:root` / `:root[data-theme="dark"]`（0-2-0），不再依赖插入顺序。
+2. **抬高后浅色规则在深色下也会生效**，把 `main.css` 的深色 `--c-statusbar: #111111`
+   一并压掉。→ `--c-statusbar` 单列一条 `:root:not([data-theme="dark"])`，只在浅色写。
+
+> 反面做法：不能改用 `documentElement.style`（内联样式）。它优先级高于一切选择器，
+> 会把深色取值**一并**压掉，深色主题下仍是浅色品牌色。
+
+### 实测
+
+| 项 | 结果 |
+| --- | --- |
+| 静态等价 | 路径 4 项、`PLACE_REGISTRY` 6 条**完全一致**；`geoJsonGroups` 分组 10→10、图层项 68→68，**差异仅 3 处纯新增 `colorMode`** |
+| 图层树 DOM | `details.layer-group` 8、`.layer-item` 59（与改前一致） |
+| 站点配置未配置态 | 标题不变、不注入样式、`--c-green` 仍为 `#99cc99` |
+| 站点配置 `#2f9e7f` | 浅色 `--c-green` / `--accent` / `--c-statusbar` / `theme-color` meta 全部 `#2f9e7f`；深色自动 `#78c0ac`；深色 `--c-statusbar` 保持 `#111111`；两档 `--c-green-text-strong` 均未被污染 |
+| `iconSize: 14` | 渲染尺寸**精确为 14px**（默认 20） |
+| 控制台 | 页面报错 0 |
+
+### 变更文件
+
+- `assets/geo-config.js` —— 131 → **607 行**（合并清单 + 新增 `SITE_CONFIG` 段与主题注入器 + 新增 `iconSize` 字段说明）
+- `assets/layers.js` —— **删除**
+- `assets/geojsonloader.js` —— 删除 2 处图层名硬编码；新增 `POINT_RADIUS_DEFAULT` 常量、`layerConfig.iconSize` 读取
+- `index.html` —— 移除 `layers.js` 引用
+- `service-worker.js` —— `STATIC_ASSETS` 移除 `layers.js`；`CACHE_NAME` `v2.5.0` → **`v2.6.0`**
+
+---
+
+## 2026-09-13 — `geo-config.js` 拆成「引擎 / 清单」两层
+
+> 版本号 **v2.5.0**。本版无界面变化，是**为后续「数据托管 + 定制交付」铺路的架构分层**。
+> 功能与 v2.4.0 完全一致。
+>
+> ⚠️ **本方案已于同日被上一条（b）取代** —— `layers.js` 已合并回 `geo-config.js`
+> 并删除。此条保留作过程记录，勿按它去找 `layers.js`。
+
+### 起因
+
+平台后续要做两件事：**别人把数据放上来**（数据托管）和**给客户交付独立站点**
+（定制化 / 平台迁移）。盘整现状后发现三个断点：
+
+| 断点 | 现状 |
+| --- | --- |
+| 无服务端 | 全站只有一次 `fetch("service-worker.js?")` 做版本检查，数据入驻全靠人肉流水线 |
+| 无租户隔离 | 一套配置 = 一个站，做定制只能 fork 整个仓库 |
+| 无计量交付 | 授权是硬编码 5 个激活码，发一个码要改代码重新部署 |
+
+其中**最关键、也是三条路共同的必经关口**，是「图层清单」还写死在源码里 ——
+导致「加一个图层」= 改代码 + 提交 + 部署，数据给了别人，上架能力却没给别人。
+
+本版先只做这一步：**把清单从代码里搬出来**。
+
+### 做法
+
+按「数据 / 逻辑」分成两个文件，`index.html` 里的加载顺序**不可颠倒**：
+
+```text
+assets/layers.js      数据层：window.geoJsonGroups = [...]   ← 日常加数据只动这里
+assets/geo-config.js  逻辑层：路径解析 + 清单兜底 + 地名注册表
+```
+
+清单内容原样搬运，**没有改任何一个字段**。
+
+**放弃了「改成异步 fetch JSON」的方案**：`window.geoJsonGroups.forEach`
+是同步执行的（`geojsonloader.js:3152` 建图层树），改异步就要把初始化挂到
+Promise 上，动到启动时序 —— 那是本项目的历史雷区。用 `<script>` 顺序加载
+则**零时序改动、零行为变化**，把风险压到接近零。
+
+同时补了一条**兜底**：
+
+```js
+window.geoJsonGroups = window.geoJsonGroups || [];
+```
+
+`geojsonloader.js` 会直接 `.forEach`，万一清单文件缺失就是 `TypeError` 白屏。
+有了它，页面至少能打开（只是没有图层）—— 故障可见可控。
+
+### 实测
+
+**① 等价性** —— 拆分前后逐项比对全局变量，`geoJsonGroups` / `PLACE_REGISTRY` /
+四个路径变量**全部一致**（JSON 字符串完全相同）；清单统计 10 分组 / 68 图层项 /
+8 个隐藏项，前后一致。兜底测试：只加载引擎 → `forEach` 不崩。
+
+**② 清单 → 图层树** —— 期望值从页面清单按渲染规则推导，再比对 DOM：
+
+| 指标 | 实际 | 期望 |
+| --- | --- | --- |
+| `details.layer-group` | 8 | 8 |
+| `.layer-item` | 59 | 59 |
+
+> 记录一个**自摆乌龙**：初版验证脚本把期望值手算成 9 组 / 68 项，实测 8 / 59
+> 以为改坏了。实为漏算两个 skip 条件 —— `groupName: null` 的平铺组不产生
+> `<details>`，`layer.hidden` 的图层不渲染，整组 `hidden` 的「测试数据」再减 1。
+> `68 − 8 − 1 = 59` ✓。**期望值必须从配置按真实渲染规则推导，不要手算。**
+
+**③ 端到端** —— 实际点击「火山」图层：`200 volcanos.geojson.gz`，加载 1293 点，
+控制台零报错。
+
+### 变更文件
+
+- 新增 `assets/layers.js`（412 行）—— 图层清单
+- 改写 `assets/geo-config.js`（489 → 130 行）—— 精简为引擎逻辑
+- `index.html` —— 新增 `<script src="./assets/layers.js">`，置于 `geo-config.js` 之前
+- `service-worker.js` —— `STATIC_ASSETS` 加入 `./assets/layers.js`（否则离线时清单缺失、图层树为空）；
+  `CACHE_NAME` → **v2.5.0**
+
+> 顺带确认了一个安全性质：**老用户不会因为这次分层而坏**。旧 `index.html` 配旧
+> `geo-config.js`（自带清单）是自洽的一对，而 Service Worker 是 cache-first ——
+> 未更新前看到的仍是旧版，功能不变。要切到新结构才需要 bump 版本号。
+
+### 待定
+
+- **数据入驻流水线**：先手工跑 3-5 次并记录实际步骤，再考虑脚本化（不要先写脚本）
+- **租户化**：`tenants/<id>.json` 承载标题 / Logo / 主题色 / 底图列表 / 清单路径。
+  ⚠️ 品牌色通常不满足对比度要求（`#99cc99` 对 `#eee` 仅 1.58:1，需 ≥3:1），
+  租户配置里要允许**额外指定一个深色版**用于文字与边框
+- **授权计量**：最后再做。硬编码激活码在客户数少时不是问题，
+  该动手的信号是「发现自己为新客户改代码重新部署」
+- ⚠️ **纯静态的硬边界**：COS 按前缀只是**逻辑隔离**，知道 URL 即可下载。
+  托管未发表数据前必须与提交者说明；真要访问控制只能上签名 URL 或轻量后端
+
+---
+
 ## 2026-09-12（e）— 「更新记录」内嵌对照图 + 弹窗图片查看
 
 > 本版起版本号定为 **v2.4.0**（正式发布号）。此前 v2.3.9 / v2.3.10 / v2.3.11

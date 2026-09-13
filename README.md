@@ -137,6 +137,8 @@ gis/
 ├── manifest.json           # PWA 配置
 ├── about.html              # 关于页面
 ├── assets/
+│   ├── geo-config.js       # ★ 站点配置唯一入口（标题/主题色/底图清单/图层清单/地名表）
+│   ├── basemap-manager.js   # 底图引擎：配置 → 图层 + 图层控件 + 3D 底图映射
 │   ├── geojsonloader.js    # 核心功能脚本
 │   ├── geojsonloader.css   # 图层管理样式
 │   ├── main.css            # 布局与主样式
@@ -153,9 +155,13 @@ gis/
 
 ## 开发说明
 
-- 图层配置在 `assets/geojsonloader.js` 的 `geoJsonGroups` 数组中
-- 添加新图层：在对应分组中添加 `{ name, file }` 配置
-- 添加新分组：在 `geoJsonGroups` 中添加新对象
+- **定制一个站点只改 `assets/geo-config.js`**，四段结构：站点（标题/主题色/天地图 token）、
+  地图（初始视野）、底图清单（`BASEMAP_CONFIG`）、图层清单（`geoJsonGroups`）、地名表
+- 加图层：在 `geoJsonGroups` 对应分组的 `layers` 里加 `{ name, file }`
+- 加底图：在 `BASEMAP_CONFIG.baseLayers` 里加一条（`kind` 决定渲染方式），
+  3D 用哪种影像由该条的 `cesium` 字段描述；引擎里不写任何图层名与 URL
+- 引擎（`geojsonloader.js` / `basemap-manager.js` / `app.js` / `cesium-viewer.js`）
+  不承载站点专属设定 —— 需要按图层/底图不同时，先往配置里加字段，再到引擎里读它
 - 搜索索引自动在 IndexedDB 中缓存，刷新页面后直接恢复
 - 所有矢量数据已压缩为 `.geojson` 文件通过 COS 加速加载
 

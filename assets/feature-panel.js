@@ -19,7 +19,8 @@
   var ECHARTS_LOADED = false;
   var ECHARTS_LOADING = false;
   var ECHARTS_CDN = "./assets/echarts.min.js";
-  var STORAGE_KEY = "ogv_feature_panel_width";
+  var STORAGE_KEY = window.OGVStorage.KEY.FEATURE_PANEL_WIDTH;
+  var S = window.OGVStorage;
   var MIN_WIDTH = 320;
   var MAX_WIDTH_PCT = 0.8;
   // 默认宽度：至少 480px 或视口 50%
@@ -52,20 +53,16 @@
   var resizeState = null; // { startX, startWidth }
 
   function _loadPanelWidth() {
-    try {
-      var saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        var v = parseInt(saved, 10);
-        if (v >= MIN_WIDTH && v <= window.innerWidth * MAX_WIDTH_PCT) {
-          panelWidth = v;
-        }
+    var saved = S.safeGet(STORAGE_KEY);
+    if (saved) {
+      var v = parseInt(saved, 10);
+      if (v >= MIN_WIDTH && v <= window.innerWidth * MAX_WIDTH_PCT) {
+        panelWidth = v;
       }
-    } catch (e) {}
+    }
   }
   function _savePanelWidth() {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(panelWidth));
-    } catch (e) {}
+    S.safeSet(STORAGE_KEY, String(panelWidth));
   }
 
   _loadPanelWidth();

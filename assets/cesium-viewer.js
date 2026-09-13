@@ -49,6 +49,8 @@
   // 升级 CESIUM_VERSION 时应同步更新；即使忘了也只是条子提前/滞后，不影响功能。
   var CESIUM_JS_BYTES = 5140708;
   var TOGGLE_KEY = "dupal_toggle_view3d";
+  // 统一存储层（geo-utils.js，索引页第 16 行）
+  var S = window.OGVStorage;
 
   // ========== 内部状态 ==========
   var viewer = null;
@@ -800,97 +802,28 @@
   }
 
   // ========== 底图映射 ==========
-  // 天地图官方支持 t0~t7 八个 CDN 子域。Cesium RequestScheduler 的
-  // per-server 并发上限默认 6；单域时所有请求挤一台服务器，既慢又容易被 429。
-  // 走八子域轮询后，等效并发 8×6=48，实测地球就绪 34.4s → 6.8s。
-  var TDT_SUBDOMAINS = ["0", "1", "2", "3", "4", "5", "6", "7"];
-  function createTdtProvider(svc, tk) {
-    return new window.Cesium.UrlTemplateImageryProvider({
-      url: "https://t{s}.tianditu.gov.cn/DataServer?T=" + svc + "&x={x}&y={y}&l={z}&tk=" + tk,
-      subdomains: TDT_SUBDOMAINS,
-      maximumLevel: 18, // 与 Leaflet 的 maxNativeZoom 保持一致
-    });
-  }
+  // 「3D 用哪张底图」由 geo-config.js 的 BASEMAP_CONFIG[].cesium 描述决定，
+  // 构建逻辑在 basemap-manager.js 里 —— 这里不再另抄一份 switch（抄两份迟早不一致）。
+  // 天地图 t0~t7 八子域、WMS / UrlTemplate / API key 的差异都收在那份描述里。
   function createImageryProvider(basemapName) {
-    var tk = window.TDT_TK || "";
-
-    switch (basemapName) {
-      case "天地图影像":
-        return createTdtProvider("img_w", tk);
-      case "天地图矢量":
-        return createTdtProvider("vec_w", tk);
-      case "天地图地形":
-        return createTdtProvider("ter_w", tk);
-
-      // ArcGIS 系列：UrlTemplateImageryProvider 直接访问瓦片端点
-      // （ArcGisMapServerImageryProvider 在 CDN 构建下有 getDerivedResource 已知 bug）
-      case "ArcGIS-影像":
-        return new window.Cesium.UrlTemplateImageryProvider({
-          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          maximumLevel: 19,
-        });
-      case "ArcGIS-海洋":
-        return new window.Cesium.UrlTemplateImageryProvider({
-          url: "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
-          maximumLevel: 10,
-        });
-      case "ArcGIS-街道":
-        return new window.Cesium.UrlTemplateImageryProvider({
-          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-          maximumLevel: 19,
-        });
-
-      // GEBCO WMS 系列
-      case "GEBCO2025-水深地形":
-        return new window.Cesium.WebMapServiceImageryProvider({
-          url: "https://wms.gebco.net/2025/mapserv?",
-          layers: "GEBCO_2025",
-          parameters: { transparent: true, format: "image/png" },
-          maximumLevel: 12,
-        });
-      case "GEBCO2024-水深地形":
-        return new window.Cesium.WebMapServiceImageryProvider({
-          url: "https://wms.gebco.net/mapserv?",
-          layers: "GEBCO_LATEST",
-          parameters: { transparent: true, format: "image/png" },
-          maximumLevel: 12,
-        });
-
-      case "OpenStreetMap":
-        return new window.Cesium.OpenStreetMapImageryProvider({
-          url: "https://tile.openstreetmap.org/",
-          maximumLevel: 19,
-        });
-
-      case "Macrostrat-全球地质":
-        return new window.Cesium.UrlTemplateImageryProvider({
-          url: "https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png",
-          maximumLevel: 16,
-        });
-
-      // Esri Wayback 历史影像：路径中的 release 编号由 2D 侧的时间条写入
-      // window.__waybackRelease，切换时相后 syncBasemap() 重建 provider 即可生效
-      case "Esri 历史影像":
-        return new window.Cesium.UrlTemplateImageryProvider({
-          url:
-            "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/" +
-            (window.__waybackRelease || 56102) +
-            "/{z}/{y}/{x}",
-          maximumLevel: 19,
-        });
-
-      // ETOPO 等本地图片底图 → 降级用 ArcGIS 影像
-      default:
-        return new window.Cesium.UrlTemplateImageryProvider({
-          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          maximumLevel: 19,
-        });
+    var mgr = window.BasemapManager;
+    if (mgr && typeof mgr.createImageryProvider === "function") {
+      var provider = mgr.createImageryProvider(basemapName);
+      if (provider) return provider;
     }
+    // 兜底：basemap-manager 未加载时也不能白屏（与 2D 兜底同一张 ArcGIS 影像）
+    return new window.Cesium.UrlTemplateImageryProvider({
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      maximumLevel: 19,
+    });
   }
 
   function syncBasemap() {
     if (!viewer) return;
-    var name = window._currentBasemapName || "ArcGIS-影像";
+    var name =
+      window._currentBasemapName ||
+      (window.BasemapManager && window.BasemapManager.fallbackName) ||
+      "ArcGIS-影像";
     try {
       var provider = createImageryProvider(name);
       viewer.imageryLayers.removeAll();
@@ -903,19 +836,23 @@
     }
   }
 
-  // ========== 覆盖层映射（天地图瓦片覆盖层 → Cesium ImageryProvider） ==========
-  var OVERLAY_LAYERS = {
-    天地图全球境界: "ibo_w",
-    天地图地名标注: "cva_w",
-    天地图影像标注: "cia_w",
-    天地图地形标注: "cta_w",
-  };
+  // ========== 覆盖层映射 ==========
+  // 天地图瓦片类覆盖层（境界 / 地名 / 影像注记 / 地形注记）在 3D 里的 provider，
+  // 同样由 BASEMAP_CONFIG 的描述给出（cesium.kind === "tianditu"）。
+  // overlayProviderFor() 返回 null = 该覆盖层在 3D 里没有对应物（如 Esri FeatureLayer）。
   var _overlayLayerCache = {};
+
+  function overlayProviderFor(name) {
+    var mgr = window.BasemapManager;
+    if (mgr && typeof mgr.createOverlayImageryProvider === "function") {
+      return mgr.createOverlayImageryProvider(name);
+    }
+    return null;
+  }
 
   function syncOverlays() {
     if (!viewer) return;
     var names = window.getCheckedOverlays ? window.getCheckedOverlays() : [];
-    var tk = window.TDT_TK || "";
 
     for (var cachedName in _overlayLayerCache) {
       if (names.indexOf(cachedName) === -1) {
@@ -928,10 +865,10 @@
 
     for (var i = 0; i < names.length; i++) {
       var name = names[i];
-      var svc = OVERLAY_LAYERS[name];
-      if (!svc || _overlayLayerCache[name]) continue;
+      if (_overlayLayerCache[name]) continue;
+      var provider = overlayProviderFor(name);
+      if (!provider) continue; // 3D 无对应物
       try {
-        var provider = createTdtProvider(svc, tk);
         _overlayLayerCache[name] = viewer.imageryLayers.addImageryProvider(
           provider,
         );
@@ -1238,11 +1175,7 @@
   function isDarkTheme() {
     if (document.documentElement.getAttribute("data-theme") === "dark")
       return true;
-    try {
-      return localStorage.getItem("dupal_toggle_darkMode") === "true";
-    } catch (e) {
-      return true;
-    }
+    return S.getBool(S.KEY.TOGGLE + "darkMode", true);
   }
 
   /**
@@ -1471,9 +1404,7 @@
   function resetToggleState() {
     var cb = document.getElementById("view3dToggle");
     if (cb) cb.checked = false;
-    try {
-      localStorage.setItem(TOGGLE_KEY, "false");
-    } catch (e) {}
+    S.safeSet(TOGGLE_KEY, "false");
   }
 
   function deactivate() {

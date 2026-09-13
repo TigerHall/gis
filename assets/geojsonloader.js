@@ -21,6 +21,9 @@
   }
 
   waitForMap(function () {
+    // 统一存储层（geo-utils.js 提供，索引页第 16 行加载，早于本文件）
+    var S = window.OGVStorage;
+
     // ========== 通用要素计数更新（提前声明，供后续回调使用）==========
     function updateLayerCount(checkboxId, features) {
       if (!checkboxId || !features || features.length === 0) return;
@@ -98,7 +101,7 @@
           pinBtn.style.opacity = "0.35";
           pinBtn.style.transform = "";
         }
-        localStorage.setItem("dupal_sidebar_pinned", isPinned);
+        S.safeSet(S.KEY.SIDEBAR_PINNED, String(!!isPinned));
         if (isPinned && sidebarToggle) {
           sidebarToggle.checked = true;
         }
@@ -109,8 +112,7 @@
 
       // 恢复图钉状态
       (function () {
-        var savedPinned =
-          localStorage.getItem("dupal_sidebar_pinned") === "true";
+        var savedPinned = S.getBool(S.KEY.SIDEBAR_PINNED, false);
         if (savedPinned) {
           document.body.classList.add("sidebar-pinned");
           pinBtn.classList.add("active");
@@ -127,12 +129,10 @@
     // ========== details 面板开合状态持久化 ==========
     // 为所有带 data-persist-details 属性的 <details> 保存/恢复 open 状态
     (function initDetailsPersistence() {
-      var STORAGE_PREFIX = "dupal_details_open_";
+      var STORAGE_PREFIX = S.KEY.DETAILS_OPEN;
 
       // 清理 app.js 旧版残留
-      try {
-        localStorage.removeItem("dupal_toggle_sectionOpen");
-      } catch (e) {}
+      S.safeRemove("dupal_toggle_sectionOpen");
 
       document
         .querySelectorAll("details[data-persist-details]")
@@ -141,14 +141,14 @@
           if (!el.id) return;
 
           // 恢复上次状态
-          var saved = localStorage.getItem(key);
+          var saved = S.safeGet(key);
           if (saved !== null) {
             el.open = saved === "true";
           }
 
           // 监听开合变化并保存
           el.addEventListener("toggle", function () {
-            localStorage.setItem(key, String(el.open));
+            S.safeSet(key, String(el.open));
           });
         });
     })();
@@ -160,13 +160,13 @@
       var trigger = document.getElementById("layerTrigger");
       if (!panel || !handle) return;
 
-      var STORAGE_KEY = "dupal_panel_width";
+      var STORAGE_KEY = S.KEY.PANEL_WIDTH;
       var MIN_WIDTH = 180;
       var MAX_WIDTH = 500;
       var DEFAULT_WIDTH = 300;
 
       // 读取存储宽度
-      var savedWidth = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+      var savedWidth = S.getNum(STORAGE_KEY, NaN);
       var panelWidth =
         savedWidth >= MIN_WIDTH && savedWidth <= MAX_WIDTH
           ? savedWidth
@@ -220,7 +220,7 @@
         document.removeEventListener("mouseup", stopResize);
         document.removeEventListener("touchmove", onResize);
         document.removeEventListener("touchend", stopResize);
-        localStorage.setItem(STORAGE_KEY, String(panelWidth));
+        S.safeSet(STORAGE_KEY, String(panelWidth));
       }
     })();
 
@@ -454,14 +454,29 @@
       );
     }
 
+    // 标签是纯文本，不是标记：数据字段里可能含 `<` `>` `&`（KML / SHP 导出的常见情况），
+    // 而 bindTooltip(String) 与 divIcon 的 html 都走 innerHTML → 会被当标记解析。
+    // 与弹窗是同一类问题（数据被当代码），故一并转义。
+    function _escapeLabelText(value) {
+      return String(value).replace(/[&<>"']/g, function (c) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[c];
+      });
+    }
+
     function _getLabelText(feature, labelField) {
       if (!feature || !feature.properties) return null;
       var props = feature.properties;
       var val = props[labelField];
-      if (val) return val;
+      if (val) return _escapeLabelText(val);
       // 无配置字段时回退到第一个非空字段值
       var fallback = _getFirstFieldValue(props);
-      return fallback || null;
+      return fallback ? _escapeLabelText(fallback) : null;
     }
 
     // ========== 线/面要素永久标签 ==========
@@ -478,7 +493,7 @@
       }
       if (!name) name = _getFeatureName(layer.feature);
       if (!name) return;
-      layer.bindTooltip(String(name), {
+      layer.bindTooltip(_escapeLabelText(name), {
         permanent: true,
         direction: "top",
         offset: [0, -8],
@@ -521,6 +536,13 @@
     // 复用 tthh 项目已验证方案（Leaflet.UserLayers.js 同款 weight 14）。
     const LINE_HIT_WEIGHT = 14;
 
+    // 点要素「矢量圆」默认半径（px）。
+    // ⚠️ 当前所有点图层都经 createPointMarkerByType 渲染成图标标记，
+    //    而 Leaflet 的 style 选项不作用于 marker —— 所以这个值实际不会被画出来，
+    //    点的大小由 iconSize（geo-config.js 的 layer.iconSize / 弹窗设置）决定。
+    //    保留它是因为下方样式函数对「圆点」路径仍需返回一个合理值。
+    const POINT_RADIUS_DEFAULT = 8;
+
     function getGeoJsonStyle(feature, checkboxId, fileName, featureIndex) {
       const geomType = (feature.geometry?.type || "").toLowerCase();
       const isPolygon = geomType === "polygon" || geomType === "multipolygon";
@@ -554,14 +576,13 @@
       }
 
       if (isPoint) {
-        const isVolcano = fileName === "volcanos.geojson";
         return {
           color: featureColor,
           fillColor: featureColor,
           weight: 1,
           opacity: layerOpacity,
           fillOpacity: layerOpacity,
-          radius: isVolcano ? 5 : 8,
+          radius: POINT_RADIUS_DEFAULT,
           dashArray: null,
         };
       }
@@ -625,68 +646,113 @@
     });
 
     // ========== 悬浮窗按钮接线（缩放至 / 详情） ==========
-    // 统一处理所有弹窗路径（Canvas、bindPopup marker、bindPopup layer）的按钮点击
-    map.on("popupopen", function (e) {
-      var popup = e.popup;
-      var popupEl = popup.getElement();
-      if (!popupEl) return;
+    // 统一处理所有弹窗路径（Canvas、bindPopup marker/layer、esri featureLayer）的按钮点击
+    //
+    // ⚠️ 为什么不用「给按钮挂 onclick」的写法（曾经的实现，会导致按钮时灵时不灵）：
+    //   Leaflet 复用同一个 Popup 对象时，setContent() / update() 会重写 _contentNode
+    //   的 innerHTML —— 重渲染出来的按钮是一批全新元素，没有任何 onclick；而此刻
+    //   popup 对象并没有被移出地图，openOn() 走 map.addLayer() 会命中 hasLayer 直接
+    //   return，popupopen 不会二次触发，所以「补挂」的时机根本不存在。
+    //   典型触发场景有两个：
+    //     ① SVG 面/线路径：click 处理器里 bindPopup().openPopup() 与 bindPopup 自动
+    //        安装的 click→_openPopup 各开一次窗，第二次 openPopup 的 _prepareOpen()
+    //        会 update() 重渲染 → 刚挂上的 onclick 立刻被抹掉（第 1 次点击正常，
+    //        第 2 次起按钮全部失效）。
+    //     ② esri FeatureLayer：只在首次打开时 popupopen 一次，之后换要素只更新内容，
+    //        同一个弹窗对象被复用 → 同样抹掉 onclick，且要素引用还会停在第一个要素上。
+    //
+    // 现改为「事件委托 + 点击时现取要素」：
+    //   popupopen 只负责登记 element → popup（容器元素在整个 Popup 生命周期内是同一个，
+    //   setContent 只换内部内容），真正点击时再从 popup._featureRef / popup._source.feature
+    //   现解析要素。于是：重渲染多少次都不影响接线，且拿到的一定是「最新一次点击」的要素。
+    var _popupByEl = new WeakMap();
 
-      var btnZoom = popupEl.querySelector('.popup-ext-btn[data-act="zoom"]');
-      var btnDetail = popupEl.querySelector(
-        '.popup-ext-btn[data-act="detail"]',
-      );
-      if (!btnZoom && !btnDetail) return;
-
-      // 获取要素与图层信息：优先从 popup 对象（Canvas 弹窗），回退到 _source（bindPopup）
+    // 从 popup 对象解析出要素 + 图层信息（点击时实时调用，不要缓存结果）
+    function resolvePopupTarget(popup) {
+      if (!popup) return null;
       var feature = popup._featureRef;
       var layerId = popup._ogvLayerId;
       var layerName = popup._ogvLayerName;
-
       if (!feature && popup._source) {
         feature = popup._source.feature;
-        layerId = popup._source._ogvLayerId;
-        layerName = popup._source._ogvLayerName;
+        layerId = layerId || popup._source._ogvLayerId;
+        layerName = layerName || popup._source._ogvLayerName;
       }
-      if (!feature) return;
+      return feature
+        ? { feature: feature, layerId: layerId, layerName: layerName }
+        : null;
+    }
 
-      if (btnZoom) {
-        btnZoom.onclick = function (ev) {
-          ev.preventDefault();
-          map.closePopup(popup);
-          // 3D 模式：飞至要素
-          if (window.CesiumViewer && window.CesiumViewer.isActive) {
-            try {
-              window.CesiumViewer.flyToFeature(feature);
-            } catch (err) {}
-            return;
-          }
-          // 2D 模式：基于要素几何缩放
+    map.on("popupopen", function (e) {
+      var el = e.popup && e.popup.getElement();
+      if (el) _popupByEl.set(el, e.popup);
+    });
+
+    document.addEventListener("click", function (ev) {
+      var btn =
+        ev.target && ev.target.closest
+          ? ev.target.closest(".popup-ext-btn[data-act]")
+          : null;
+      if (!btn) return;
+      var popupEl = btn.closest(".leaflet-popup");
+      var popup = popupEl ? _popupByEl.get(popupEl) : null;
+      var target = resolvePopupTarget(popup);
+      if (!target) return;
+      ev.preventDefault();
+      var act = btn.getAttribute("data-act");
+      if (popup) map.closePopup(popup);
+
+      if (act === "zoom") {
+        // 3D 模式：飞至要素
+        if (window.CesiumViewer && window.CesiumViewer.isActive) {
           try {
-            var b = window.GeoUtils.computeBounds({
-              type: "FeatureCollection",
-              features: [feature],
-            });
-            if (b && b.isValid && b.isValid()) {
-              map.fitBounds(b, {
-                padding: [50, 50],
-                maxZoom: 14,
-                animate: true,
-              });
-            }
+            window.CesiumViewer.flyToFeature(target.feature);
           } catch (err) {}
-        };
-      }
-
-      if (btnDetail) {
-        btnDetail.onclick = function (ev) {
-          ev.preventDefault();
-          map.closePopup(popup);
-          if (typeof window.openFeatureDetail === "function") {
-            window.openFeatureDetail(feature, layerId, layerName);
+          return;
+        }
+        // 2D 模式：基于要素几何缩放
+        try {
+          var b = window.GeoUtils.computeBounds({
+            type: "FeatureCollection",
+            features: [target.feature],
+          });
+          if (b && b.isValid && b.isValid()) {
+            map.fitBounds(b, {
+              padding: [50, 50],
+              maxZoom: 14,
+              animate: true,
+            });
           }
-        };
+        } catch (err) {}
+      } else if (act === "detail") {
+        if (typeof window.openFeatureDetail === "function") {
+          window.openFeatureDetail(
+            target.feature,
+            target.layerId,
+            target.layerName,
+          );
+        }
       }
     });
+
+    // ========== 统一的「独立弹窗」开关 ==========
+    // 每次点击都新建一个 Popup 对象再 openOn(map)，刻意不走 layer.bindPopup()：
+    // bindPopup 会顺带把 click→_openPopup 装到 layer 上，与业务自己的 click 处理器
+    // 撞成「一次点击开两次窗」（第二次会重渲染内容并抹掉按钮接线）。
+    // 走独立 Popup 时，新对象不在图上 → openOn 必然触发 popupopen → 登记 element 映射。
+    function openFeaturePopup(feature, latlng, content, layerId, layerName) {
+      if (!content) return null;
+      if (!latlng || typeof latlng.lat !== "number") {
+        latlng = feature && feature._ogvLatLng;
+      }
+      if (!latlng || typeof latlng.lat !== "number") return null;
+      var popup = L.popup({ maxWidth: 300 }).setLatLng(latlng).setContent(content);
+      popup._featureRef = feature;
+      popup._ogvLayerId = layerId;
+      popup._ogvLayerName = layerName || "";
+      popup.openOn(map);
+      return popup;
+    }
 
     // ========== 创建 GeoJSON 图层 ==========
     function buildGeoJsonLayerGroup(geojsonData, checkboxId, fileName) {
@@ -963,16 +1029,29 @@
                 labelField,
                 layerDisplayName,
               );
-              if (content) {
-                var popup = L.popup({ maxWidth: 300 })
-                  .setLatLng(latlng)
-                  .setContent(content)
-                  .openOn(map);
-                // 存储要素引用，供 popupopen 按钮使用
-                popup._featureRef = f;
-                popup._ogvLayerId = checkboxId;
-                popup._ogvLayerName = layerDisplayName || "";
-              }
+              if (!content) return;
+              // ⚠️ featuresArray 的元素只有 { lat, lng, color, _idx, properties }，没有
+              //    geometry；而「缩放至」走 GeoUtils.computeBounds()，它读的是
+              //    f.geometry.coordinates → 拿不到就返回 null → fitBounds 不执行 →
+              //    按钮点了没反应。这里补一个 Point 几何再交给弹窗。
+              //    （detail 面板的图表也会读 feature.geometry，一并受益。）
+              openFeaturePopup(
+                {
+                  type: "Feature",
+                  properties: f.properties || {},
+                  geometry: {
+                    type: "Point",
+                    coordinates: [f.lng, f.lat],
+                  },
+                  _featureIndex: f._idx,
+                  _fileName: fileName,
+                  _ogvLatLng: latlng,
+                },
+                latlng,
+                content,
+                checkboxId,
+                layerDisplayName,
+              );
             };
 
             geoLayers.push(canvasLayer);
@@ -1032,7 +1111,9 @@
                   try {
                     marker.setStyle(hlStyle);
                   } catch (err) {}
-                  if (content) marker.openPopup();
+                  // 不要在这里再调 marker.openPopup()：bindPopup 已经把 click→_openPopup
+                  // 装到 marker 上（它就是负责开窗的那个），再手动开一次只会让 popup 的
+                  // update() 白跑一遍、把刚渲染好的内容连同按钮接线一起重写掉。
                   L.DomEvent.stop(e);
                 });
 
@@ -1203,8 +1284,13 @@
                     labelField,
                     layerDisplayName,
                   );
-                  if (content)
-                    layer.bindPopup(content, { maxWidth: 300 }).openPopup();
+                  openFeaturePopup(
+                    feature,
+                    e.latlng,
+                    content,
+                    checkboxId,
+                    layerDisplayName,
+                  );
                   L.DomEvent.stop(e);
                 });
 
@@ -1238,8 +1324,13 @@
                     labelField,
                     layerDisplayName,
                   );
-                  if (content)
-                    layer.bindPopup(content, { maxWidth: 300 }).openPopup();
+                  openFeaturePopup(
+                    feature,
+                    e.latlng,
+                    content,
+                    checkboxId,
+                    layerDisplayName,
+                  );
                   L.DomEvent.stop(e);
                 });
 
@@ -1268,7 +1359,13 @@
                   layerDisplayName,
                 );
                 if (content)
-                  layer.bindPopup(content, { maxWidth: 300 }).openPopup();
+                  openFeaturePopup(
+                    feature,
+                    e.latlng,
+                    content,
+                    checkboxId,
+                    layerDisplayName,
+                  );
                 L.DomEvent.stop(e);
               });
 
@@ -1300,7 +1397,13 @@
                   layerDisplayName,
                 );
                 if (content)
-                  layer.bindPopup(content, { maxWidth: 300 }).openPopup();
+                  openFeaturePopup(
+                    feature,
+                    e.latlng,
+                    content,
+                    checkboxId,
+                    layerDisplayName,
+                  );
                 L.DomEvent.stop(e);
               });
             },
@@ -1512,17 +1615,10 @@
         if (colorMode[checkboxId] === undefined) {
           const isPolygon =
             geomType === "polygon" || geomType === "multipolygon";
-          if (
-            fileName === "hotspots.json" ||
-            fileName === "volcanos.json" ||
-            fileName === "hydrothermal_vents.geojson"
-          ) {
-            colorMode[checkboxId] = "single";
-          } else if (isPolygon) {
-            colorMode[checkboxId] = "sequential";
-          } else {
-            colorMode[checkboxId] = "single";
-          }
+          // 默认配色模式只按几何类型定：面用分级色带，点/线用单色。
+          // 需要例外的图层，在 geo-config.js 里写 colorMode 显式指定
+          // （config 值已在前面写入 defaultColorModeMap，优先级高于这里）。
+          colorMode[checkboxId] = isPolygon ? "sequential" : "single";
         }
 
         const worldCopyGroup = buildGeoJsonLayerGroup(
@@ -2289,12 +2385,10 @@
 
     /** 保存单个图层 checkbox 的勾选状态到 localStorage */
     function persistLayerCheckState(cb, checked) {
-      try {
-        var key = cb.dataset.userLayer
-          ? "dupal_user_layer_" + (cb.dataset.persistentId || cb.id)
-          : "dupal_layer_" + cb.id;
-        localStorage.setItem(key, String(checked));
-      } catch (e) {}
+      var key = cb.dataset.userLayer
+        ? S.KEY.USER_LAYER_CHECK + (cb.dataset.persistentId || cb.id)
+        : S.KEY.LAYER_CHECK + cb.id;
+      S.safeSet(key, String(!!checked));
     }
 
     // 展开 checkbox 所在的面板层级：子组 → section
@@ -2507,34 +2601,21 @@
       if (btn) btn.title = "图层设置 · " + getColorModeLabel(checkboxId);
     }
 
-    const LAYER_SETTINGS_PREFIX = "dupal_layer_set_";
+    const LAYER_SETTINGS_PREFIX = S.KEY.LAYER_SETTINGS;
 
     // ========== 统一图层设置持久化 ==========
     // 所有图层自定义设置（颜色模式、名称字段等）统一为一个 JSON 对象，
     // 按 checkboxId 存入 localStorage。新增设置只需在 settings 对象加字段。
     function saveLayerSettings(checkboxId, settings) {
-      try {
-        localStorage.setItem(
-          LAYER_SETTINGS_PREFIX + checkboxId,
-          JSON.stringify(settings),
-        );
-      } catch (e) {}
+      S.setJSON(LAYER_SETTINGS_PREFIX + checkboxId, settings || {});
     }
+    // 坏 JSON 由 OGVStorage 删键自愈，返回 {} 让调用方走默认值
     function loadLayerSettings(checkboxId) {
-      try {
-        return (
-          JSON.parse(
-            localStorage.getItem(LAYER_SETTINGS_PREFIX + checkboxId),
-          ) || {}
-        );
-      } catch (e) {
-        return {};
-      }
+      var v = S.getJSON(LAYER_SETTINGS_PREFIX + checkboxId, {});
+      return v && typeof v === "object" ? v : {};
     }
     function clearLayerSettings(checkboxId) {
-      try {
-        localStorage.removeItem(LAYER_SETTINGS_PREFIX + checkboxId);
-      } catch (e) {}
+      S.safeRemove(LAYER_SETTINGS_PREFIX + checkboxId);
     }
 
     // ========== 图层设置弹窗（颜色 / 属性表 / 图表）==========
@@ -3251,6 +3332,10 @@
           var fixedColor =
             layerConfig.color || window.GeoUtils.getFixedColor(idx);
           layerColorMap[checkboxId] = fixedColor;
+          // 点图标尺寸：geo-config.js 的 iconSize 作为默认值。
+          // 用户在图层设置弹窗里改过的尺寸会在加载时覆盖它（见 loadLayerSettings）。
+          if (layerConfig.iconSize)
+            layerIconSizeMap[checkboxId] = Number(layerConfig.iconSize);
           if (layerConfig.labelField)
             labelFieldMap[checkboxId] = layerConfig.labelField;
           if (layerConfig.colorMode)
@@ -3317,12 +3402,7 @@
             // 勾选时展开到对应面板层级
             if (this.checked) expandToLayerGroup(this);
             // 持久化内置图层的勾选状态
-            try {
-              localStorage.setItem(
-                "dupal_layer_" + checkboxId,
-                String(this.checked),
-              );
-            } catch (e) {}
+            S.safeSet(S.KEY.LAYER_CHECK + checkboxId, String(this.checked));
             syncAllGroupStatus();
             if (this.checked) loadGeoJSONLayer(fullPath, checkboxId, false);
             else removeGeoJSONLayer(checkboxId);
@@ -3689,48 +3769,41 @@
     let userLayerIndex = 0;
     const userLayerGeoJson = {};
     window._userLayerGeoJson = userLayerGeoJson; // 暴露给 index.html 的开关事件使用
-    const USER_LAYER_STORAGE_KEY = "dupal_user_layers";
+    const USER_LAYER_STORAGE_KEY = S.KEY.USER_LAYER_LIST;
 
     // 检查「记住图层」开关状态
     function isRememberLayerEnabled() {
-      var saved = localStorage.getItem("dupal_toggle_rememberLayer");
-      return saved !== null ? saved === "true" : true; // 默认开启
+      return S.getBool(S.KEY.TOGGLE + "rememberLayer", true); // 默认开启
     }
 
     // 保存用户图层信息到 localStorage（持久化列表）
     function saveUserLayerMeta(id, fileName) {
-      var list = [];
-      try {
-        list = JSON.parse(localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]");
-      } catch (e) {}
+      var list = S.getJSON(USER_LAYER_STORAGE_KEY, []);
+      if (!Array.isArray(list)) list = [];
       if (
         !list.find(function (e) {
           return e.id === id;
         })
       ) {
         list.push({ id: id, fileName: fileName });
-        localStorage.setItem(USER_LAYER_STORAGE_KEY, JSON.stringify(list));
+        S.setJSON(USER_LAYER_STORAGE_KEY, list);
       }
     }
 
     // 从 localStorage 删除用户图层记录
     function removeUserLayerMeta(id) {
-      var list = [];
-      try {
-        list = JSON.parse(localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]");
-      } catch (e) {}
+      var list = S.getJSON(USER_LAYER_STORAGE_KEY, []);
+      if (!Array.isArray(list)) list = [];
       list = list.filter(function (e) {
         return e.id !== id;
       });
-      localStorage.setItem(USER_LAYER_STORAGE_KEY, JSON.stringify(list));
+      S.setJSON(USER_LAYER_STORAGE_KEY, list);
     }
 
     // 页面初始化时从 IDB 恢复用户已上传的图层
     function restoreUserLayers() {
-      var list = [];
-      try {
-        list = JSON.parse(localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]");
-      } catch (e) {}
+      var list = S.getJSON(USER_LAYER_STORAGE_KEY, []);
+      if (!Array.isArray(list)) list = [];
       list.forEach(function (meta) {
         L.GzIdbLoader.getCache("user_geo_" + meta.id).then(function (data) {
           if (!data) {
@@ -3739,11 +3812,7 @@
             return;
           }
           // 严格按保存的勾选状态还原：true→勾选并加载，false/未保存→不勾选（默认不加载）
-          var wasChecked = false;
-          try {
-            var saved = localStorage.getItem("dupal_user_layer_" + meta.id);
-            wasChecked = saved === "true";
-          } catch (e) {}
+          var wasChecked = S.getBool(S.KEY.USER_LAYER_CHECK + meta.id, false);
           addUserLayer(data, meta.fileName, wasChecked, meta.id);
         });
       });
@@ -3852,12 +3921,10 @@
       checkbox.style.background = autoShow !== false ? fixedColor : "#fff";
       checkbox.dataset.layerName = fileName;
       // 持久化初始勾选状态（上传即视为“打开”，便于下次恢复时正确还原勾选）
-      try {
-        localStorage.setItem(
-          "dupal_user_layer_" + persistentId,
-          String(checkbox.checked),
-        );
-      } catch (e) {}
+      S.safeSet(
+        S.KEY.USER_LAYER_CHECK + persistentId,
+        String(checkbox.checked),
+      );
       checkbox.addEventListener("change", function () {
         this.style.background = this.checked ? fixedColor : "#fff";
         // 勾选时展开到对应面板层级
@@ -3884,12 +3951,10 @@
         }
         scheduleLegendRefresh();
         // 持久化用户图层的勾选状态
-        try {
-          localStorage.setItem(
-            "dupal_user_layer_" + persistentId,
-            String(this.checked),
-          );
-        } catch (e) {}
+        S.safeSet(
+          S.KEY.USER_LAYER_CHECK + persistentId,
+          String(this.checked),
+        );
         // 同步本地图层面板全选状态
         var localCb = document.querySelector(
           ".layer-section > summary > .group-select-all",
@@ -5575,16 +5640,14 @@
     function initClusterToggle() {
       var toggle = document.getElementById("clusterToggle");
       if (!toggle) return;
-      var saved = localStorage.getItem("dupal_cluster_enabled");
-      if (saved !== null) {
-        clusterEnabled = saved === "true";
-        toggle.checked = clusterEnabled;
-      } else {
-        clusterEnabled = true;
-      }
+      // 无存储值 → 默认 true（getBool 的第二参）
+      clusterEnabled = S.getBool(S.KEY.CLUSTER, true);
+      toggle.checked = clusterEnabled;
+      // 程序化赋值不触发 change → 设置面板的「已开/总数」徽标不会自己更新
+      if (window._syncQuickStates) window._syncQuickStates();
       toggle.addEventListener("change", function () {
         clusterEnabled = this.checked;
-        localStorage.setItem("dupal_cluster_enabled", String(clusterEnabled));
+        S.safeSet(S.KEY.CLUSTER, String(clusterEnabled));
         rebuildLoadedPointLayers();
         syncCesiumLayerStyles();
       });
@@ -5594,17 +5657,14 @@
     function initLabelToggle() {
       var toggle = document.getElementById("labelToggle");
       if (!toggle) return;
-      var saved = localStorage.getItem("dupal_label_enabled");
-      if (saved !== null) {
-        labelEnabled = saved === "true";
-        toggle.checked = labelEnabled;
-      } else {
-        labelEnabled = false; // 默认关闭标签，避免大数据集内存溢出
-        toggle.checked = false;
-      }
+      // 默认关闭标签，避免大数据集内存溢出
+      labelEnabled = S.getBool(S.KEY.LABEL, false);
+      toggle.checked = labelEnabled;
+      // 同上：本模块比设置面板渲染得晚，恢复完必须主动通知徽标重算
+      if (window._syncQuickStates) window._syncQuickStates();
       toggle.addEventListener("change", function () {
         labelEnabled = this.checked;
-        localStorage.setItem("dupal_label_enabled", String(labelEnabled));
+        S.safeSet(S.KEY.LABEL, String(labelEnabled));
         rebuildLoadedPointLayers();
         syncCesiumLayerStyles();
       });
@@ -5693,53 +5753,56 @@
     }
 
     // 检查 localStorage 中是否存在已保存的图层状态
+    // ⚠️ 必须排除 LAYER_SETTINGS（dupal_layer_set_ 也以 dupal_layer_ 开头）：
+    //    否则用户只是调过颜色/透明度，就会误弹「是否恢复图层」；而选「不恢复」
+    //    又会连带把辛苦调好的设置一起清掉
     function hasSavedLayerState() {
-      for (var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
-        if (
-          key &&
-          (key.indexOf("dupal_layer_") === 0 ||
-            key.indexOf("dupal_user_layer_") === 0)
-        ) {
-          return true;
-        }
+      var prefixes = [S.KEY.LAYER_CHECK, S.KEY.USER_LAYER_CHECK];
+      for (var i = 0; i < prefixes.length; i++) {
+        var hit = S.keysWithPrefix(prefixes[i]).filter(function (k) {
+          return k.indexOf(S.KEY.LAYER_SETTINGS) !== 0;
+        });
+        if (hit.length) return true;
       }
-      try {
-        var list = JSON.parse(
-          localStorage.getItem(USER_LAYER_STORAGE_KEY) || "[]",
-        );
-        if (list.length > 0) return true;
-      } catch (e) {}
-      return false;
+      var list = S.getJSON(S.KEY.USER_LAYER_LIST, []);
+      return Array.isArray(list) && list.length > 0;
+    }
+
+    // 回收孤儿键：图层改名 / 从 geo-config 移除后，旧 checkboxId 的键会永久残留。
+    // 白名单 = 当前面板里真实存在的 checkbox id + 用户上传图层的 persistentId；
+    // 命中 dupal_layer_ / dupal_layer_set_ / dupal_user_layer_ 三个前缀却不在白名单
+    // 里的，直接删。
+    function pruneOrphanLayerKeys() {
+      var valid = {};
+      document
+        .querySelectorAll('.layer-item input[type="checkbox"]')
+        .forEach(function (cb) {
+          if (cb.id) valid[cb.id] = true;
+        });
+      (S.getJSON(S.KEY.USER_LAYER_LIST, []) || []).forEach(function (m) {
+        if (m && m.id) valid[m.id] = true;
+      });
+      var n = 0;
+      [
+        S.KEY.LAYER_CHECK,
+        S.KEY.LAYER_SETTINGS,
+        S.KEY.USER_LAYER_CHECK,
+      ].forEach(function (p) {
+        S.keysWithPrefix(p).forEach(function (k) {
+          if (!valid[k.slice(p.length)] && S.safeRemove(k)) n++;
+        });
+      });
+      return n;
     }
 
     // 清除所有已保存的图层状态（用户选择不恢复时调用）
     function clearAllLayerStates() {
-      var keysToRemove = [];
-      for (var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
-        if (
-          key &&
-          key !== USER_LAYER_STORAGE_KEY &&
-          (key.indexOf("dupal_layer_") === 0 ||
-            key.indexOf("dupal_user_layer_") === 0)
-        ) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(function (k) {
-        localStorage.removeItem(k);
-      });
-      // 清除图层勾选状态和设置（不删除用户图层数据和元数据）
-      for (var j = 0; j < localStorage.length; j++) {
-        var k2 = localStorage.key(j);
-        if (k2 && k2.indexOf(LAYER_SETTINGS_PREFIX) === 0) {
-          localStorage.removeItem(k2);
-        }
-      }
-      // 注意：不清除 USER_LAYER_STORAGE_KEY 和 IDB 用户图层缓存
-      // 用户图层始终持久化，不受「不恢复」影响
-      localStorage.removeItem(MAP_STATE_KEY);
+      // 只清「内置图层的勾选 + 各图层设置 + 地图视野」。
+      // ⚠️ 用户上传图层的勾选（dupal_user_layer_*）不动 —— 它们是用户资产，
+      //    清掉会让用户图层在恢复后全部变未勾选，与其「始终持久化」的语义冲突。
+      S.removeAll([S.KEY.LAYER_CHECK, S.KEY.LAYER_SETTINGS]);
+      S.safeRemove(S.KEY.MAP_STATE);
+      // 注意：不清除 USER_LAYER_LIST 和 IDB 用户图层缓存
     }
 
     // 恢复内置图层的勾选状态
@@ -5747,8 +5810,10 @@
       document
         .querySelectorAll('.layer-item input[type="checkbox"]')
         .forEach(function (cb) {
-          var saved = localStorage.getItem("dupal_layer_" + cb.id);
-          if (saved === "true" && !cb.checked) {
+          // 只对内置图层生效：用户图层的键是 dupal_user_layer_<persistentId>，
+          // 由 restoreUserLayers() 单独恢复
+          if (cb.dataset.userLayer) return;
+          if (S.getBool(S.KEY.LAYER_CHECK + cb.id, false) && !cb.checked) {
             cb.checked = true;
             cb.style.background = layerColorMap[cb.id] || "#fff";
             // 展开对应面板层级
@@ -5765,7 +5830,6 @@
       syncSelectAllStatus();
     }
 
-    const MAP_STATE_KEY = "dupal_map_state";
 
     // ========== 初始化 ==========
     function initGeoJsonLayer() {
@@ -5784,14 +5848,13 @@
       var _saveMapStateTimer = null;
       function saveMapState() {
         if (!_mapStateReady) return;
-        try {
-          var center = map.getCenter();
-          var zoom = map.getZoom();
-          localStorage.setItem(
-            MAP_STATE_KEY,
-            JSON.stringify({ lat: center.lat, lng: center.lng, zoom: zoom }),
-          );
-        } catch (e) {}
+        var center = map.getCenter();
+        var zoom = map.getZoom();
+        S.setJSON(S.KEY.MAP_STATE, {
+          lat: center.lat,
+          lng: center.lng,
+          zoom: zoom,
+        });
       }
       function saveMapStateDebounced() {
         if (!_mapStateReady) return;
@@ -5813,37 +5876,43 @@
       // (3) 标准页面离开兜底
       window.addEventListener("pagehide", saveMapState);
 
-      // 恢复地图中心/缩放
+      // 恢复地图中心/缩放：坏 JSON 由 OGVStorage 自愈（删键 + 兜底）
       function restoreMapCenter() {
-        try {
-          var saved = localStorage.getItem(MAP_STATE_KEY);
-          if (saved) {
-            var state = JSON.parse(saved);
-            if (
-              typeof state.lat === "number" &&
-              typeof state.lng === "number" &&
-              typeof state.zoom === "number" &&
-              state.lat >= -85 &&
-              state.lat <= 85
-            ) {
-              map.setView([state.lat, state.lng], state.zoom, {
-                animate: false,
-              });
-            }
-          }
-        } catch (e) {}
-      }
-
-      // 清理 localStorage 中纬度越界的坏数据
-      try {
-        var raw = localStorage.getItem(MAP_STATE_KEY);
-        if (raw) {
-          var st = JSON.parse(raw);
-          if (typeof st.lat === "number" && (st.lat > 85 || st.lat < -85)) {
-            localStorage.removeItem(MAP_STATE_KEY);
-          }
+        var st = S.getJSON(S.KEY.MAP_STATE, null);
+        if (!st || typeof st !== "object") return;
+        if (
+          typeof st.lat === "number" &&
+          typeof st.lng === "number" &&
+          typeof st.zoom === "number" &&
+          isFinite(st.lat) &&
+          isFinite(st.lng) &&
+          isFinite(st.zoom) &&
+          st.lat >= -85 &&
+          st.lat <= 85 &&
+          st.lng >= -180 &&
+          st.lng <= 180 &&
+          st.zoom >= 0 &&
+          st.zoom <= 22
+        ) {
+          map.setView([st.lat, st.lng], st.zoom, { animate: false });
+        } else {
+          // 越界 / 残缺的坏数据直接清掉，别让它反复干扰恢复
+          S.safeRemove(S.KEY.MAP_STATE);
         }
-      } catch (e) {}
+      }
+      // 启动时先做一次坏数据清理（纬度越界、JSON 损坏）
+      (function cleanBadMapState() {
+        var st = S.getJSON(S.KEY.MAP_STATE, null);
+        if (st && typeof st === "object") {
+          var latOk =
+            typeof st.lat === "number" && isFinite(st.lat) &&
+            st.lat >= -85 && st.lat <= 85;
+          var lngOk =
+            typeof st.lng === "number" && isFinite(st.lng) &&
+            st.lng >= -180 && st.lng <= 180;
+          if (!latOk || !lngOk) S.safeRemove(S.KEY.MAP_STATE);
+        }
+      })();
 
       // 图层恢复：检测到已保存状态时弹窗询问（内置图层 + 用户上传图层统一由此控制）
       if (hasSavedLayerState()) {
@@ -5874,6 +5943,9 @@
 
       initClusterToggle();
       initLabelToggle();
+
+      // 延后回收：用户图层从 IDB 恢复是异步的，等面板稳定后再算孤儿键
+      setTimeout(pruneOrphanLayerKeys, 5000);
     }
 
     // ========== 图例数据构建（供外部 LegendControl 调用）==========

@@ -46,13 +46,21 @@
      geojsonloader.js          cesium-viewer.js (新增)
      (2D: 现有编排层)          (3D: Cesium 编排层)
               │                       │
-              ↓                       ↓
-     Leaflet.GzIdbLoader      cesium-geojson-adapter.js (新增)
-     (共享数据管线)            (featureCache → Cesium Entities)
+              ↓                       │
+     Leaflet.GzIdbLoader              │
+     (共享数据管线)                    │
               │                       │
               └───────┬───────────────┘
                       ↓
               featureCache (共享 GeoJSON)
+
+              ┌───────────────────────┐
+              │  basemap-manager.js   │ ← BASEMAP_CONFIG（底图清单）
+              │  2D 图层 + 图层控件    │
+              │  3D ImageryProvider   │
+              └───────────┬───────────┘
+                          ↑ 只问「当前底图名 → provider」
+                    cesium-viewer.js
 ```
 
 ## 3. 新增文件清单
@@ -154,6 +162,43 @@ if (window.CesiumViewer && window.CesiumViewer.isActive) {
   },
 }
 ```
+
+### 4.5 geo-config.js — 底图清单（2D 与 3D 共用一份）
+
+v3.0.0 起，「3D 用哪张底图」不再由 `cesium-viewer.js` 里的一份 `switch` 决定，也不再
+在 2D / 3D 各抄一份底图清单。底图的**定义与 3D 映射**都在 `BASEMAP_CONFIG.baseLayers`
+的每一条描述里，`basemap-manager.js` 负责把描述变成 2D 图层与 3D provider：
+
+```js
+window.BASEMAP_CONFIG = {
+  defaultBasemap: "ArcGIS-海洋",
+  defaultSubset: ["ETOPO", "天地图影像", "ArcGIS-影像", /* … */],
+  boundary: tdt("世界境界", "ibo_w", { maxZoom: 18 }, 18), // 被 attachBoundary 引用
+  baseLayers: [
+    {
+      name: "GEBCO2025-水深地形",
+      kind: "wms",
+      url: "https://wms.gebco.net/2025/mapserv?",
+      layers: "GEBCO_2025",
+      maxZoom: 12,
+      // ↓ 3D 用哪种 ImageryProvider（不写 = 回退内置 ArcGIS 影像兜底）
+      cesium: { kind: "wms", url: "https://wms.gebco.net/2025/mapserv?", layers: "GEBCO_2025", maximumLevel: 12 },
+    },
+    // …
+  ],
+  overlays: [{ name: "天地图全球境界", ref: "boundary" }, /* … */],
+  moreOverlays: [/* … */],
+};
+```
+
+`cesium.kind` 支持 `tianditu`（自动走 t0~t7 八子域，见 §6 性能笔记）/ `urlTemplate` /
+`wms` / `osm` / `wayback`。`cesium-viewer.js` 只保留一行委托：
+
+```js
+var provider = window.BasemapManager.createImageryProvider(window._currentBasemapName);
+```
+
+因此**换底图、加底图、调缩放层级都只改 `geo-config.js`**，2D 与 3D 同时生效。
 
 ## 5. Cesium 3D 核心能力
 

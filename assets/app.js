@@ -9,6 +9,13 @@
 
 // ========== 付费激活码（每月更新） ==========
 var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
+
+// 统一存储层（geo-utils.js 提供，索引页第 16 行加载）—— 所有
+// localStorage / sessionStorage 读写都经它，异常吞掉、坏值自愈、清理按前缀
+var S = window.OGVStorage;
+// 启动时回收历史废弃键（dupal_premium / dupal_toggle_sectionOpen）
+S.dropObsoleteKeys();
+
 (function () {
   // ========== 数据驱动渲染（必须在 toggleConfig 执行前创建 DOM）==========
   // 面板分两层，解决「设置项太多、找东西靠翻」的问题：
@@ -21,6 +28,9 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     var quickBar = document.getElementById("quickBar");
     var body = document.getElementById("toggleBody");
     if (!body || body.children.length > 0) return;
+
+    // 徽标刷新的 rAF 句柄（渲染① 结束时就会用到，必须在最前面初始化）
+    var _badgeRaf = 0;
 
     // 字段说明：
     //   id       —— 必须是 toggleConfig 中的键（控件开关已按 id 注册）
@@ -278,6 +288,8 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           items[i].classList.toggle("is-on", on);
           items[i].setAttribute("aria-pressed", on ? "true" : "false");
         }
+        // 徽标和快捷区读的是同一批 checkbox —— 顺手一起刷，省得每个调用点都补一遍
+        if (typeof requestSubBadges === "function") requestSubBadges();
       };
       window._syncQuickStates();
 
@@ -378,6 +390,15 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     if (window._syncQuickStates) window._syncQuickStates();
 
     // 子分组徽标：显示「已开 / 总数」，让折叠状态下也能一眼看出哪里开着东西
+    //
+    // ⚠️ 徽标读的是 checkbox 的**实时**状态，但开关是在渲染之后才恢复的：
+    //    initToggle 是程序化赋值（cb.checked = x）—— **不触发 change**；
+    //    cluster / label 更晚，由 geojsonloader 恢复。而「高级」组五项默认全是关的，
+    //    所以「渲染时算一次 + 只监听 change」会永久停在 0/5：
+    //    激活高级功能后还是 0/5，随手拨一个别的才跳成 2/5，刷新又回到 0/5。
+    //
+    // 修法：刷新收敛成一个**幂等**入口 requestSubBadges()，谁改了开关都调它，
+    //      内部用 rAF 合并（同一帧内改 20 个开关也只重算一次），重复调用零成本。
     function updateSubBadges() {
       var subs = body.querySelectorAll("details.toggle-sub");
       for (var i = 0; i < subs.length; i++) {
@@ -399,9 +420,41 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         }
       }
     }
+    // rAF 合并：把同一帧内的 N 次请求压成一次重算
+    function requestSubBadges() {
+      if (_badgeRaf) return;
+      var raf =
+        window.requestAnimationFrame ||
+        function (fn) {
+          return setTimeout(fn, 16);
+        };
+      _badgeRaf = raf(function () {
+        _badgeRaf = 0;
+        updateSubBadges();
+      });
+    }
+    // 对外暴露：其他模块（geojsonloader 恢复 cluster/label）也能主动触发一次
+    window._updateSubBadges = requestSubBadges;
+
     body.addEventListener("change", function (e) {
-      if (e.target && e.target.type === "checkbox") updateSubBadges();
+      if (e.target && e.target.type === "checkbox") requestSubBadges();
     });
+    // 兜底：<details> 的 toggle 事件不冒泡，但**会走捕获阶段** —— 展开/收起分组时
+    // 再刷一次，保证只要徽标看得见就是准的
+    body.addEventListener(
+      "toggle",
+      function (e) {
+        if (
+          e.target &&
+          e.target.classList &&
+          e.target.classList.contains("toggle-sub")
+        )
+          requestSubBadges();
+      },
+      true,
+    );
+    // 面板首次渲染 / 重开时各刷一次
+    requestSubBadges();
     updateSubBadges();
 
     // 动作按钮：快捷区和地图设置里各有一个入口，用 data-action 统一绑定，
@@ -740,11 +793,12 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       });
     }
     function doRefresh(all) {
-      // 保存高级功能激活状态，避免被 clear 清除
-      var premium = localStorage.getItem("ogv_premium_active");
-      localStorage.clear();
-      // 恢复高级功能激活
-      if (premium) localStorage.setItem("ogv_premium_active", premium);
+      // ⚠️ 不能用 localStorage.clear()：它按 origin 清，会连带删掉
+      //   ① 同域其他页面（如写真集 tthh）的数据
+      //   ② 用户上传图层的清单 dupal_user_layers —— 一删，IndexedDB 里的
+      //      数据就再也找不到主人，变成永久孤儿
+      // 统一走存储层：只清本应用的键，且保留「用户资产」
+      S.clearResettable();
       var tasks = [clearSWCache()];
       if (all) tasks.push(clearIDB());
       Promise.all(tasks).then(function () {
@@ -1129,10 +1183,9 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   (function () {
     var cb = document.getElementById("clipboardToggle");
     if (cb) {
-      var saved = localStorage.getItem("dupal_toggle_clipboard");
-      cb.checked = saved !== null ? saved === "true" : true; // 默认开启
+      cb.checked = S.getBool(S.KEY.TOGGLE + "clipboard", true); // 默认开启
       cb.addEventListener("change", function () {
-        localStorage.setItem("dupal_toggle_clipboard", String(this.checked));
+        S.safeSet(S.KEY.TOGGLE + "clipboard", String(this.checked));
       });
     }
   })();
@@ -1141,29 +1194,17 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   (function () {
     var cb = document.getElementById("rememberLayerToggle");
     if (cb) {
-      var saved = localStorage.getItem("dupal_toggle_rememberLayer");
-      cb.checked = saved !== null ? saved === "true" : true; // 默认开启
+      cb.checked = S.getBool(S.KEY.TOGGLE + "rememberLayer", true); // 默认开启
       cb.addEventListener("change", function () {
-        localStorage.setItem(
-          "dupal_toggle_rememberLayer",
-          String(this.checked),
-        );
+        S.safeSet(S.KEY.TOGGLE + "rememberLayer", String(this.checked));
         if (!this.checked) {
           // 关闭 → 只清除勾选状态，不删除用户图层数据
-          var keysToRemove = [];
-          for (var i = 0; i < localStorage.length; i++) {
-            var key = localStorage.key(i);
-            if (
-              key &&
-              key !== "dupal_user_layers" &&
-              (key.indexOf("dupal_layer_") === 0 ||
-                key.indexOf("dupal_user_layer_") === 0)
-            ) {
-              keysToRemove.push(key);
-            }
-          }
-          keysToRemove.forEach(function (k) {
-            localStorage.removeItem(k);
+          // ⚠️ 必须排除 LAYER_SETTINGS（dupal_layer_set_ 也以 dupal_layer_ 开头）:
+          //    颜色/透明度不属于「记住图层」的语义，不该被顺手清掉
+          [S.KEY.LAYER_CHECK, S.KEY.USER_LAYER_CHECK].forEach(function (p) {
+            S.keysWithPrefix(p).forEach(function (k) {
+              if (k.indexOf(S.KEY.LAYER_SETTINGS) !== 0) S.safeRemove(k);
+            });
           });
         } else {
           // 打开 → 保存当前所有用户图层
@@ -1173,22 +1214,15 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
             if (info && info.persistentId) {
               var pid = info.persistentId;
               L.GzIdbLoader.setCache("user_geo_" + pid, info.geoJsonData);
-              var list2 = [];
-              try {
-                list2 = JSON.parse(
-                  localStorage.getItem("dupal_user_layers") || "[]",
-                );
-              } catch (e) {}
+              var list2 = S.getJSON(S.KEY.USER_LAYER_LIST, []);
+              if (!Array.isArray(list2)) list2 = [];
               if (
                 !list2.find(function (e) {
                   return e.id === pid;
                 })
               ) {
                 list2.push({ id: pid, fileName: info.fileName });
-                localStorage.setItem(
-                  "dupal_user_layers",
-                  JSON.stringify(list2),
-                );
+                S.setJSON(S.KEY.USER_LAYER_LIST, list2);
               }
             }
           });
@@ -1201,10 +1235,9 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   (function () {
     var cb = document.getElementById("moreBasemapToggle");
     if (cb) {
-      var saved = localStorage.getItem("dupal_toggle_moreBasemap");
-      cb.checked = saved !== null ? saved === "true" : false;
+      cb.checked = S.getBool(S.KEY.TOGGLE + "moreBasemap", false);
       cb.addEventListener("change", function () {
-        localStorage.setItem("dupal_toggle_moreBasemap", String(this.checked));
+        S.safeSet(S.KEY.TOGGLE + "moreBasemap", String(this.checked));
         if (typeof window.rebuildLayerCtrl === "function")
           window.rebuildLayerCtrl();
       });
@@ -1285,7 +1318,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           window.showToast("❌ 设备不支持 GPS 定位", { duration: 2000 });
           var cb = document.getElementById("isLocationTracking");
           if (cb) cb.checked = false;
-          localStorage.setItem(TOGGLE_PREFIX + "isLocationTracking", "false");
+          S.safeSet(TOGGLE_PREFIX + "isLocationTracking", "false");
           return;
         }
         // 创建标记对象但不添加到地图（等待首次定位成功再显示）
@@ -1374,7 +1407,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           var cb = document.getElementById("graticuleToggle");
           if (cb) {
             cb.checked = false;
-            localStorage.setItem(TOGGLE_PREFIX + "graticule", "false");
+            S.safeSet(TOGGLE_PREFIX + "graticule", "false");
           }
           return;
         }
@@ -1530,7 +1563,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
               var cb = document.getElementById("premiumToggle");
               if (cb) {
                 cb.checked = false;
-                localStorage.setItem(TOGGLE_PREFIX + "premium", "false");
+                S.safeSet(TOGGLE_PREFIX + "premium", "false");
               }
             }
           });
@@ -1545,7 +1578,7 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
           var cb = document.getElementById("premiumToggle");
           if (cb) {
             cb.checked = true;
-            localStorage.setItem(TOGGLE_PREFIX + "premium", "true");
+            S.safeSet(TOGGLE_PREFIX + "premium", "true");
           }
           return;
         }
@@ -1661,14 +1694,19 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     }
   }
 
-  // 初始化主题：仅置顶开关状态，由 initToggle 同时设置 data-theme
+  // 初始化主题：无存储值时按系统偏好「预设」开关状态，但**不落盘**。
+  // ⚠️ 旧实现会立刻把系统偏好写进 localStorage —— 首次访问就把它固化成了用户
+  //    选择，之后用户在系统里改深浅色，页面再也跟不动了。
   (function initTheme() {
-    var saved = localStorage.getItem(TOGGLE_PREFIX + "darkMode");
-    if (saved === null) {
-      var isDark =
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches;
-      localStorage.setItem(TOGGLE_PREFIX + "darkMode", String(isDark));
+    if (S.safeGet(TOGGLE_PREFIX + "darkMode") !== null) return;
+    var isDark =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    // initToggle 把 cb.checked 当作 defaultChecked，这里预设即生效
+    var cb = document.getElementById("darkModeToggle");
+    if (cb) {
+      cb.checked = !!isDark;
+      if (window._syncQuickStates) window._syncQuickStates();
     }
   })();
 
@@ -1676,9 +1714,8 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     var cb = document.getElementById(cbId);
     if (!cb) return;
 
-    var saved = localStorage.getItem(cfg.storageKey);
     var defaultChecked = cb.checked;
-    var checked = saved !== null ? saved === "true" : defaultChecked;
+    var checked = S.getBool(cfg.storageKey, defaultChecked);
     cb.checked = checked;
 
     // 快捷区那个按钮的选中态跟着这里走。
@@ -1698,9 +1735,12 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       if (cfg.disable) cfg.disable();
       else if (cfg.control) map.removeControl(cfg.control);
     }
+    // 副作用可能又把 cb 改回去（例如未激活时 premium 的 enable() 会强制取消勾选），
+    // 所以副作用跑完必须再同步一次 —— 否则徽标算的是「恢复前」的状态
+    syncQuickState();
 
     cb.addEventListener("change", function () {
-      localStorage.setItem(cfg.storageKey, String(this.checked));
+      S.safeSet(cfg.storageKey, String(this.checked));
       syncQuickState();
       // 用户主动拨动开关才视为 userInitiated，触发注册与提示
       if (this.checked) {
@@ -1714,11 +1754,12 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
   }
 
   // 同步高级功能激活状态 → 开关
-  if (localStorage.getItem("ogv_premium_active") === "true") {
+  // （旧版还会写一份 dupal_premium，全项目无人读取，已随存储层一并清理）
+  if (S.safeGet(S.KEY.PREMIUM) === "true") {
     var _pcb = document.getElementById("premiumToggle");
     if (_pcb) {
       _pcb.checked = true;
-      localStorage.setItem("dupal_premium", "true");
+      if (window._syncQuickStates) window._syncQuickStates();
     }
   }
 
@@ -1726,19 +1767,63 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
     if (toggleConfig.hasOwnProperty(cbId)) initToggle(cbId, toggleConfig[cbId]);
   }
 
+  // ========== 跨标签同步 ==========
+  // 别的标签页改了开关 → storage 事件通知本页。值的归属没有歧义：事件本身就是
+  // 「对方已经写完」的通知，天然以后写入为准。真正的分歧在**下一步要不要在本页
+  // 重放 enable/disable**：
+  //
+  //   SYNC_SAFE  —— 纯视觉 / 幂等，立刻重放，体验最好
+  //   SYNC_BLOCK —— 副作用重不得，一律不同步，等本页下次加载按存储值自然生效：
+  //      view3d            4.9 MB 引擎 + 第二个 WebGL 场景；更要命的是
+  //                        cesium-viewer.js 每次加载都会把开关复位为 false，
+  //                        一旦同步两页会互相把对方的 3D 关掉，来回震荡
+  //      isLocationTracking clearWatch 会被别的标签页关掉（等于 A 关了 B 的定位）
+  //      premium           会弹出激活码对话框；且 _activated 是闭包变量改不了
+  //      elevationRead     插件 enable() 的幂等性未验证
+  var SYNC_BLOCK = {
+    view3dToggle: 1,
+    isLocationTracking: 1,
+    premiumToggle: 1,
+    elevationReadToggle: 1,
+  };
+  window.addEventListener("storage", function (e) {
+    if (!e || !e.key || e.key.indexOf(TOGGLE_PREFIX) !== 0) return;
+    for (var id in toggleConfig) {
+      if (!toggleConfig.hasOwnProperty(id)) continue;
+      var cfg = toggleConfig[id];
+      if (cfg.storageKey !== e.key) continue;
+      if (SYNC_BLOCK[id]) return; // 危险组：不参与同步
+      var cb = document.getElementById(id);
+      if (!cb) return;
+      var v = e.newValue === "true";
+      if (cb.checked === v) return;
+      // 程序化赋值 .checked 不会触发 change → 不会回写存储 → 不会形成回环
+      cb.checked = v;
+      if (v) {
+        if (cfg.enable) cfg.enable(false);
+        else if (cfg.control) cfg.control.addTo(map);
+      } else {
+        if (cfg.disable) cfg.disable();
+        else if (cfg.control) map.removeControl(cfg.control);
+      }
+      if (window._syncQuickStates) window._syncQuickStates();
+      return;
+    }
+  });
+
   // ========== 高级功能激活码验证 ==========
   (function () {
     var _activated = false;
-    var _PR_KEY = "ogv_premium_active";
+    var _PR_KEY = S.KEY.PREMIUM;
 
-    _activated = localStorage.getItem(_PR_KEY) === "true";
+    _activated = S.safeGet(_PR_KEY) === "true";
 
     // 已激活 → 同步勾上高级功能开关
     if (_activated) {
       var cb = document.getElementById("premiumToggle");
       if (cb) {
         cb.checked = true;
-        localStorage.setItem("dupal_premium", "true");
+        if (window._syncQuickStates) window._syncQuickStates();
       }
     }
 
@@ -1804,7 +1889,10 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         }
         if (_PR_CODES.indexOf(code) >= 0) {
           _activated = true;
-          localStorage.setItem(_PR_KEY, "true");
+          S.safeSet(_PR_KEY, "true");
+          var _pcb2 = document.getElementById("premiumToggle");
+          if (_pcb2) _pcb2.checked = true;
+          if (window._syncQuickStates) window._syncQuickStates();
           showQrAfterActivate(code);
           if (typeof callback === "function") callback(true);
         } else {
@@ -1829,16 +1917,54 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
       });
     };
 
+    // 调试入口：控制台 window.premiumReset() 复位激活态
+    // ⚠️ 必须同时复位开关本身和它的持久化值，否则开关仍显示「已激活」，
+    //    下次刷新又会被 initToggle 勾回来
     window.premiumReset = function () {
       _activated = false;
-      localStorage.removeItem(_PR_KEY);
+      S.safeRemove(_PR_KEY);
+      S.safeSet(S.KEY.TOGGLE + "premium", "false");
+      var cb = document.getElementById("premiumToggle");
+      if (cb) {
+        cb.checked = false;
+        if (window._syncQuickStates) window._syncQuickStates();
+      }
     };
 
-    // ========== URL 参数自动激活（扫码直达）==========
+    // sessionStorage 也要防抛：Safari 无痕 / 存储被禁时访问本身就抛 SecurityError
+  function _ss() {
+    try {
+      return window.sessionStorage || null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function _ssGet(k) {
+    try {
+      var ss = _ss();
+      return ss ? ss.getItem(k) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function _ssSet(k, v) {
+    try {
+      var ss = _ss();
+      if (ss) ss.setItem(k, String(v));
+    } catch (e) {}
+  }
+  function _ssRemove(k) {
+    try {
+      var ss = _ss();
+      if (ss) ss.removeItem(k);
+    } catch (e) {}
+  }
+
+  // ========== URL 参数自动激活（扫码直达）==========
     (function () {
       // 刚通过 URL 激活完成的页面，显示提示
-      if (sessionStorage.getItem("_pr_just_activated")) {
-        sessionStorage.removeItem("_pr_just_activated");
+      if (_ssGet("_pr_just_activated")) {
+        _ssRemove("_pr_just_activated");
         setTimeout(function () {
           if (typeof window.showToast === "function")
             window.showToast("✅ 已使用激活码激活高级功能", { duration: 5000 });
@@ -1849,8 +1975,8 @@ var _PR_CODES = ["837291", "460518", "915742", "283604", "671849"];
         var code = m[1];
         if (_PR_CODES.indexOf(code) >= 0) {
           _activated = true;
-          localStorage.setItem(_PR_KEY, "true");
-          sessionStorage.setItem("_pr_just_activated", "1");
+          S.safeSet(_PR_KEY, "true");
+          _ssSet("_pr_just_activated", "1");
           history.replaceState(null, "", location.pathname + location.hash);
           location.reload();
         }

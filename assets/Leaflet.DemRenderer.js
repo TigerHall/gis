@@ -332,8 +332,9 @@
    *
    * 为什么需要独立 pane：GeoRasterLayer 默认落在 overlayPane(400)，与矢量图层
    * 同层，谁后加谁在上面，DEM 容易被瓦片/影像底图或后加载的矢量压住。
-   * 这里固定到 zIndex 350 —— 高于 tilePane(200) 与 baseImagePane(250)，
+   * 这里固定到 zIndex 350 —— 高于 tilePane(200) 与 baseImagePane(190)，
    * 低于矢量 overlayPane(400)，保证「DEM 稳定显示在底图之上、要素之下」。
+   * 数值真源是 geo-config.js 的 MAP_CONFIG.panes.demPane，这里只是兜底。
    * @param {Object} map - Leaflet 地图实例
    * @returns {HTMLElement|null} pane 容器
    */
@@ -342,7 +343,9 @@
     var pane = map.getPane("demPane");
     if (!pane) {
       pane = map.createPane("demPane");
-      pane.style.zIndex = 350;
+      var cfgPanes =
+        (window.MAP_CONFIG && window.MAP_CONFIG.panes) || {};
+      pane.style.zIndex = cfgPanes.demPane != null ? cfgPanes.demPane : 350;
     }
     return pane;
   }
