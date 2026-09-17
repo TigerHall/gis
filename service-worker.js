@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v3.0.4";
+const CACHE_NAME = "v3.0.6";
 
 // 全量预缓存：安装 PWA 后全部功能离线可用（后台静默执行，不阻塞页面）
 // 注意：assets/cesium/Cesium.js（4.9MB）故意不在此列 —— 它只在用户真正打开 3D 时
@@ -40,6 +40,7 @@ const STATIC_ASSETS = [
   "./assets/jszip.min.js",
   "./assets/pointdrop.js",
   "./assets/measure-export.js",
+  "./assets/measure-tools.js",
   "./assets/scroll-gutter-guard.js",
   "./assets/geojsonloader.js",
   "./assets/geo-config.js",

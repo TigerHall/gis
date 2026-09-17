@@ -1266,6 +1266,21 @@ S.dropObsoleteKeys();
     removalMode: true,
   };
 
+  // 上面是「工具条上放哪些按钮」；下面是「绘制过程中的键盘行为」，
+  // 两者在 Geoman 里是两套配置（addControls 不吃 finishOnEnter），必须分开给。
+  // 这份 Geoman 的默认值是 finishOnEnter:false / exitModeOnEscape:false
+  // （leaflet-geoman.js 内 `exitModeOnEscape:!1,finishOnEnter:!1`），
+  // 后果是画线/画多边形时**只能用鼠标双击、或点回起点**才能收尾，Esc 也退不出去
+  // —— 纯键盘用户无法完成一次测量（WCAG 2.1.1 键盘可操作，A 级）。
+  // 打开后：回车 = 结束当前图形，Esc = 取消当前绘制。
+  // 二者都只在「真的有某个绘制模式在跑」时才生效（_handleEnterKey 先查
+  // getActiveShape()、_handleEscapeKey 先查 global*ModeEnabled()），
+  // 所以不会抢走搜索框等别处的回车 / Esc。
+  var GEOMEN_GLOBAL_OPTS = {
+    finishOnEnter: true,
+    exitModeOnEscape: true,
+  };
+
   // 高程读取插件单例（懒加载，绑定到地图）
   function ensureElevationQuery() {
     if (!window._elevationQuery) {
@@ -1477,6 +1492,11 @@ S.dropObsoleteKeys();
       enable: function () {
         map.pm.addControls(GEOMEN_OPTS);
         map.pm.setLang("zh");
+        map.pm.setGlobalOptions(GEOMEN_GLOBAL_OPTS);
+        // 「清除全部测量」按钮由 measure-tools.js 注册（Geoman 的 Removal Mode
+        // 只能逐个删，没有「全部清除」）。必须在 addControls **之后**调用 ——
+        // 实测 createCustomControl 会把按钮立即渲染进已建好的工具条。
+        if (window.OGVMeasureTools) window.OGVMeasureTools.installToolbarButtons();
       },
       disable: function () {
         map.pm.removeControls();

@@ -420,6 +420,24 @@
     // ── 事件：点击 / 悬停检测 ──
     _fire: function (e) {
       if (!this._hitTree) return;
+      // ── 测量/绘制期间不做要素命中 ──
+      // 与 measure-tools.js 的 CSS 屏蔽是同一件事的两个半边。
+      // CSS 的 pointer-events:none 只能拦「DOM 层」的点击（marker / 矢量 pane 上的
+      // 图标与路径），而本 Canvas 路径是**自己监听 map 的 click/mousemove** 再做
+      // RBush 命中检测的 —— 绘制时点击穿透到 .leaflet-container 之后它照旧触发，
+      // 后果有三个：
+      //   ① 命中点要素 → onFeatureClick → 弹出属性「悬浮窗」，压在光标下把落点挡掉
+      //      （用户反馈：「点击下去后优先触发的还是悬浮窗，导致点不了设置点」）
+      //   ② 命中聚合簇 → map.setView() 直接跳级缩放，落点全乱
+      //   ③ mousemove 命中就把光标改成 pointer，盖掉 Geoman 的十字准星
+      // 判定走 measure-tools.js 暴露的 isDrawing()（内部即 pm.globalDrawModeEnabled()，
+      // 只在真的点了绘制工具后为真，不会误伤「编辑/拖拽/删除」模式）。
+      if (window.OGVMeasureTools && window.OGVMeasureTools.isDrawing()) {
+        if (this._map && this._map._container) {
+          this._map._container.style.cursor = "";
+        }
+        return;
+      }
       var pt = e.containerPoint;
       var hits = this._hitTree.search({
         minX: pt.x,

@@ -435,3 +435,109 @@
 .leaflet-overlay-pane path.hit-area {
   pointer-events: stroke !important;
 }
+
+/* ========== 测量 / 绘制交互（assets/measure-tools.js）========== */
+
+/* 绘制·测量进行中：点击只用来落点，不再命中底下的要素 —— 不弹属性窗、不高亮。
+   为什么不去逐个图层改 interactive：
+     ① 要素弹窗是 Leaflet 的 bindPopup 自己开的，拦我们自己的 click 处理器拦不住它；
+     ② Leaflet-Geoman 的**顶点吸附是几何计算**（Snap 模块自己遍历图层几何找最近点），
+        不依赖 DOM 命中 —— 所以关掉 pointer-events 仍然能吸附到点要素 / 线面折点。
+
+   ⚠️ 只关 pane 是不够的（踩过）：
+      pointer-events 虽然可继承，但**元素自己的声明优先于继承值** ——
+      leaflet.css 的 `path.leaflet-interactive{pointer-events:auto}` 和本项目
+      上面的 `path.hit-area{pointer-events:stroke !important}` 都会把 pane 上的 none 顶掉。
+      症状：绘制期间点线/面要素照旧弹属性「悬浮窗」，压在光标下把落点吃掉。
+      → 所以对 **pane + 可交互元素本身** 各关一次，并且必须带 !important
+        （否则压不过 `path.hit-area` 的那条 !important）。
+
+   ⚠️ 必须连 .leaflet-popup-pane 一起关（踩过）：
+      绘制时若还开着上一个要素的属性悬浮窗，它就压在光标下。关掉之后点击会**穿透**到
+      .leaflet-container，落点不会被吃掉。圆形的「半径/面积 + 输入改半径」弹窗不受影响 ——
+      它的交互都发生在图形画完、body 上的 ogv-drawing 已经摘掉之后。
+
+   只动 .leaflet-map-pane：.leaflet-control-container 是它的**兄弟**节点，
+   所以工具条 / 缩放条 / 图层控件照旧可点。 */
+body.ogv-drawing .leaflet-map-pane,
+body.ogv-drawing .leaflet-map-pane .leaflet-pane,
+body.ogv-drawing .leaflet-map-pane svg,
+body.ogv-drawing .leaflet-map-pane path,
+body.ogv-drawing .leaflet-map-pane img,
+body.ogv-drawing .leaflet-map-pane .leaflet-interactive,
+body.ogv-drawing .leaflet-map-pane .hit-area {
+  pointer-events: none !important;
+}
+
+/* 画圆时的实时半径读数（跟随光标） */
+.ogv-radius-chip {
+  position: absolute;
+  z-index: 900;
+  transform: translate(14px, 14px);
+  padding: 2px 7px;
+  font-size: 12px;
+  font-family: "Microsoft YaHei", Arial, sans-serif;
+  line-height: 1.5;
+  color: var(--text-primary, #222);
+  background: var(--content-bg, #fff);
+  border: 1px solid var(--border-toggle, #bbb);
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  pointer-events: none; /* 别让读数挡住落点 */
+}
+
+/* 圆的测量弹窗：半径 / 面积 + 输入改半径 */
+.ogv-circle-pop {
+  font-size: 12px;
+  line-height: 1.75;
+}
+.ogv-circle-pop .ogv-circle-row b {
+  /* 绿字一律用 --c-green-text-strong（浅色 4.84:1 / 深色 8.06:1，达 WCAG AA）——
+     --accent 那种浅绿当文字只有 1.7~3.8:1，不能用 */
+  color: var(--c-green-text-strong, #3a743a);
+}
+.ogv-circle-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-toggle, #ddd);
+}
+.ogv-circle-edit input {
+  width: 74px;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--border-toggle, #bbb);
+  border-radius: 3px;
+  background: var(--content-bg, #fff);
+  color: var(--text-primary, #222);
+}
+.ogv-circle-apply {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--c-green-text-strong, #3a743a);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--c-green-text-strong, #3a743a);
+}
+/* 悬停反白：底色只能用浅绿 --accent 配深字（9.3:1）；
+   --c-green-text-strong 那种深绿当底会把深字压到 3.2:1，不达标 */
+.ogv-circle-apply:hover {
+  background: var(--accent, #99cc99);
+  color: #1a1a2e;
+}
+.ogv-circle-apply:active {
+  transform: scale(0.96);
+  transition-duration: 0s;
+}
+
+/* 「清除全部测量」工具条按钮图标（与 Geoman 自带图标同规格：
+   24×24 单色 SVG + background-size:contain，深色主题下由 Geoman 的 filter 反白） */
+.leaflet-pm-toolbar .leaflet-pm-icon-clear-measure {
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path fill='%235B5B5B' d='M9 3h6l.8 1.6H20v1.9H4V4.6h4.2L9 3zm-2.6 5h11.2l-.9 12.2A1.9 1.9 0 0 1 14.8 22H9.2a1.9 1.9 0 0 1-1.9-1.8L6.4 8zm3.1 2v9h1.6v-9H9.5zm3.4 0v9h1.6v-9h-1.6z'/></svg>");
+}

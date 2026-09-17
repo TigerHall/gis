@@ -340,9 +340,15 @@
   }
 
   // ========== 创建带标签的圆形点标记 ==========
+  // ⚠️ iconSize 的语义必须与 createPointIcon 保持一致 = **标记总直径**（px）。
+  //    这里历史上写的是 `(iconSize || 8) * 2`（把入参当半径），而调用方
+  //    （geojsonloader 传 layerIconSizeMap[checkboxId] || 20）早已改成传直径 ——
+  //    两边语义不一致的后果：**打开「显示标签」后圆点从 20px 变成 40px**，
+  //    关掉标签又缩回去，看起来像「一开标签图标就变大」。
+  //    浏览器实测：无标签 20x20 / 有标签 40x40。现已对齐为「入参即直径」。
   function createLabeledMarker(map, latlng, color, labelText, opacity, iconSize) {
     var showLabel = !!labelText;
-    var d = (iconSize || 8) * 2;
+    var d = iconSize || 16;
     var html =
       '<div class="station-marker-wrapper">' +
       '<span class="station-dot" style="background:' +

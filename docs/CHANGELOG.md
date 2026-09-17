@@ -1,5 +1,179 @@
 # 更新记录
 
+## 2026-09-17 — v3.0.6：修「测量时点击仍被属性悬浮窗吃掉」
+
+> 版本号 `v3.0.5` → **`v3.0.6`**。改了 `geojsonloader.css` / `Leaflet.MarkersCanvas.js` /
+> `measure-tools.js`，前两个在 SW 预缓存清单里，故必须 bump。
+
+### 现象
+
+> 「确实能吸附了，但是点击下去后，优先触发的还是悬浮窗，导致点击不了设置点。」
+
+v3.0.5 的屏蔽只写了一半 —— **两条真正的泄漏路径都没堵住**。
+
+### 泄漏一：`pointer-events` 可继承，但「元素自身的声明优先于继承值」
+
+v3.0.5 把 `pointer-events: none` 加在 **pane** 上：
+
+```css
+body.ogv-drawing .leaflet-map-pane .leaflet-pane:not(.leaflet-popup-pane) { pointer-events: none !important; }
+```
+
+这对**点要素**管用（marker 图标自己没有 `pointer-events` 声明，老实继承 pane 的 none），
+但对**线/面要素完全无效** —— 因为它们带了 `.leaflet-interactive`，而
+
+- `leaflet.css`：`path.leaflet-interactive { pointer-events: auto }`
+- 本项目 `geojsonloader.css`：`path.hit-area { pointer-events: stroke !important }`
+
+都是**元素自己**的声明。父级的 `!important` 只管父级那个盒子，
+**改变不了子元素自身声明的计算值**。实测非绘制态这 528 条路径的 PE 就是 `stroke`。
+
+→ 于是绘制期间点线/面要素照旧可点、照旧弹属性窗，正好压在光标下把落点吃掉。
+（吸附不受影响，所以出现「能吸附但点不下去」这种组合现象。）
+
+**改为对 pane + 可交互元素本身各关一次**，且必须带 `!important` 才压得过 `path.hit-area`：
+
+```css
+body.ogv-drawing .leaflet-map-pane,
+body.ogv-drawing .leaflet-map-pane .leaflet-pane,
+body.ogv-drawing .leaflet-map-pane svg,
+body.ogv-drawing .leaflet-map-pane path,
+body.ogv-drawing .leaflet-map-pane img,
+body.ogv-drawing .leaflet-map-pane .leaflet-interactive,
+body.ogv-drawing .leaflet-map-pane .hit-area { pointer-events: none !important; }
+```
+
+实测：绘制态 530 条路径 PE 全为 `none`，退出后复原成 `stroke`。
+
+### 泄漏二：Canvas 渲染路径是**自己监听 map 事件**的，CSS 根本拦不到
+
+`Leaflet.MarkersCanvas.js` 在 `onAdd` 里挂了
+`map.on("click", this._fire)` / `map.on("mousemove", this._fire)`，
+自己拿 RBush 做命中检测。CSS 的 `pointer-events:none` 只是让点击**穿透**到
+`.leaflet-container`（Geoman 要的正是这个），而 `map` 的 click 照样会触发，于是：
+
+- 命中点要素 → `onFeatureClick` → 弹属性悬浮窗
+- 命中聚合簇 → `map.setView()` 直接跳级缩放（落点全乱）
+- `mousemove` 命中就把容器光标改成 `pointer`，盖掉 Geoman 的十字准星
+
+**修法**：`_fire` 开头加闸，走 `OGVMeasureTools.isDrawing()`（内部即
+`pm.globalDrawModeEnabled()`，只在真的点了绘制工具后为真，不误伤编辑/拖拽/删除模式）：
+
+```js
+if (window.OGVMeasureTools && window.OGVMeasureTools.isDrawing()) {
+  if (this._map && this._map._container) this._map._container.style.cursor = "";
+  return;
+}
+```
+
+### 顺带
+
+- `pm:drawstart` 时 `map.closePopup()`：进测量模式先把上一个要素的属性窗收掉
+  （点击已经穿透了，但留个窗口浮在光标下既看不清落点也容易误解成还能点选）
+- `registerCircle()` 里 `openPopup()` 前显式 `setDrawing(false)`：
+  圆的「半径/面积 + 输入改半径」弹窗现在也会被 CSS 关掉，
+  得保证它在图形画完、绘制标记摘掉之后才需要交互
+
+### 实测（10/10 + 20/20 无回归）
+
+`.workbuddy/artifacts/probe-fix-clickthrough.js`（合成 Canvas 图层精确验闸）+ `verify-5req.js`：
+
+| 检查点 | 结果 |
+|---|---|
+| 绘制期间 `.leaflet-interactive` PE 全为 none | 530/530 ✅ |
+| 绘制期间 `.hit-area` PE 全为 none（压过 `!important stroke`） | 528/528 ✅ |
+| 绘制中点在线上：落点成功 **且** 不弹属性窗 | 顶点 0→1，popup=false ✅ |
+| Canvas：非绘制态点要素会触发 `onFeatureClick`（基线） | 1 次 ✅ |
+| Canvas：绘制态 **不**触发 `onFeatureClick` | 0 次 ✅ |
+| Canvas：绘制态不把光标改成 pointer（保住十字准星） | cursor='' ✅ |
+| Canvas：绘制态点击仍能落点 | 顶点=1 ✅ |
+| 退出绘制后 `ogv-drawing` 撤销、路径 PE 复原为 `stroke` | ✅ |
+| 工具条 / 图层控件始终可点 | ✅ |
+| v3.0.5 的 20 项全量回归（含圆的半径弹窗输入） | 20/20 ✅ |
+
+## 2026-09-17 — v3.0.5：测量控件五项交互修复（标签放大 / 无级缩放 / 盆地归组 / 测量不点选 / 画圆半径）
+
+> 版本号 `v3.0.4` → **`v3.0.5`**。改了 `geo-config.js` / `index.html` / `app.js` /
+> `Leaflet.GeoMarker.js` / `geojsonloader.css` / `service-worker.js`，
+> 新增 `measure-tools.js`。前五个都在 SW 预缓存清单里，故必须 bump；
+> 新文件已加进 `STATIC_ASSETS`。
+
+### ① 显示标签以后图标变大了
+
+**根因**：点图层的标记有两条渲染路径 —— 不带标签走 `createPointIcon()`（参数当**直径**），
+带标签走 `createLabeledMarker()`，而后者写的是 `var d = (iconSize || 8) * 2`（把参数当**半径**）。
+调用方两边都传的直径 20，于是开标签后变成 40px。
+
+**改法**：`createLabeledMarker` 的 `d` 取 `iconSize` 原值，与 `createPointIcon` 同口径。
+
+### ② 无级缩放（能停在 2.5 这种中间态）
+
+`MAP_CONFIG` 增 `zoomSnap:0` + `zoomDelta` / `wheelPxPerZoomLevel` / `wheelDebounceTime`。
+
+⚠️ 配套坑：`index.html` 读这些值时**必须用 `!= null` 判断**（新增 `_mapOpt(k, fallback)`）。
+`zoomSnap` 的合法值是 `0`，写成 `_MAP_CFG.zoomSnap || 1` 会把 0 弹回 1 —— 等价于没改。
+
+实测：`setZoom(2.5)` → `getZoom() = 2.5`；滚轮 3 → 3.981。
+
+### ③ 盆地图层归到「陆地地理信息」
+
+`盆地 (Evenick2021)` 从「海底基础信息」移入「陆地地理信息」。
+随之同步 `docs/static-vector-help.md`（该文档此前与实际清单已脱节，本次整篇按
+`window.geoJsonGroups` 重写：8 个可见组、逐组列实际图层名、补「暂未开放」区）。
+并把「数据图层清单变动 ⇒ 顺手同步该文档」写进项目 skill（与更新日志同一条流水线）。
+
+### ④ 测量时不点选要素（保留吸附）
+
+新增 `measure-tools.js`：绘制期间给 `<body>` 打 `ogv-drawing`，
+CSS `body.ogv-drawing .leaflet-map-pane .leaflet-pane:not(.leaflet-popup-pane){pointer-events:none}`。
+
+**为什么不影响吸附**：Leaflet-Geoman 的顶点吸附是**几何计算**（Snap 模块自己遍历图层几何找最近点），
+不依赖 DOM 命中测试 —— 所以屏蔽点击不会削弱吸附到点要素 / 线面折点。
+弹出层 pane 已从选择器里排除，属性表 / 弹窗里的按钮照常可点。
+
+### ⑤ 画圆显示/输入半径 + 一键清除
+
+- 画圆时跟随光标显示实时半径读数（`#ogvRadiusChip`）
+- 画完自动弹窗：半径 / 面积 + 可直接输入 km 改圆（回车等于点「应用」）
+- 工具条新增「清除全部测量」按钮（Geoman 自带的 Removal Mode 只能逐个删）
+
+⚠️ **两个实现坑**：
+
+1. **Geoman 的圆是「点一下定圆心 → 再点一下定半径」，不是按住拖**。
+   实时读数不能靠自己记 `mousedown` 的圆心 —— 两次点击之间夹的那次 `mouseup`
+   会把圆心清掉，读数永远出不来。改为读 Geoman 内部态
+   （`Draw.Circle._layer` / `._centerMarker` / `._layerGroup.hasLayer(...)`），
+   `click-click` 与拖动两种流程都能覆盖。
+2. **Leaflet 里 `L.Circle = L.CircleMarker.extend({...})`**（`leaflet.js`：`gi = fi.extend`）。
+   所以「地理圆 vs 像素圆」**只能写 `instanceof L.Circle`**；
+   第一版写的是 `instanceof L.Circle && !(x instanceof L.CircleMarker)` —— 后半段恒为 false，
+   导致所有地理圆都被当成像素圆：弹窗把 272060 m 显示成「272060 px」，
+   输入 300 也只按 300 像素处理（圆纹丝不动）。
+
+**顺带修的键盘可用性（WCAG 2.1.1，A 级）**：
+这份 Geoman 的默认值是 `finishOnEnter:false` / `exitModeOnEscape:false`
+（`leaflet-geoman.js` 内 `exitModeOnEscape:!1,finishOnEnter:!1`），
+后果是画线/画多边形**只能用鼠标双击或点回起点**才能收尾，Esc 也退不出去 ——
+纯键盘用户无法完成一次测量。已在 `app.js` 用 `map.pm.setGlobalOptions(GEOMEN_GLOBAL_OPTS)`
+打开「回车结束 / Esc 取消」。二者都只在真的有绘制模式在跑时才生效
+（`_handleEnterKey` 先查 `getActiveShape()`、`_handleEscapeKey` 先查 `global*ModeEnabled()`），
+不会抢走搜索框等别处的回车/Esc。
+⚠️ `addControls()` **不吃**这两个键 —— 工具条选项与全局选项在 Geoman 里是两套配置。
+
+### 实测（20/20）
+
+脚本 `.workbuddy/artifacts/verify-5req.js`（无头 Chrome，真点击/真滚轮）：
+
+| 项 | 检查点 | 结果 |
+|---|---|---|
+| ① | 圆点图层开关标签尺寸一致 | 20x20 / 20x20 ✅ |
+| ① | 内置图标图层（火山）开关标签尺寸一致 | 20x20 → 20x20 ✅ |
+| ② | `zoomSnap === 0` / `setZoom(2.5)`→2.5 / `setZoom(4.37)`→4.37 / 滚轮出小数层级 | 4/4 ✅ |
+| ③ | 盆地只在「陆地地理信息」；「海底基础信息」已无 | 2/2 ✅ |
+| ④ | 未测量时点要素会弹窗（基线）/ 测量中不弹 / 吸附仍开 / 折线能画完 / 退出后标记撤销 | 7/7 ✅ |
+| ⑤ | 按钮上图 / 实时读数 / 弹窗是 km 且有面积 / 输入 300 真的变 300 km / 一键清除 | 5/5 ✅ |
+| — | 页面无 JS 报错 | ✅ |
+
 ## 2026-09-13（j）— v3.0.4：设置面板「已开/总数」徽标计数修准
 
 > 版本号 `v3.0.3` → **`v3.0.4`**。改了 `app.js` / `geojsonloader.js`（都在 SW 预缓存清单里）。

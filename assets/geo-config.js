@@ -3,7 +3,7 @@
  *
  * 定制一个站点 = 只改本文件。共六段：
  *   ①   SITE_CONFIG   站点级：标题、主题色、天地图 token
- *   ①-2 MAP_CONFIG    地图级：初始视野、缩放上限
+ *   ①-2 MAP_CONFIG    地图级：初始视野、缩放上限、缩放手感（无级缩放）
  *   ①-3 BASEMAP_CONFIG 底图级：底图清单 + 覆盖层 + 3D 底图映射
  *   ②   路径配置      「数据从哪找」
  *   ③   图层清单      「有哪些图层」  ← 日常加数据只动这一段
@@ -195,6 +195,23 @@
     zoom: 3,
     // 地图允许的最大层级。底图自身的 maxNativeZoom（超过就放大填充）在 ①-3 里单独设。
     maxZoom: 19,
+
+    // ---- 缩放手感 ----
+    // zoomSnap = 缩放档位间隔。
+    //   0  = **无级缩放**：可以停在 2.5 / 4.37 这类中间层级（滚轮、双指捏合都是连续的），
+    //        手感接近 Google 地图。代价：底图瓦片只能取整级，中间态靠 CSS 缩放，
+    //        比整数级略糊一点点（矢量/标注不受影响）。
+    //   1  = Leaflet 默认，只能停在整数级。
+    //   0.5 / 0.25 之类也可以，就是「半级 / 四分之一级」档位。
+    zoomSnap: 0,
+    // 点「+/-」按钮、双击、键盘 +/- 一次跳几级（与 zoomSnap 独立）。
+    //   zoomSnap=0 时仍建议留 1，让按钮保持「一整级」的干脆手感。
+    zoomDelta: 1,
+    // 滚轮：每缩放 1 级需要滚多少像素。数值越大 = 一次滚轮改变得越少 = 越慢越细腻。
+    // Leaflet 默认 60。想更接近 Google 的「慢慢放大」可以调到 80~100。
+    wheelPxPerZoomLevel: 80,
+    // 滚轮停止后延迟多少毫秒才执行缩放（避免连续滚动被拆成很多次动画）。Leaflet 默认 40。
+    wheelDebounceTime: 40,
 
     // ---- 自定义 pane 的 z-index（改叠放顺序只改这里）----
     // Leaflet 默认：tilePane 200 < overlayPane 400 < shadowPane 500
@@ -605,16 +622,7 @@
         },
         { name: "大火成岩省 (Johansson)", file: "LIP_Johansson.geojson" },
         { name: "洋壳年龄30Ma间隔", file: "seafloor_age_30.geojson" },
-        {
-          name: "盆地 (Evenick2021)",
-          file: "global_basins_Evenick2021.geojson",
-        },
-        // 盆地只保留一个数据源：CGG 数据集体积过大（10MB gz），统一并入 Evenick2021
-        {
-          name: "盆地 (CGG)",
-          file: "Sedimentary_CGG.geojson",
-          hidden: true,
-        },
+        // 盆地（Evenick2021 / CGG）属陆地地理信息 → 已移到下方「陆地地理信息」组
         {
           name: "海底地名点 Gazetteer_point",
           file: "Gazetteer_point.geojson.gz",
@@ -834,6 +842,17 @@
           // 但写死在配置里，以后数据加要素也还是同一个蓝）
           color: "#1976D2",
           colorMode: "single",
+        },
+        // —— 沉积盆地：地理上属于陆地，2026-09-17 从「海底基础信息」移入本组 ——
+        {
+          name: "盆地 (Evenick2021)",
+          file: "global_basins_Evenick2021.geojson",
+        },
+        // 盆地只保留一个数据源：CGG 数据集体积过大（10MB gz），统一并入 Evenick2021
+        {
+          name: "盆地 (CGG)",
+          file: "Sedimentary_CGG.geojson",
+          hidden: true,
         },
         // {
         //   name: "国家行政区 countries",

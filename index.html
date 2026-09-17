@@ -365,7 +365,7 @@
     </div>
     <!-- 基础设定JS脚本 -->
     <script>
-      // 天地图 TK、初始视野等站点级设定统一来自 assets/geo-config.js
+      // 天地图 TK、初始视野、缩放手感等站点级设定统一来自 assets/geo-config.js
       const _MAP_CFG = window.MAP_CONFIG || {};
       const TDT_TK =
         (window.SITE_CONFIG && window.SITE_CONFIG.tiandituToken) || "";
@@ -373,9 +373,24 @@
 
       // L.CRS.EPSG3857.projection.MAX_LATITUDE = 89;
 
+      // ⚠️ zoomSnap 允许为 0（= 无级缩放），所以这里**不能用 `||` 兜底**
+      //    —— 0 是假值，`_MAP_CFG.zoomSnap || 1` 会把 0 悄悄改回 1。
+      //    用 `!= null` 判断「配置里到底写了没有」。
+      function _mapOpt(key, fallback) {
+        var v = _MAP_CFG[key];
+        return v == null ? fallback : v;
+      }
+
       // 初始化地图容器
       map = L.map("map", {
         maxZoom: _MAP_CFG.maxZoom || 19,
+        // 缩放档位：0 = 无级（可停在 2.5 这种中间层级），1 = 只能整数级
+        zoomSnap: _mapOpt("zoomSnap", 1),
+        // +/- 按钮 / 双击 / 键盘一次跳几级
+        zoomDelta: _mapOpt("zoomDelta", 1),
+        // 滚轮手感：每级需要滚多少像素（越大越慢越细腻）
+        wheelPxPerZoomLevel: _mapOpt("wheelPxPerZoomLevel", 60),
+        wheelDebounceTime: _mapOpt("wheelDebounceTime", 40),
         zoomControl: true,
         attributionControl: false,
       }).setView(_MAP_CFG.center || [32, 107], _MAP_CFG.zoom || 3);
@@ -403,6 +418,11 @@
       map.on("pm:create", function (e) {
         const layer = e.layer;
         let measurement = "";
+
+        // 圆（Circle / CircleMarker）交给 assets/measure-tools.js：
+        // 它的弹窗除了半径/面积读数，还要带一个「输入半径直接改圆」的输入框，
+        // 不是纯格式化能覆盖的，故不在这里重复绑弹窗。
+        if (e.shape === "Circle" || e.shape === "CircleMarker") return;
 
         if (e.shape === "Line") {
           // 计算线段长度
@@ -556,6 +576,8 @@
     <script src="./assets/pointdrop.js"></script>
     <!-- 测量/绘制结果 → GeoJSON 用户图层（依赖 pointdrop 的按钮锚点） -->
     <script src="./assets/measure-export.js"></script>
+    <!-- 测量/绘制交互增强：测量中不点选要素、画圆实时半径 + 输入改半径、一键清除测量 -->
+    <script src="./assets/measure-tools.js"></script>
     <script src="./assets/scroll-gutter-guard.js"></script>
     <!-- 要素详情面板（属性表 + 图表） -->
     <script src="./assets/feature-panel.js"></script>
