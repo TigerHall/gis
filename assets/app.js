@@ -48,6 +48,12 @@ S.dropObsoleteKeys();
             desc: "切换到 Cesium 3D 地球，支持地形起伏和多角度查看。首次启用需下载约 4MB 引擎库（有进度提示，可取消）；刷新页面后不会自动进入",
           },
           {
+            id: "polarToggle",
+            label: "极地投影视图",
+            icon: "🧊",
+            desc: "切换到南北极立体投影视图（北极 EPSG:3413 / 南极 EPSG:3031）。这是独立的第二张地图，主视图与已加载图层不受影响；面板里勾选的数据图层会同步渲染，坐标仍保持 -180~180。底图默认 NASA GIBS 极地瓦片，另有 GEBCO 极地影像；刷新页面后不会自动进入",
+          },
+          {
             id: "clusterToggle",
             label: "点要素聚类",
             icon: "🧩",
@@ -1307,6 +1313,13 @@ S.dropObsoleteKeys();
     view3dToggle: {
       storageKey: TOGGLE_PREFIX + "view3d",
       enable: function (userInitiated) {
+        // 极地视图与 3D 互斥：两个大场景同时开着既互相遮挡又抢性能。
+        // 走 checkbox + change 事件关闭，保证开关 UI 状态一致（本项目统一做法）。
+        var polarCb = document.getElementById("polarToggle");
+        if (polarCb && polarCb.checked) {
+          polarCb.checked = false;
+          polarCb.dispatchEvent(new Event("change", { bubbles: true }));
+        }
         if (window.CesiumViewer) {
           window.CesiumViewer.activate();
         } else if (userInitiated) {
@@ -1324,6 +1337,33 @@ S.dropObsoleteKeys();
           window.CesiumViewer.cancelActivate();
           window.CesiumViewer.deactivate();
         }
+      },
+    },
+    polarToggle: {
+      storageKey: TOGGLE_PREFIX + "polar",
+      enable: function (userInitiated) {
+        // 与 3D 同策略：刷新页面不自动进极地视图。initToggle 会把存储里的
+        // true 映射成 enable(false)，这里直接把开关和存储都按回「关」，
+        // 只有用户主动拨动（userInitiated=true）才真正打开。
+        if (!userInitiated) {
+          var cbOff = document.getElementById("polarToggle");
+          if (cbOff) cbOff.checked = false;
+          S.safeSet(TOGGLE_PREFIX + "polar", "false");
+          return;
+        }
+        if (!window.PolarView) {
+          window.showToast("极地视图模块未加载", { duration: 3000 });
+          var cbMiss = document.getElementById("polarToggle");
+          if (cbMiss) cbMiss.checked = false;
+          return;
+        }
+        if (!window.PolarView.open()) {
+          var cbFail = document.getElementById("polarToggle");
+          if (cbFail) cbFail.checked = false;
+        }
+      },
+      disable: function () {
+        if (window.PolarView) window.PolarView.close();
       },
     },
     isLocationTracking: {
@@ -1802,6 +1842,7 @@ S.dropObsoleteKeys();
   //      elevationRead     插件 enable() 的幂等性未验证
   var SYNC_BLOCK = {
     view3dToggle: 1,
+    polarToggle: 1,
     isLocationTracking: 1,
     premiumToggle: 1,
     elevationReadToggle: 1,

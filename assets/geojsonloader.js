@@ -683,10 +683,19 @@
         : null;
     }
 
-    map.on("popupopen", function (e) {
-      var el = e.popup && e.popup.getElement();
-      if (el) _popupByEl.set(el, e.popup);
-    });
+    // popupopen 只负责登记 element → popup。注意要在**每张**可能开窗的地图上挂一次
+    // （极地视图是独立的第二张 L.map，它开窗时主地图的 popupopen 不会触发）——
+    // 所以抽成 trackPopups(targetMap)，并对外暴露 window._ogvTrackPopups。
+    function trackPopups(targetMap) {
+      if (!targetMap || targetMap._ogvPopupTracked) return;
+      targetMap._ogvPopupTracked = true;
+      targetMap.on("popupopen", function (e) {
+        var el = e.popup && e.popup.getElement();
+        if (el) _popupByEl.set(el, e.popup);
+      });
+    }
+    window._ogvTrackPopups = trackPopups;
+    trackPopups(map);
 
     document.addEventListener("click", function (ev) {
       var btn =
@@ -700,7 +709,10 @@
       if (!target) return;
       ev.preventDefault();
       var act = btn.getAttribute("data-act");
-      if (popup) map.closePopup(popup);
+      // 弹窗可能开在极地视图上 → 关闭 / 缩放的都必须是「它自己那张图」，
+      // 用主地图 map 是关不掉的（removeLayer 对不持有该图层的地图是空操作）。
+      var hostMap = (popup && popup._map) || map;
+      if (popup) hostMap.closePopup(popup);
 
       if (act === "zoom") {
         // 3D 模式：飞至要素
@@ -717,7 +729,7 @@
             features: [target.feature],
           });
           if (b && b.isValid && b.isValid()) {
-            map.fitBounds(b, {
+            hostMap.fitBounds(b, {
               padding: [50, 50],
               maxZoom: 14,
               animate: true,
@@ -863,56 +875,63 @@
         });
       }
 
-      // 根据几何类型判断是否需要跨180度副本
+      // ── 跨 180° 处理：几何「展开」，而不是复制 ────────────────────
+      // 跨 180° 的线/面在 Web Mercator 下会被拉成横跨全球的怪线（实测一条实际只有
+      // 20° 的线渲染成 968px，而世界宽才 1024px）。fixAntimeridian 按「相邻点经度差
+      // 不超过 180°」把几何展开（170E→170W 变成 170→190），链式消掉跳变。
+      // 就地修改、不深拷贝（数据来自 IDB 的副本，改不到存储）。
       const mainGeomType = window.GeoUtils.detectMainGeomType(geojsonData);
       const isLineOrPolygon =
         mainGeomType === "linestring" ||
         mainGeomType === "multilinestring" ||
         mainGeomType === "polygon" ||
         mainGeomType === "multipolygon";
-      // 线/面始终做三个副本；点要素只在≤3000时做副本（避免内存爆炸）
+      if (isLineOrPolygon && window.GeoUtils.fixAntimeridian) {
+        window.GeoUtils.fixAntimeridian(geojsonData);
+      }
+
       const totalPoints = geojsonData.features
         ? geojsonData.features.length
         : 0;
-      const useWorldCopy = isPointType
-        ? totalPoints > 0 && totalPoints <= 3000
-        : isLineOrPolygon;
-      const offsets = useWorldCopy ? [-360, 0, 360] : [0];
+      // 大数据集点层 → Canvas 渲染。世界副本由 Canvas 在渲染层完成，
+      // 所以「点数 > 3000 就不做副本」这个妥协可以删掉了。
+      const useCanvasRenderer = isPointType && totalPoints > 3000;
+
+      // ── 世界副本的三条落地路径（详见 Leaflet.WorldWrap.js 顶部说明）──
+      //  · 线/面：L.Polyline._project 补丁把 _rings 复制 k 份，绘制与命中同时生效
+      //  · Canvas 点层：_redraw 内按「屏幕上可见的世界」循环绘制
+      //  · DOM 点层（聚类 / 无聚类）：聚类是数据空间算法，只能一 k 一份图层，
+      //    交给 L.WorldCopyGroup 按视口池化挂载与回收
+      // 三者都只保留一份正本数据，坐标永远是 -180~180。
+      const useWorldCopyGroup = isPointType && !useCanvasRenderer;
+      const WORLD_COPY_MAX_POOL = 6;
+
       const geoLayers = [];
       const clusterGroups = [];
       const allMarkers = [];
 
-      offsets.forEach(function (offset) {
-        const shifted = window.GeoUtils.shiftGeoJSON(geojsonData, offset);
-        if (
-          shifted.type === "FeatureCollection" &&
-          Array.isArray(shifted.features)
-        ) {
-          shifted.features.forEach(function (f, idx) {
-            f._featureIndex = geojsonData.features[idx]
-              ? geojsonData.features[idx]._featureIndex
-              : idx;
-          });
-        }
-
-        const firstFeature = shifted.features?.find((f) => f.geometry);
+      /**
+       * 按「一份数据」构建图层，返回本轮新建的图层数组。
+       * data 只在 DOM 世界副本路径下会被平移到 k*360，其余路径都是正本。
+       */
+      function buildPassFor(data) {
+        const madeFrom = geoLayers.length;
+        const firstFeature = data.features?.find((f) => f.geometry);
         const firstGeomType = (
           firstFeature?.geometry?.type || ""
         ).toLowerCase();
-        const isPointType =
+        const isPointData =
           firstGeomType === "point" || firstGeomType === "multipoint";
 
-        if (isPointType) {
-          const features = shifted.features || [];
+        if (isPointData) {
+          const features = data.features || [];
           const totalFeatures = features.length;
-          const originalCount = geojsonData.features
-            ? geojsonData.features.length
-            : 0;
 
           // 大数据集：Canvas 渲染（零 DOM 节点，支持 45 万+ 点）
-          // 用原始要素数判断，不受世界副本（×3）影响
-          // 自定义图标在 Canvas 上通过 drawImage 绘制
-          if (originalCount > 3000) {
+          // 世界副本由 Canvas 在渲染层完成（_redraw 按可见 k 循环），
+          // 所以这里只喂一份正本要素、坐标保持 -180~180。
+          // 判断走上面已算好的 useCanvasRenderer
+          if (useCanvasRenderer) {
             // 预加载自定义图标
             var iconType_ = layerIconMap[checkboxId];
             var iconSize_ = layerIconSizeMap[checkboxId] || 20;
@@ -1015,7 +1034,7 @@
               );
             }
 
-            canvasLayer.setFeatures(featuresArray);
+            canvasLayer.setFeatures(featuresArray, map);
 
             // 缓存 featuresArray 供颜色快速切换（避免重新读取数据）
             canvasFeaturesCache[checkboxId] = featuresArray;
@@ -1061,7 +1080,7 @@
             // 注意：不在这里 addTo(map)，统一由层组管理，避免重复添加/移除混乱
 
             const markers = [];
-            L.geoJSON(shifted, {
+            L.geoJSON(data, {
               pointToLayer: function (feature, latlng) {
                 const idx = feature._featureIndex || 0;
                 const color = getFeatureFillColor(
@@ -1140,7 +1159,7 @@
             geoLayers.push(clusterGroup);
           } else {
             // 小数据集 + 聚类关闭：DOM 无聚类
-            const geoLayer = L.geoJSON(shifted, {
+            const geoLayer = L.geoJSON(data, {
               pointToLayer: function (feature, latlng) {
                 const idx = feature._featureIndex || 0;
                 const color = getFeatureFillColor(
@@ -1185,7 +1204,7 @@
           // 线要素点击热区收集（透明宽线，onEachFeature 中 push，构造后统一 add，
           // 避免在 L.geoJSON 构造期间访问尚未赋值的 geoLayer）
           const lineHitLayers = [];
-          const geoLayer = L.geoJSON(shifted, {
+          const geoLayer = L.geoJSON(data, {
             pointToLayer: function (feature, latlng) {
               const idx = feature._featureIndex || 0;
               const color = getFeatureFillColor(
@@ -1419,7 +1438,33 @@
           // 注意：不在这里 addTo(map)，统一由层组管理，避免重复添加/移除混乱
           geoLayers.push(geoLayer);
         }
-      });
+
+        return geoLayers.splice(madeFrom);
+      }
+
+      // ── 按渲染路径装配 ────────────────────────────────────────────
+      if (useWorldCopyGroup) {
+        // DOM 点层（聚类 / 无聚类）：聚类是数据空间算法，只能一 k 一份图层。
+        // 份数由 L.WorldCopyGroup 按当前视口算出，按需创建、池化复用 ——
+        // 不再是写死的 [-360, 0, 360] 三份。正本始终是 k=0 那一份。
+        const copyGroup = L.worldCopyGroup(
+          function (k) {
+            const d =
+              k === 0
+                ? geojsonData
+                : window.GeoUtils.shiftGeoJSON(geojsonData, k * 360);
+            return buildPassFor(d);
+          },
+          { maxPool: WORLD_COPY_MAX_POOL },
+        );
+        copyGroup._ogvWorldCopyGroup = true;
+        geoLayers.push(copyGroup);
+      } else {
+        // 线/面（由 L.Polyline._project 补丁负责副本）
+        // Canvas 点层（由 MarkersCanvas._redraw 负责副本）：都只需要正本
+        const made = buildPassFor(geojsonData);
+        for (let mi = 0; mi < made.length; mi++) geoLayers.push(made[mi]);
+      }
 
       highlightState[checkboxId] = {
         geoLayers: geoLayers,
@@ -2107,7 +2152,7 @@
                   properties: f.properties || null,
                 });
               }
-              canvasLayer.setFeatures(featuresArray);
+              canvasLayer.setFeatures(featuresArray, map);
               // 缓存更新后的 featuresArray，供后续颜色快速切换
               canvasFeaturesCache[checkboxId] = featuresArray;
               updateColorBtnHint(checkboxId);

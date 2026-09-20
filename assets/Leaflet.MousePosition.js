@@ -388,16 +388,26 @@
       }
 
       var lat = targetLatLng.lat.toFixed(this.options.precision);
-      var lng = targetLatLng.lng.toFixed(this.options.precision);
+      // ⚠️ 地图横向拖出 ±180° 后，光标落点是「世界副本」上的位置，经纬度会是
+      //    456 这类被平移过的值。读数上统一折回 [-180,180) —— 同一位置在世界里
+      //    重复出现，折回后仍指向同一个点，只是不再显示越界经度。
+      var lngValue = targetLatLng.lng;
+      if (window.L.WorldWrap && isFinite(lngValue)) {
+        lngValue = window.L.WorldWrap.normalizeLng(lngValue);
+      }
+      var lng = lngValue.toFixed(this.options.precision);
 
       var text = this.options.format
         .replace("{lat}", lat)
         .replace("{lng}", lng);
 
-      if (this.options.showZoom && this._currentZoom) {
+      // ⚠️ 无级缩放（zoomSnap:0）下 getZoom() 是 2.4713… 这类长小数，直接拼进去
+      //    读数会抖着眼花。统一保留 1 位小数；z0 也要显示（旧写法 `&& this._currentZoom`
+      //    把 0 当成假值，缩到最小时整段读数会消失）。
+      if (this.options.showZoom && this._currentZoom != null) {
         var zoomText = this.options.zoomLabel.replace(
           "{zoom}",
-          this._currentZoom,
+          (Math.round(this._currentZoom * 10) / 10).toFixed(1),
         );
         text = zoomText + text;
       }

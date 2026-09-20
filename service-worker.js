@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v3.0.6";
+const CACHE_NAME = "v3.1.1";
 
 // 全量预缓存：安装 PWA 后全部功能离线可用（后台静默执行，不阻塞页面）
 // 注意：assets/cesium/Cesium.js（4.9MB）故意不在此列 —— 它只在用户真正打开 3D 时
@@ -24,8 +24,13 @@ const STATIC_ASSETS = [
   "./assets/pointdrop.css",
   "./assets/elevation-query.css",
   "./assets/cesium-container.css",
+  "./assets/polar-view.css",
   // 脚本
   "./assets/leaflet.js",
+  "./assets/proj4.js",
+  "./assets/proj4leaflet.js",
+  "./assets/Leaflet.WorldWrap.js",
+  "./assets/Leaflet.PolarView.js",
   "./assets/geo-utils.js",
   "./assets/Leaflet.GeoMarker.js",
   "./assets/Leaflet.GzIdbLoader.js",
@@ -72,6 +77,9 @@ const STATIC_ASSETS = [
   // 底图
   "./assets/xyz/etopo.jpg",
   "./assets/xyz/etopo2022high.jpg",
+  // 极地投影底图（GEBCO 官方 WMS 不支持极地 SRS，故为离线预烘影像）
+  "./assets/xyz/gebco_3413.jpg",
+  "./assets/xyz/gebco_3031.jpg",
   // 截图
   "./assets/images/screenshot-desktop.jpg",
   "./assets/images/screenshot-mobile.jpg",

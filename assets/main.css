@@ -655,6 +655,13 @@ details.layer-section[open] > summary .layer-group-arrow {
   transition: box-shadow 0.3s ease;
 }
 
+/* 底图控件选「无底图」时（basemap-manager 会挂 body.basemap-none）：
+   地图露出容器背景，这里让它跟随站点主题，而不是 Leaflet 默认的 #ddd
+   —— 深色模式下那块亮灰很刺眼。选择器要压过 .leaflet-container 的 0,1,0。 */
+body.basemap-none #map {
+  background: var(--c-bg);
+}
+
 #map:active {
   box-shadow: 0 0 16px rgba(106, 170, 106, 0.4);
 }

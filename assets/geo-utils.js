@@ -333,9 +333,35 @@
 
   /**
    * fixRingCoords - "展开"策略：消除相邻点之间的 >180° 跳变
+   *
+   * ⚠️ 极冠环必须原样返回，不能展开（见 POLAR_RING_LAT 的说明）。
    */
+  // 含此纬度以上顶点的环 = 「极冠环」（沿 ±180° 切开、靠极点段闭合的那种）。
+  // 87 取在「真正的极冠」与「北极圈内普通地形」（格陵兰最北约 83.6°）之间。
+  const POLAR_RING_LAT = 87;
+
   function fixRingCoords(coords) {
     if (!coords || coords.length === 0) return coords;
+
+    // ── 极冠环：原样返回 ────────────────────────────────────────────
+    // 这类环是「沿 ±180° 切开」的写法，靠一段横躺在极点上的顶点把环闭合，例如：
+    //   … (-179.999,-89.999) → (-110,-89.999) → (179.999,-89.999) → (179.999,-88.73) …
+    // Web Mercator 把 |lat|>85.051 钳到 ±85.051，所以那一段会**正好躺在地图上下边**
+    // 上横贯一整圈 —— 环于是就着地图边闭合，极冠被完整填充。
+    //
+    // 一旦对它做「展开」：-(110)→(179.999) 这一步是 290° 跳变，会被折算成 -70°，
+    // 于是极点段被折叠成原地往返的零面积尖刺，环改成走一条**横贯地图的弦**闭合；
+    // SVG 按非零环绕填充时自我抵消，极冠整块消失。
+    // 实测（plate16 南极冠 913 点环，6 个采样点）：
+    //   原样        → 6/6 命中（罗斯海、威德尔海、南极点 都在填充内）
+    //   展开后      → 1/6 命中
+    //   北极 plate_ocean #61（环跨 385.6°，自交）同理：3/6 → 1/6
+    // 极冠环本来就已在 ±180° 处切开，不存在需要展开的跳变，跳过它对其它几何无影响。
+    for (let k = 0; k < coords.length; k++) {
+      const c = coords[k];
+      if (c && Math.abs(c[1]) >= POLAR_RING_LAT) return coords;
+    }
+
     const first = coords[0].slice();
     first[0] = ((((first[0] + 180) % 360) + 360) % 360) - 180;
     const result = [first];
@@ -570,6 +596,9 @@
       BASEMAP: PREFIX + "basemap",
       OVERLAYS: PREFIX + "overlays",
       WAYBACK_RELEASE: PREFIX + "wayback_release",
+      // --- 极地投影视图 ---
+      POLAR_MODE: PREFIX + "polar_mode", // north / south
+      POLAR_BASEMAP: PREFIX + "polar_basemap",
     };
 
     // 本应用的键前缀（清理时只动这些，不碰同域其他页面）

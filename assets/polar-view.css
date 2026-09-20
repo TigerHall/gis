@@ -1,0 +1,217 @@
+/**
+ * polar-view.css
+ * 极地投影视图：容器与顶部控制条。
+ *
+ * 容器占位规则与 #map 完全一致（同一个 flex 列里互斥显示），
+ * 这样切过去时不会出现尺寸/边距跳变。颜色一律走 main.css 的主题变量。
+ */
+
+/* ===== 容器：与 #map 同款占位 ===== */
+#polarView {
+  flex: 1;
+  height: 100%;
+  width: min(96%, 100vw - 6px);
+  margin: 0 auto;
+  position: relative;
+  border: min(1.6px, 1vh) dashed var(--panel-border);
+  border-radius: max(6px, 0.6vw);
+  overflow: hidden;
+  display: none;
+  touch-action: pan-x pan-y;
+}
+
+/* 极地模式：主地图与极地图互斥显示（display 切换 → 返回时需 map.invalidateSize） */
+body.polar-active #map {
+  display: none;
+}
+body.polar-active #polarView {
+  display: block;
+}
+
+#polarMap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-bg-alt);
+}
+
+/* ===== 顶部控制条 ===== */
+.polar-bar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 12px;
+  max-width: calc(100% - 16px);
+  padding: 6px 10px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--c-text);
+}
+
+.polar-bar__title {
+  font-weight: 600;
+  color: var(--c-green-text-strong);
+  white-space: nowrap;
+}
+
+/* 北 / 南 分段选择 */
+.polar-seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--c-bg-alt);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+}
+
+.polar-seg__btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 3px 10px;
+  background: transparent;
+  color: var(--c-text-alt);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.polar-seg__btn:hover {
+  background: var(--c-bg-hover);
+}
+
+/* 选中态：边框色不能用 --accent(#99cc99 仅 1.58:1)，
+   文字用 --c-green-text-strong 保证 AA */
+.polar-seg__btn.is-active {
+  background: var(--c-bg);
+  border-color: var(--c-green-text-strong);
+  color: var(--c-green-text-strong);
+  font-weight: 600;
+}
+
+.polar-seg__btn:focus-visible {
+  outline: 2px solid var(--c-green-text-strong);
+  outline-offset: 1px;
+}
+
+.polar-seg__btn:active {
+  transform: scale(0.96);
+  transition-duration: 0s;
+}
+
+/* 底图选择 */
+.polar-bar__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.polar-bar__label {
+  color: var(--c-text-alt);
+  white-space: nowrap;
+}
+
+.polar-bar select {
+  max-width: 190px;
+  padding: 3px 4px;
+  font: inherit;
+  color: var(--input-color);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.polar-bar select:focus-visible {
+  outline: 2px solid var(--c-green-text-strong);
+  outline-offset: 1px;
+}
+
+/* 状态提示 */
+.polar-bar__hint {
+  color: var(--c-text-alt);
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.polar-bar__hint.is-error {
+  color: var(--c-red);
+  white-space: normal;
+}
+
+/* 返回主视图 */
+.polar-bar__close {
+  appearance: none;
+  padding: 3px 10px;
+  font: inherit;
+  color: var(--c-green-text-strong);
+  background: var(--c-bg);
+  border: 1px solid var(--c-green-text-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.polar-bar__close:hover {
+  background: var(--c-bg-hover);
+}
+
+.polar-bar__close:focus-visible {
+  outline: 2px solid var(--c-green-text-strong);
+  outline-offset: 1px;
+}
+
+.polar-bar__close:active {
+  transform: scale(0.96);
+  transition-duration: 0s;
+}
+
+/* 窄屏：控制条改为两行，避免把地图压得太小 */
+@media (max-width: 600px) {
+  .polar-bar {
+    gap: 6px 8px;
+    padding: 5px 8px;
+  }
+  .polar-bar__hint {
+    max-width: 100%;
+    order: 5;
+  }
+  .polar-bar select {
+    max-width: 130px;
+  }
+}
+
+/* 深色模式下 Leaflet 的比例尺 / 版权条跟随主题。
+   版权条默认不生成（POLAR_CONFIG.showAttribution = false），这两条规则是
+   把开关打开时的配色兜底。 */
+[data-theme="dark"] #polarView .leaflet-control-scale-line {
+  background: rgba(17, 17, 17, 0.7);
+  border-color: var(--c-border-str);
+  color: var(--c-text);
+}
+
+[data-theme="dark"] #polarView .leaflet-control-attribution {
+  background: rgba(17, 17, 17, 0.7);
+  color: var(--c-text-alt);
+}
+
+[data-theme="dark"] #polarView .leaflet-control-attribution a {
+  color: var(--c-blue);
+}

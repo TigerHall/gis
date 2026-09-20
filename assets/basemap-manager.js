@@ -320,6 +320,16 @@
     allBaseLayers[FALLBACK.name] = fallbackLayer();
   }
 
+  // —— 「无底图」：底图控件里的一个伪底图项（配置字段 BASEMAP_CONFIG.noneLabel）——
+  // 载体是一个**恒定单例**的空 LayerGroup：Leaflet 的图层控件是单选，选中它就会把
+  // 上一张底图卸掉，于是地图露出 #map 的背景（body.basemap-none 让它跟随主题，
+  // 而不是 Leaflet 默认的 #ddd）。必须是单例，否则控件的选中态/重建后对不上。
+  // 放进 allBaseLayers 是为了让「当前底图」这套逻辑（记忆恢复、rebuild 时确保
+  // 底图在图上、3D 的底图映射）把它当成一张普通底图看待，不必到处打补丁。
+  var noneLabel = typeof cfg.noneLabel === "string" ? cfg.noneLabel.trim() : "";
+  var noneLayer = noneLabel ? L.layerGroup([]) : null;
+  if (noneLayer) allBaseLayers[noneLabel] = noneLayer;
+
   var allOverlays = {};
   (cfg.overlays || []).forEach(function (d) {
     var l = buildOne(d);
@@ -378,15 +388,34 @@
     return merged;
   }
   function getVisibleBaseLayers() {
-    if (moreToggleOn()) return allBaseLayers;
-    var subset = cfg.defaultSubset;
-    if (!Array.isArray(subset) || !subset.length) return allBaseLayers;
-    var out = {};
-    // 顺序按 allBaseLayers（即 baseLayers 的书写顺序），只按 defaultSubset 过滤
-    Object.keys(allBaseLayers).forEach(function (k) {
-      if (subset.indexOf(k) !== -1) out[k] = allBaseLayers[k];
-    });
-    if (!Object.keys(out).length) return allBaseLayers;
+    var out;
+    if (moreToggleOn()) {
+      out = {};
+      Object.keys(allBaseLayers).forEach(function (k) {
+        out[k] = allBaseLayers[k];
+      });
+    } else {
+      var subset = cfg.defaultSubset;
+      if (!Array.isArray(subset) || !subset.length) {
+        out = {};
+        Object.keys(allBaseLayers).forEach(function (k) {
+          out[k] = allBaseLayers[k];
+        });
+      } else {
+        out = {};
+        // 顺序按 allBaseLayers（即 baseLayers 的书写顺序），只按 defaultSubset 过滤
+        Object.keys(allBaseLayers).forEach(function (k) {
+          if (subset.indexOf(k) !== -1) out[k] = allBaseLayers[k];
+        });
+        if (!Object.keys(out).length) {
+          Object.keys(allBaseLayers).forEach(function (k) {
+            out[k] = allBaseLayers[k];
+          });
+        }
+      }
+    }
+    // 「无底图」永远在列表里，且永远排在最后（不受 defaultSubset / 「更多底图」影响）
+    if (noneLayer) out[noneLabel] = noneLayer;
     return out;
   }
 
@@ -420,6 +449,15 @@
   // 「更多底图」收起时 rebuildLayerCtrl 会摘掉随之隐藏的覆盖层 —— 那是**被动移除**，
   // 不是用户取消勾选。挂起持久化，否则记忆被顺手清掉，下次打开「更多底图」全丢。
   var _suspendPersist = false;
+
+  /**
+   * 同步「无底图」标记到 body：main.css 用它把 #map 背景换成主题色
+   * （否则露出的是 Leaflet 默认的 #ddd，深色模式下是一块刺眼的亮灰）。
+   */
+  function syncNoneState() {
+    if (!document.body || !noneLayer) return;
+    document.body.classList.toggle("basemap-none", map.hasLayer(noneLayer));
+  }
 
   function rebuildLayerCtrl() {
     if (window._layerCtrlControl) {
@@ -474,6 +512,8 @@
       }
     });
     _suspendPersist = false;
+
+    syncNoneState();
   }
 
   window.rebuildLayerCtrl = rebuildLayerCtrl;
@@ -509,6 +549,7 @@
     _currentBasemapName = e.name;
     window._currentBasemapName = e.name;
     S.safeSet(S.KEY.BASEMAP, e.name);
+    syncNoneState();
     if (window.CesiumViewer && window.CesiumViewer.isActive) {
       window.CesiumViewer.syncBasemap();
     }
@@ -777,6 +818,8 @@
   window.BasemapManager = {
     config: cfg,
     fallbackName: FALLBACK.name,
+    // 「无底图」项名（null = 配置里关掉了这一项）。3D 侧据此判断要不要铺底图。
+    noneName: noneLabel || null,
     baseLayers: allBaseLayers,
     overlays: allOverlays,
     moreOverlays: moreOverlays,

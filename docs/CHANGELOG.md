@@ -1,5 +1,338 @@
 # 更新记录
 
+## 2026-09-20 — v3.0.10：底图控件新增「无底图」+ 极地视图去掉版权条
+
+> 版本号 `v3.0.9` → **`v3.0.10`**。改动落在 `basemap-manager.js` / `cesium-viewer.js` /
+> `main.css` / `geo-config.js`，前三个都在 SW 预缓存清单里，故照例 bump。
+
+### 一、底图单选新增「无底图」：一键清空底图，只留要素
+
+**需求**：底图控件里加一个「无底图」选项，选上后所有底图卸掉、地图留空白，方便
+专心看矢量要素。
+
+![选中「无底图」：底图全部卸掉，只剩板块面与境界线](shots/basemap-none-map.png)
+
+**做法**（`BASEMAP_CONFIG.noneLabel`，默认 `"无底图"`）：
+
+- 它是**伪底图** —— 一个空的 `L.layerGroup([])`，混在 `allBaseLayers` 里交给
+  Leaflet 的图层控件。控件底图区是**单选**，选中它 Leaflet 自己就把上一张底图移除，
+  不需要我们手动遍历卸载。
+- 位置固定在列表**最末**：`getVisibleBaseLayers()` 在「默认子集 / 更多底图」过滤**之后**
+  追加，所以开不开「更多底图」它都在最后一项。
+- 选中的状态落到 `body.basemap-none`（`syncNoneState()`，在 `rebuildLayerCtrl()` 与
+  `baselayerchange` 里各同步一次）。`main.css` 据此把 `#map` 背景从 Leaflet 默认的
+  `#ddd` 换成主题色 `--c-bg` —— 浅色主题是白，深色主题是深底，不会突兀地亮一块。
+- **记忆照常生效**：它就是一个普通底图名，走 `OGVStorage` 的 `KEY.BASEMAP`，
+  刷新后仍是「无底图」。
+- **3D 同步**：`BasemapManager` 导出 `noneName`，`CesiumViewer.syncBasemap()` 认这个
+  名字就**不铺影像**（`imageryLayers` 里只留用户勾选的覆盖层），地球只余
+  `globe.baseColor`，要素照常渲染。
+- 配置里把 `noneLabel` 传空字符串即可**隐藏该项**，引擎侧无硬编码。
+
+**验证**（无头浏览器 7 项）：控件最后一项确为「无底图」；选中后底图瓦片 `img` 由 84 → 0
+（剩下的 28 个属于用户勾选的覆盖层「天地图全球境界」，本该保留）；`body.basemap-none`
+为真、`#map` 背景为主题色；16 条矢量 `path` 照常渲染；刷新后记忆为「无底图」；
+切回「ArcGIS-海洋」瓦片恢复；3D 下 `imageryLayers` 只剩覆盖层、基底层归零。
+
+### 二、极地视图右下角版权条默认不显示
+
+`POLAR_CONFIG.showAttribution`（默认 `false`）→ `Leaflet.PolarView.js` 的
+`attributionControl: !!cfg.showAttribution`。极地视图是独立 `L.Proj.CRS` 的第二张地图，
+默认底图是 GIBS，右下角那条版权文字对使用没有帮助，默认关掉；需要时改配置即可开回。
+
+### 三、关于 Cesium 南北极「空洞」：查清了，但不做垫图
+
+极区看着是个洞（像素直接露星空），曾按「用极区底图垫在下面」的思路试了三条路线，**全部无效**：
+
+| 垫图方案 | 极区近黑像素占比 |
+| --- | --- |
+| 不加任何垫图（仅单层底图） | **0%**（Cesium 会把基底层边缘瓦片拉伸盖住极点） |
+| 极冠条带（`SingleTileImageryProvider`，20°~90°） | 97.8% |
+| 覆盖全球的单张等经纬图（同上 provider，±90°） | 97.8% |
+| 手写「任何瓦片都返回同一张图」的 provider | 100% |
+
+**根因不在影像，在地表**：没配 ion token 时的默认地形 ArcGIS World Elevation 3D
+也是 Web Mercator 瓦片（矩形上限 ±85.0511°）。转储 `globe._surface._tilesToRender`，
+相机停在 89.5°N 时视锥内纬度 >80° 的地块只有一个 `L1 lat[0,85.05]`，**极点附近一个地块
+都不存在**；换成覆盖 ±90° 的 `EllipsoidTerrainProvider` 后立刻出现 112 个
+`lat[84.37,90]` 地块。而且只要在底图之下多加一层影像，Cesium 原本「把基底层边缘瓦片
+拉伸盖住极点」的兜底也会一起失效（0% → 100%）。
+
+结论与后续两条可行路径（给 Cesium ion token / 进极区切椭球地形）已写成注释留在
+`cesium-viewer.js` 的 `syncBasemap()` 上方，本次**不做处理**。
+
+## 2026-09-19（c）— v3.0.9：修「极区板块填充被抹掉」+ 缩放读数收敛到 1 位小数
+
+> 版本号 `v3.0.8` → **`v3.0.9`**。改到的 `geo-utils.js` / `Leaflet.MousePosition.js`
+> 都在 SW 预缓存清单里，而浏览器本地已经跑过 v3.0.8 —— `CACHE_NAME` 不变就继续吐旧文件
+> （普通刷新看不到修复），故按例外规则再 bump 一次。
+
+### 一、极区板块填充被整块抹掉（`geo-utils.js`）
+
+**症状**：大陆板块 / 大洋板块这类全球面图层，在南北极附近渲染错误 ——
+北极顶上出现一条**横贯全宽的纯色平板带**，南极冠干脆**没有任何板块填充**。
+主视图（EPSG:3857）和极地视图都受影响，只是主视图看得最明显。
+
+![修复前：北极顶部一条横贯全宽的平板带](shots/plate-polar-band-before.png)
+![修复后：底图纹理一路连续到世界顶边](shots/plate-polar-band-after.png)
+
+**根因**：`GeoUtils.fixAntimeridian()` 的「经度展开」把**极冠环**搞坏了。
+
+极冠环是按「沿 ±180° 切开」写的，靠一段横躺在极点上的顶点把环闭合：
+
+```
+… (-179.999,-89.999) → (-110,-89.999) → (179.999,-89.999) → (179.999,-88.730) …
+```
+
+Web Mercator 把 `|lat| > 85.0511287798` 钳到 ±85.051，那一段于是**正好躺在地图上下边上
+横贯一整圈** —— 环就着地图边闭合，极冠被完整填充。
+
+而 `fixAntimeridian` 会把它「展开」：`-110 → 179.999` 是 290° 跳变，被折算成 **-70°**，
+极点横移段于是被折叠成原地往返的零面积尖刺；环改成走一条**横贯地图的弦**闭合，
+SVG 按非零环绕填充时**自我抵消** → 极冠整块消失。
+
+**修法**：`fixRingCoords()` 开头判一下，含 `|lat| ≥ 87` 顶点的环**原样返回、不展开**。
+
+```js
+const POLAR_RING_LAT = 87;   // 取在「真正的极冠」与「格陵兰最北 83.6°」之间
+for (let k = 0; k < coords.length; k++) {
+  const c = coords[k];
+  if (c && Math.abs(c[1]) >= POLAR_RING_LAT) return coords;
+}
+```
+
+极冠环本来就已在 ±180° 处切开，不存在需要展开的跳变，跳过它对其它几何零影响。
+
+**证据（单环 A/B，`.workbuddy/artifacts/ring-ab.js`）**：把 plate16 南极冠那条 913 点环
+单独放进一张最小 Leaflet 页面对照 —— 用「点在填充内」判定 6 个采样点
+（南极点 / 罗斯海 / 威德尔海 / 南大洋 / …）：
+
+| 环的写法 | 南极 6 点命中 | 北冰洋板块 6 点命中 |
+|---|---|---|
+| **原样（修后）** | **6** | **3** |
+| 展开（修前） | 1 | 1 |
+| 极点吸附到 ±clamp | 1 | 1 |
+| 展开 + 矩形裁剪（Sutherland–Hodgman） | 1 | 1 |
+
+**验证（`.workbuddy/artifacts/probe-latscan.js`）**：沿纬线逐 10° 经度扫 plate16 单层的
+「覆盖该点的面数」，修前南极 −68°~−86° **全为 0**，修后**全为 1**；北极不变。
+
+![修复后：南极冠已被板块填充覆盖](shots/plate-south-cap-after.png)
+
+另：世界副本（`L.WorldWrap`）不受影响 —— 平移两个世界后板块仍完整渲染，控制台 0 错误。
+
+### 二、缩放读数收敛到 1 位小数（`Leaflet.MousePosition.js`）
+
+无级缩放（`zoomSnap:0`）下 `getZoom()` 是 `3.4713…` 这种长小数，直接拼进读数里
+抖着眼花。统一 `(Math.round(z*10)/10).toFixed(1)`，读数变成 `缩放: 3.5`。
+
+顺带修掉一处老 bug：原先的闸门写成 `&& this._currentZoom`，把 **z0 当成假值** ——
+缩到最小时整段读数会消失；改成 `!= null`。
+
+## 2026-09-19（b）— v3.0.8：新增「极地投影视图」（EPSG:3413 / 3031）
+
+> 版本号 `v3.0.7` → **`v3.0.8`**。本轮改的 `Leaflet.PolarView.js` / `geo-config.js` /
+> `polar-view.css` 都在 SW 预缓存清单里，而本地联调时浏览器已经跑过 v3.0.7 ——
+> `CACHE_NAME` 不变就会继续吐旧文件（普通刷新看不到修复），故按例外规则再 bump 一次。
+
+### 是什么
+
+面板「显示」分类新增开关 **极地投影视图**（`polarToggle`🧊）。打开后主地图整体换成一张
+独立的 `L.Proj.CRS` 地图：北极 **EPSG:3413**、南极 **EPSG:3031**（极球面立体投影）。
+视野默认**以极点为中心**（z1，约覆盖纬度 60° 以上）—— 极地立体投影的原点就是极点，
+所以屏幕上是完整 360°、不需要裁切。顶部控制条可切半球 / 切底图 / 返回主视图，
+与 3D 视图互相关闭。
+
+底图 4 个，**默认 GIBS**：
+
+| 底图 | 来源 | 说明 |
+|---|---|---|
+| GIBS-海陆阴影水深 | `gibs.earthdata.nasa.gov/wmts/epsg{epsg}/best/{layer}/default/500m/{z}/{y}/{x}.jpeg` | **默认**；512px 瓦片 |
+| GIBS-真彩影像 | 同上，`BlueMarble_NextGeneration` | |
+| GIBS-地形阴影 | 同上，`BlueMarble_ShadedRelief` | |
+| GEBCO2025-水深地形 | `assets/xyz/gebco_{epsg}.jpg` | 离线预烘整幅影像（官方 WMS 不支持极地 SRS） |
+
+数据图层**不重灌**：按面板里当前勾选的 `layer_*` 重建一份挂在极地地图上；
+改勾选走 `document` change 委托 + 180ms 防抖重建。跨 180° 的线在极地下是**一条连续线**
+（`L.WorldWrap.periodProjected()` 为 0 → 世界副本自动关闭，坐标永远是 -180~180）。
+
+### 三个坑（都是实测定位，彼此无因果关系）
+
+#### 坑一：给瓦片层设 `bounds` → 一块瓦片都不出
+
+第一版用「正方形四边采样」算了个经纬度包络框塞进 `tileLayer.options.bounds`，
+想拦住网格外的瓦片请求。结果 `tileTotal: 0`。
+
+**根因是几何的：极点在正方形内部，不在四条边上。** 只采样四条边得到的是纬度
+38.8°~52.6° 的「环带」，而视口里靠近极点的瓦片纬度是 60°~90° → 与环带不相交 →
+Leaflet `_isValidTile()` 末尾的 `overlaps()` 对每一块都返回 false。
+
+| | `_isValidTile({2,2,2})` | DOM 里 `img.leaflet-tile` | 已加载 |
+|---|---|---|---|
+| 带 `options.bounds = modeEnvelope()` | `false` | **0** | 0 |
+| 去掉（`options.bounds = null`） | `true` | 8 | **8** |
+
+而这个 `bounds` 本来就是多余的：CRS 自己给了 `bounds` → `crs.infinite = false` →
+Leaflet 用 `getPixelWorldBounds()` 推出 `_globalTileRange`；极地 CRS 没有
+`wrapLng` / `wrapLat`，矩阵之外的 x/y 一律被拒。实测 `globalTileRange = (0,0)-(7,7)`，
+正好等于 GIBS「500m」矩阵 level 2 的 8×8 —— 白名单由 CRS 免费提供，不需要再包一层。
+
+#### 坑二：`map.getBounds()` 在极地下退化成一条纬度线 → 点要素全被裁掉
+
+极点居中时**视口四角到极点的距离完全相等**，而 Leaflet 只取两个对角点：
+
+```js
+getBounds: function () {
+  var t = this.getPixelBounds();
+  return new LatLngBounds(this.unproject(t.getBottomLeft()), this.unproject(t.getTopRight()));
+}
+```
+
+→ 两角纬度相同 → 返回高度为 0 的环带。后果是**所有**用 `getBounds()` 做视口裁剪的地方
+整批丢要素：`MarkerClusterGroup._getExpandedVisibleBounds`、`MarkersCanvas` 的 RBush
+视口查询、大图层视口过滤。而且它调的是 `.pad(1)`（按比例放大），对 0 高度毫无作用 ——
+没法靠 pad 兜。症状是「底图好、线也在，就是点要素一个都不显示」。
+
+**修法**：在**地图实例层**换掉 `getBounds`（`Leaflet.PolarView.js` `patchBounds()`）——
+沿视口矩形按 5×5 网格在**像素空间**采样取真实经纬度极值；极点落在视口内时纬度极值取
+±90、经度显式写 -180~180（绕满一圈时 `LatLngBounds` 表达不了「整圈」）。一处修好，
+所有下游自动正确。
+
+**不变量验证**（`.workbuddy/artifacts/probe-polar-bounds.js`：全球 2°×5° 网格 6408 点，
+逐点比对 `getBounds().contains()` 与「容器坐标是否落在视口矩形内」）：
+
+| 场景 | 网格点在矩形内 | bounds 内 | 漏（可见却被裁） | 多（不可见却保留） |
+|---|---|---|---|---|
+| 北极 · 极点居中 z1 | 784 | 1080 | **0** | 286 |
+| 北极 · z3 | 178 | 216 | **0** | 34 |
+| 南极 · 极点居中 z2 | 380 | 504 | **0** | 124 |
+
+「漏 = 0」是必须成立的那一条（静默裁掉可见数据最难发现）；「多」是极冠用经纬度盒子
+表示时的固有外接误差，只影响一点裁剪精度，不丢数据。
+
+#### 坑三：`resolutions` 比 `maxZoom` 少一项 → 放大到 maxZoom 附近直接抛异常
+
+配置写了 `maxZoom: 6`，但 `resolutions` 只有 6 项（索引 0..5）。proj4leaflet 的
+`scale(z)` 就是 `_scales[z]`，表里没有的层级返回 `undefined` → Leaflet `getZoomScale()`
+拿它做除法得 NaN → `_pxBoundsToTileRange()` 算出非有限范围 →
+`Error: Attempted to load an infinite number of tiles`。因为 `zoomSnap: 0` 会插值到
+`_scales[z + 1]`，所以不只是「最大那级不能用」，而是**滚轮滑到 z5.5 就崩**。
+
+两处一起修：`resolutions` 补到 7 项；引擎侧加 `maxZoomFor(mode)` 取
+`min(cfg.maxZoom, resolutions.length - 1)` 并在被夹时告警，兜住配置写错。
+
+### 实测
+
+全层级扫描（`.workbuddy/artifacts/verify-polar-tiles.js`，两个半球 × 8 个层级）：
+
+| zoom | 实际 m/px | URL 层级 | 瓦片数 | 已加载 |
+|---|---|---|---|---|
+| 0 | 8192 | 0 | 4 | 4 |
+| 1 | 4096 | 1 | 8 | 8 |
+| 2 | 2048 | 2 | 8 | 8 |
+| 3 | 1024 | 3 | 8 | 8 |
+| 4 | 512 | 4 | 8 | 8 |
+| 5 | 256 | 4 | 8 | 8 |
+| 5.5 | 171 | 4 | 8 | 8 |
+| 6 | 128 | 4 | 8 | 8 |
+
+**URL 层级严格等于 zoom（0..4），z5 / z5.5 / z6 正确复用 level 4**（`maxNativeZoom: 4`
+生效）—— GIBS 对 z5/z6 直接返回 400，所以这一条是硬的。GIBS 响应统计：
+`epsg3413` 成功 37 / 失败 0，`epsg3031` 成功 36 / 失败 0。
+
+另：`probe-gibs-matrices.js` 从 GIBS 能力文档读出极地共 `1km/500m/250m/31.25m` 四套矩阵，
+而三个 BlueMarble 图层**只挂了 `500m`**（level 0 = 2×2 → level 4 = 32×32，512px 瓦片，
+原点 (-4194304, 4194304)，逐级分辨率减半）→ 没有更细的原生层，`maxNativeZoom: 4` 是上限。
+
+**GEBCO 离线影像是本轮顺带修好的**：烘焙脚本 `make-polar-gebco.js` 里
+`c.width = SW`（源图尺寸）之后直接 `putImageData(out, 0, 0)`（out 是 1024×1024）。
+`putImageData` **不会改变画布尺寸、也不缩放**，是 1:1 覆盖写 —— 1024 行里只有前 222 行
+落进画布，导出的 JPEG 是条被压扁的窄带（1536×222），而脚本自报的还是 "1024x1024"。
+改成先 `c.width = c.height = p.out` 再 `putImageData`；并在主流程里**从 JPEG 字节流
+读真实宽高**（`jpegSize()`）与自报值对账，避免这类「假通过」再溜过去。
+
+### 验证
+
+- `.workbuddy/artifacts/verify-polar-view.js` —— 主回归：打开 / 切半球 / 切底图 / 关闭复原、
+  跨 180° 线是单条连续路径（`d="M651 -27L481 121L401 163L273 351"`，8 个坐标）、
+  `normalizeLng(456) = 96`、`wrapPeriod = 0`、关闭后主视图仍是 `EPSG:3857` / 105 瓦片。
+- `.workbuddy/artifacts/verify-polar-interaction.js` —— 面板开关在极地视图里仍可点，且
+  `.layer-panel`（`z-index: 1666`）确实盖在地图之上；改勾选 → 极地重建（图层 1 → 2 → 1、
+  要素 12 → 20 → 8）；GEBCO 影像**真的解码**（`naturalWidth = 1024×1024`，
+  不是只有 `<img>` 元素）。
+- 全部脚本控制台错误 **0**。
+
+### 变更文件
+
+- `assets/Leaflet.PolarView.js`（**新**，约 900 行）
+- `assets/polar-view.css`（**新**）
+- `assets/xyz/gebco_3413.jpg` / `assets/xyz/gebco_3031.jpg`（**新**，离线预烘极地影像）
+- `assets/geo-config.js`（新增 ①-4 段 `POLAR_CONFIG`；`resolutions` 补到 7 项）
+- `assets/geo-utils.js`（存储键 `POLAR_MODE` / `POLAR_BASEMAP`）
+- `index.html`（引入 css/js、新增 `#polarView` 容器）
+- `assets/app.js`（`polarToggle` 开关；与 `view3dToggle` 互斥）
+- `assets/geojsonloader.js`（抽出 `_ogvTrackPopups` 供极地地图复用弹窗扩展按钮）
+- `service-worker.js`（`CACHE_NAME` `v3.0.7` → **`v3.0.8`**；登记新静态资源）
+
+### 截图（弹窗内点击可放大）
+
+| 北极 · GIBS（默认） | 南极 · GEBCO 离线影像 |
+|---|---|
+| ![北极](shots/polar-gibs-north.jpg) | ![南极](shots/polar-gebco-south.jpg) |
+
+### 待定
+
+- GEBCO 离线影像的源图只有 1536×222（约 26 km/px），烘成 1024²（8192 m/px）后放大偏糊。
+  想更清晰可把 4326 源按纬度切成多条带分别取图再拼（切 4 条 → 约 6.5 km/px）。
+- Cesium 3D 的极点俯视预设未做；`cesium-viewer.js:415/423` 里 `Math.cos(lat)` 在极点
+  除零的问题也还没修。
+
+---
+
+## 2026-09-19 — v3.0.7：世界副本从数据层下移到渲染层
+
+> 版本号 `v3.0.6` → **`v3.0.7`**。改了 `geojsonloader.js` / `Leaflet.MarkersCanvas.js` /
+> `app.js` / `index.html`，新增 `Leaflet.WorldWrap.js`，均属 SW 预缓存资源。
+
+### 起因
+
+`Leaflet.WorldWrap.js` 顶部记的四个代价，全都在真机上出现过：
+
+1. 内存 ×3 —— 45 万点图层尤其致命，最后只能写「点数 > 3000 就不做副本」的妥协
+   （`geojsonloader.js` 的 `totalPoints <= 3000` 阈值），于是大图层**平移过去点就消失**；
+2. 副本要素混进搜索索引 / 属性表 → 重复计数；
+3. 点击副本弹出的坐标是被平移过的值（**456°**），不是真实经纬度；
+4. 份数写死 3，与「屏幕上此刻能看到几个世界」无关。
+
+实测锚点（浏览器实测）：`getBounds()` 在平移 2000 / 4000px 后 w 527→1230、e 879→1582
+（**不 wrap、线性增长**）；`contains([0, -170])` 返回 `false` → 「点消失」的直接根因；
+跨 180° 的线（170E→170W）渲染跨度 **968px**（世界宽 1024px），20° 的线被拉成横跨全球。
+
+### 修复
+
+把「世界副本」从**数据概念**（深拷贝 + 平移 ±360°）下移到**渲染概念**（渲染时整数 k·360°）。
+正本数据只存 1 份、坐标永远是 -180~180，副本份数按当前视口算、无上限，行为与瓦片同构：
+
+- **Canvas 点层**（`Leaflet.MarkersCanvas.js` v2.0）：`_redraw` 内按可见 k 循环
+  「查询 + 绘制」，零内存增长 → 大图层的副本不再受点数阈值限制；
+- **SVG / Canvas 线面**：投影后把 `_rings` 复制 k 份并整体平移像素，`_rawPxBounds` 一并扩展。
+  因为 `_parts` 由 `_rings` 裁剪而来，**绘制与命中检测同时生效**，且仍被 renderer 裁剪；
+- **DOM 点 / 聚类**（`L.WorldCopyGroup` 池化）：聚类是数据空间算法，只能「一个 k 一份 DOM」，
+  但份数由视口决定、按需创建与回收，不再写死 3。
+
+**不环绕的 CRS 自动退化**：极地投影没有 `wrapLng` → `periodProjected()` 为 0 →
+所有路径退化为单份（这正是 v3.0.8 极地视图能直接复用的前提）。
+
+### 变更文件
+
+- `assets/Leaflet.WorldWrap.js`（**新**）
+- `assets/Leaflet.MarkersCanvas.js`（v2.0，副本走渲染层）
+- `assets/geojsonloader.js`（去掉数据层副本；`fixRingCoords` / `fixAntimeridian` 接线）
+- `assets/Leaflet.MousePosition.js`（显示前 `normalizeLng`，不再出现 456°）
+- `assets/app.js` / `index.html` / `service-worker.js`（引入与预缓存登记）
+
+---
+
 ## 2026-09-17 — v3.0.6：修「测量时点击仍被属性悬浮窗吃掉」
 
 > 版本号 `v3.0.5` → **`v3.0.6`**。改了 `geojsonloader.css` / `Leaflet.MarkersCanvas.js` /

@@ -1,19 +1,32 @@
 /**
- * Leaflet.MarkersCanvas.js v1.4
+ * Leaflet.MarkersCanvas.js v2.0
  * Leaflet 插件：纯 Canvas 渲染 + 距离聚类，零 DOM 节点，支持 45 万+ 点
  *
  * 依赖：Leaflet（全局 L，需在 leaflet.js 之后引入）
  *        RBush（全局 RBush，需在 rbush.js 之后引入）
+ *        Leaflet.WorldWrap.js（世界副本 / 投影空间工具）
  *
  * 用法：
  *   const layer = L.markersCanvas({ clustering: true }).addTo(map);
- *   layer.setFeatures(featuresArray);
+ *   layer.setFeatures(featuresArray, map);
  *
  * Options:
  *   clusterDistance: 100   - 聚类距离阈值（屏幕像素）
  *   clusterMaxZoom: 14     - 此 zoom 以下显示聚类
  *   clusterFont: "bold 11px sans-serif"
  *   onFeatureClick: null    - fn(feature, latlng)
+ *
+ * ── v2.0 改动（渲染层世界副本 + 极地可用的视口裁剪）──────────────
+ * 1. 空间索引从「经纬度空间」搬到「投影空间」（crs.projection.project 的结果）。
+ *    这样一来视口查询矩形可以由像素矩形做**仿射逆变换**精确得到，不再依赖
+ *    map.getBounds() —— 后者在极地投影（EPSG:3413/3031）下是退化的（实测返回
+ *    s=31.35 > n=31，完全不含极点），一旦依赖它，极地视图下会一点都画不出来。
+ * 2. 无限世界环绕：_redraw 按「当前屏幕上可见的世界」循环查询 + 绘制。
+ *    正本数据只有 1 份、坐标永远 -180~180，副本纯属绘制行为，和瓦片一致，
+ *    份数不设上限。于是「点数 > 3000 就不做副本」那个妥协可以直接删掉。
+ * 3. 逐点绘制改走「一次取出仿射系数 + 逐点算术」的快路径。原先每点调一次
+ *    map.latLngToContainerPoint()，在极地投影下等于每点跑一次 proj4 前向变换，
+ *    45 万点会直接卡死；改成预投影一次（setFeatures 时）+ 每帧纯算术。
  */
 (function () {
   "use strict";
@@ -26,6 +39,12 @@
   if (typeof RBush === "undefined") {
     throw new Error("RBush is required. Include rbush.js before this plugin.");
   }
+  if (typeof L.WorldWrap === "undefined") {
+    throw new Error(
+      "Leaflet.WorldWrap is required. Include Leaflet.WorldWrap.js before this plugin.",
+    );
+  }
+  var WW = L.WorldWrap;
 
   // ─────────────────────────────────────────────
   //  网格预聚合聚类（O(n)，比 DBSCAN 快百倍）
@@ -34,7 +53,10 @@
   // ── 网格预聚合聚类（O(n)，比 DBSCAN 快百倍）────────────────────────
   //  1. 按 cellSize 划分网格（cellSize = clusterRadius/2，保证邻格补漏）
   //  2. 每格内点聚合；额外查询周围一圈邻格，防止格子边缘的点被切分
-  function computeClusters(features, indices, map, clusterRadiusPixels) {
+  //
+  //  pointOf(idx) → {x, y} 容器像素。调用方按「某一个世界副本」给出，
+  //  所以每个副各自独立聚类 —— 与瓦片各画各的语义一致。
+  function computeClusters(features, indices, pointOf, clusterRadiusPixels) {
     if (!indices.length) return [];
 
     var cellSize = Math.max(Math.floor(clusterRadiusPixels / 2), 1); // 50px（阈值100时）
@@ -44,7 +66,7 @@
     for (var i = 0; i < indices.length; i++) {
       var f = features[indices[i]];
       if (!f) continue;
-      var pt = map.latLngToContainerPoint([f.lat, f.lng]);
+      var pt = pointOf(indices[i]);
       var gx = Math.floor(pt.x / cellSize);
       var gy = Math.floor(pt.y / cellSize);
       var key = gx + "," + gy;
@@ -156,6 +178,8 @@
       L.Util.setOptions(this, options);
       this._tree = new RBush();
       this._hitTree = new RBush();
+      this._px = null; // Float64Array：预投影坐标 [x0,y0,x1,y1,...]（投影空间）
+      this._dataRect = null; // 数据在投影空间的外接矩形（算世界副本用）
     },
 
     onAdd: function (map) {
@@ -199,6 +223,8 @@
 
     clear: function () {
       this._features = null;
+      this._px = null;
+      this._dataRect = null;
       this._tree = new RBush();
       this._hitTree = new RBush();
       this._lastClusters = null;
@@ -210,21 +236,57 @@
       this._redraw(true);
     },
 
-    /** 设置原始要素（不创建任何 L.Marker 对象） */
-    setFeatures: function (features) {
+    /** 设置原始要素（不创建任何 L.Marker 对象）
+     *  @param features  [{ lat, lng, color, _idx, properties }]
+     *  @param map       投影基准地图；省略则用 this._map（若 setFeatures 早于 addTo，
+     *                   必须显式传入 —— 预投影要按该地图的 CRS 做）
+     */
+    setFeatures: function (features, map) {
       this._features = features;
       this._tree = new RBush();
-      var items = [];
-      for (var i = 0; i < features.length; i++) {
-        var f = features[i];
-        items.push({
-          minX: f.lng,
-          minY: f.lat,
-          maxX: f.lng,
-          maxY: f.lat,
-          idx: i,
-        });
+      if (!features || !features.length) {
+        this._px = null;
+        this._dataRect = null;
+        this._redraw(true);
+        return;
       }
+
+      var m = map || this._map;
+      var crs = m && m.options ? m.options.crs : null;
+      var n = features.length;
+      var px = new Float64Array(n * 2);
+      var items = new Array(n);
+      var minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+
+      for (var i = 0; i < n; i++) {
+        var f = features[i];
+        var x = 0,
+          y = 0;
+        if (crs && crs.projection && f) {
+          try {
+            var p = crs.projection.project(L.latLng(f.lat, f.lng));
+            x = p.x;
+            y = p.y;
+          } catch (e) {
+            x = 0;
+            y = 0;
+          }
+        }
+        if (!isFinite(x)) x = 0;
+        if (!isFinite(y)) y = 0;
+        px[i * 2] = x;
+        px[i * 2 + 1] = y;
+        items[i] = { minX: x, minY: y, maxX: x, maxY: y, idx: i };
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+      this._px = px;
+      this._dataRect = { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
       this._tree.load(items);
       this._redraw(true);
     },
@@ -267,65 +329,104 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     },
 
-    // ── 核心：渲染（含聚类）──
+    // ── 核心：渲染（含聚类 + 无限世界副本）──
     _redraw: function (clear) {
       if (!this._ctx || !this._map) return;
       if (clear) {
         this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
       }
-      if (!this._features || !this._features.length) return;
+      if (!this._features || !this._features.length || !this._px) return;
 
       var ctx = this._ctx;
       var map = this._map;
       var zoom = map.getZoom();
-      var bounds = map.getBounds();
 
-      // 1. 查询视口内要素
-      var visible = this._tree.search({
-        minX: bounds.getWest(),
-        minY: bounds.getSouth(),
-        maxX: bounds.getEast(),
-        maxY: bounds.getNorth(),
-      });
-      if (!visible.length) return;
+      // ── 环绕/投影参数（一次取出，逐点走算术快路径）──
+      var inf = WW.info(map);
+      if (!inf.ok) return;
+      var qRect = WW.viewRectProjected(map, inf);
+      if (!qRect || !this._dataRect) return;
+      var ks = inf.wraps
+        ? WW.ksForRect(inf.period, qRect, this._dataRect, inf.maxK)
+        : [0];
 
-      var indices = visible.map(function (v) {
-        return v.idx;
-      });
+      var inf_scale = inf.scale,
+        inf_a = inf.a,
+        inf_b = inf.b,
+        inf_c = inf.c,
+        inf_d = inf.d;
+      var ox = inf.originX - inf.paneX;
+      var oy = inf.originY - inf.paneY;
+      var px = this._px;
+      var per = inf.period;
 
-      // 2. 是否使用聚类（由 clustering 选项 + clusterMaxZoom 共同控制）
-      var zoom = map.getZoom();
+      // 投影坐标 → 容器像素（含第 k 个世界的平移）
+      function ptx(i, k) {
+        return inf_scale * (inf_a * (px[i * 2] + k * per) + inf_b) - ox;
+      }
+      function pty(i) {
+        return inf_scale * (inf_c * px[i * 2 + 1] + inf_d) - oy;
+      }
+
+      // ── 是否聚类（clustering 选项 + clusterMaxZoom 共同控制）──
       var useCluster =
         this.options.clustering && zoom <= this.options.clusterMaxZoom;
 
-      var drawUnits;
-      if (useCluster) {
-        drawUnits = computeClusters(
-          this._features,
-          indices,
-          map,
-          this._getClusterRadiusInPixels(),
-        );
-      } else {
-        // 不聚类：直接绘制所有可见点（Canvas 绘制比 DOM 快几个数量级）
-        drawUnits = indices
-          .map(
-            function (idx) {
-              var f = this._features[idx];
-              if (!f) return null;
-              var pt = map.latLngToContainerPoint([f.lat, f.lng]);
-              return {
-                x: pt.x,
-                y: pt.y,
-                color: f.color || "#3388ff",
-                idx: idx,
-              };
-            }.bind(this),
-          )
-          .filter(Boolean);
+      var drawUnits = [];
+      for (var ki = 0; ki < ks.length; ki++) {
+        var k = ks[ki];
+        var kx = k * per;
+
+        // 视口内要素：查询矩形按世界反向平移回数据空间
+        var visible = this._tree.search({
+          minX: qRect.minX - kx,
+          minY: qRect.minY,
+          maxX: qRect.maxX - kx,
+          maxY: qRect.maxY,
+        });
+        if (!visible.length) continue;
+
+        var idxs = new Array(visible.length);
+        for (var v = 0; v < visible.length; v++) idxs[v] = visible[v].idx;
+
+        // 逐点/聚类都走「绑定了 k」的取点函数
+        var pointOf = (function (kk) {
+          return function (idx) {
+            return { x: ptx(idx, kk), y: pty(idx) };
+          };
+        })(k);
+
+        if (useCluster) {
+          var cu = computeClusters(
+            this._features,
+            idxs,
+            pointOf,
+            this._getClusterRadiusInPixels(),
+          );
+          for (var c = 0; c < cu.length; c++) drawUnits.push(cu[c]);
+        } else {
+          for (var q = 0; q < idxs.length; q++) {
+            var idx2 = idxs[q];
+            var f2 = this._features[idx2];
+            if (!f2) continue;
+            var pt2 = pointOf(idx2);
+            drawUnits.push({
+              x: pt2.x,
+              y: pt2.y,
+              color: f2.color || "#3388ff",
+              idx: idx2,
+              world: k,
+            });
+          }
+        }
+      }
+      if (!drawUnits.length) {
+        this._hitTree = new RBush();
+        this._lastClusters = drawUnits;
+        return;
       }
 
-      // 3. 绘制 + 构建点击检测树
+      // ── 绘制 + 构建点击检测树 ──
       var hitItems = [];
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -466,7 +567,10 @@
             var clusterLatLng = map.containerPointToLatLng(
               L.point(hit.screenX, hit.screenY),
             );
-            map.setView(clusterLatLng, targetZoom);
+            // ⚠️ 若命中的是「世界副本」上的聚类，这里算出来的经度会是 456 这类
+            //    被平移过的值。折回 [-180,180) 后视野完全一致（地图内容是周期性的），
+            //    但地图中心/读数不会再出现越界经度。
+            map.setView(WW.normalizeLatLng(clusterLatLng), targetZoom);
           }
         } else if (hit.type === "point" && this.options.onFeatureClick) {
           this.options.onFeatureClick(this._features[hit.idx], e.latlng);
@@ -483,20 +587,33 @@
 
     // ── 地图事件 ──
     _reset: function () {
-      var tl = this._map.containerPointToLayerPoint([0, 0]);
+      var map = this._map;
+      var tl = map.containerPointToLayerPoint([0, 0]);
       L.DomUtil.setPosition(this._canvas, tl);
       this._updateCanvasResolution();
+      // 记录当前中心/层级，供缩放动画用（见 _animateZoom）
+      this._center = map.getCenter();
+      this._zoom = map.getZoom();
       this._redraw();
     },
 
+    // 缩放动画：容器随缩放做 CSS transform。
+    //
+    // ⚠️ 这里**不能**沿用 Leaflet 的 _latLngBoundsToNewLayerBounds(map.getBounds(), ...)：
+    //    它要读 getBounds() 的 NorthWest/SouthEast，而极地投影下 getBounds() 本身
+    //    是退化的（南 > 北），算出来的偏移会错。改用「容器半宽 × 缩放比 + 中心像素」
+    //    的纯像素算法（与 L.Renderer._updateTransform 同构），与投影无关。
     _animateZoom: function (e) {
-      var scale = this._map.getZoomScale(e.zoom);
-      var offset = this._map._latLngBoundsToNewLayerBounds(
-        this._map.getBounds(),
-        e.zoom,
-        e.center,
-      ).min;
-      L.DomUtil.setTransform(this._canvas, offset, scale);
+      var map = this._map;
+      var scale = map.getZoomScale(e.zoom, this._zoom);
+      var viewHalf = map.getSize().multiplyBy(0.5);
+      var currentCenterPoint = map.project(this._center || map.getCenter(), e.zoom);
+      var topLeftOffset = viewHalf
+        .multiplyBy(-scale)
+        .add(currentCenterPoint)
+        .subtract(map._getNewPixelOrigin(e.center, e.zoom));
+      if (!isFinite(topLeftOffset.x) || !isFinite(topLeftOffset.y)) return;
+      L.DomUtil.setTransform(this._canvas, topLeftOffset, scale);
     },
   });
 

@@ -263,8 +263,9 @@
   //   wayback          tileBase、configUrl、fallbackRelease（供底部时相条用）
   //   esriFeature      url（ArcGIS MapServer/FeatureServer 端点）、style（面样式）
   //
-  // 📌 三个顶层字段
+  // 📌 四个顶层字段
   //   defaultBasemap  首次访问（无本地记忆）时选中的底图名
+  //   noneLabel       底图控件里的「无底图」项名（选中 = 卸掉所有底图，只留要素）
   //   defaultSubset   「更多底图」关闭时控件里显示的底图子集（按名称挑；顺序仍按 baseLayers）
   //   boundary        共享的「世界境界」图层定义：被 attachBoundary 引用，同时自己也是
   //                   一个可选覆盖层（见 overlays 里的 ref）
@@ -382,6 +383,12 @@
     window.BASEMAP_CONFIG = {
       // 无本地记忆时的默认底图
       defaultBasemap: "ArcGIS-海洋",
+
+      // 底图控件里的「无底图」项：选中时卸掉所有底图，地图留空白、只剩要素。
+      // 它是**伪底图**（一个空 LayerGroup）：Leaflet 的图层控件是单选，选中它就会
+      // 把上一张底图移除，于是露出 #map 的背景（跟随主题，见 main.css 的
+      // body.basemap-none 规则）。传空字符串即隐藏该项。
+      noneLabel: "无底图",
 
       // 「更多底图」关闭时可见的底座（够用且轻量；其余的藏进更多底图）
       defaultSubset: [
@@ -525,6 +532,137 @@
         esriIsland("UNEP-WCMC大海岛", 2),
         esriIsland("UNEP-WCMC大陆", 3),
       ],
+    };
+  })();
+
+  // ==================================================================
+  // ①-4 极地投影视图配置（2D：Leaflet + proj4leaflet）
+  // ==================================================================
+  // 极地视图是**第二张独立地图**：主视图（EPSG:3857）完全不受影响，切换时另开一个
+  // L.map 容器，用 L.Proj.CRS 做极球面立体投影（北极 EPSG:3413 / 南极 EPSG:3031）。
+  // 数据只渲染一份正本，坐标始终是 -180~180。
+  //
+  // 📌 底图为什么要单独列一份
+  //    极地 CRS 下 L.TileLayer.WMS 会自动把 SRS 换成 EPSG:3413 / 3031，
+  //    但只有本身支持极地 SRS 的服务才画得出来。实测：
+  //      · GIBS（NASA）WMTS 原生提供 epsg3413 / epsg3031 瓦片 → 可直接用，本配置默认
+  //      · GEBCO 官方 WMS 只声明 EPSG:4326 / 3395 / 3857，传极地 SRS 会直接返回
+  //        ServiceException(InvalidSRS)，也没有极地瓦片端点
+  //        → 极地下的 GEBCO 由离线预烘的影像提供（kind: "polarImage"），
+  //          见 .workbuddy/artifacts/make-polar-gebco.js
+  //
+  // 📌 字段
+  //    modes        北极 / 南极两套 CRS 定义 + 打开时的初始视野 [lat, lng, zoom]
+  //    basemaps     极地底图清单（单选）；URL 里的 {epsg} 按当前模式替换（3413 / 3031）
+  //    defaultBasemap  首次进入极地视图时选中的底图名
+  //    maxZoom      视图最大层级。原生瓦片到 maxNativeZoom 为止，再放大是放大填充
+  //                 （矢量不受影响，仍然清晰）
+  //    maxProjected 点要素过滤半径（米，投影坐标）。立体投影会把另一个半球投到极远处
+  //                 （甚至趋于无穷），必须按半径挡掉，否则会画出飞到天外的点
+  //    canvasThreshold  点图层超过这个数量改用 Canvas 渲染（与主视图同源策略）
+  //    imageBounds  polarImage 影像在投影坐标里的范围（正方形，与极地瓦片矩阵对齐）
+  // ==================================================================
+  (function () {
+    var GIBS_ATTR =
+      '<a href="https://earthdata.nasa.gov/gibs" target="_blank">NASA GIBS</a>';
+    // GIBS 极地瓦片：512px，矩阵 TopLeftCorner = (-4194304, 4194304)，
+    // 分辨率阶梯 8192 / 2^z；静态图层只挂 500m 矩阵（level 0..4）
+    function gibs(name, layer, extra, attr) {
+      return Object.assign(
+        {
+          name: name,
+          kind: "tile",
+          url:
+            "https://gibs.earthdata.nasa.gov/wmts/epsg{epsg}/best/" +
+            layer +
+            "/default/500m/{z}/{y}/{x}.jpeg",
+          tileSize: 512,
+          maxNativeZoom: 4,
+          attribution: attr || GIBS_ATTR,
+        },
+        extra || {},
+      );
+    }
+
+    window.POLAR_CONFIG = {
+      // ⚠️ 契约：resolutions.length 必须 ≥ maxZoom + 1。
+      //    proj4leaflet 的 scale(z) 直接取 resolutions 的倒数表 _scales[z]，
+      //    表里没有的层级返回 undefined → Leaflet 的 getZoomScale 算成 NaN →
+      //    瓦片范围变非有限 → 抛 "Attempted to load an infinite number of tiles"。
+      //    而且 zoomSnap:0（无级缩放）会插值到 _scales[z+1]，所以差一级不只是
+      //    「最大那级不能用」，而是**滚轮滑到 maxZoom 附近就崩**。
+      //    当前 7 项（索引 0..6）→ maxZoom 6 合法。
+      maxZoom: 6,
+      maxProjected: 6291456, // 1.5 × 4194304
+      canvasThreshold: 3000,
+      // polarImage 影像覆盖的投影范围（与极地瓦片矩阵同一个正方形）
+      imageBounds: [
+        [-4194304, -4194304],
+        [4194304, 4194304],
+      ],
+      // 影像叠放用的 pane（落在唯一底图之下、矢量之上由 Leaflet 自身顺序决定，
+      // 这里显式指定，避免和主视图的自定义 pane 混在一起）
+      imagePane: "overlayPane",
+
+      modes: {
+        north: {
+          label: "北极",
+          epsg: "3413",
+          code: "EPSG:3413",
+          def:
+            "+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +k=1 +x_0=0 +y_0=0 " +
+            "+datum=WGS84 +units=m +no_defs",
+          origin: [-4194304, 4194304],
+          // GIBS「500m」矩阵的层级分辨率阶梯（level 0 = 8192 m/px，逐级减半）。
+          // 前 5 项（0..4）与 GIBS 原生层级一一对应，第 5、6 项是超出原生分辨率
+          // 的放大层（URL 仍走 level 4，由 maxNativeZoom 负责夹住），
+          // 保留它们才能让用户继续放大观察极区细节。
+          resolutions: [8192, 4096, 2048, 1024, 512, 256, 128],
+          bounds: [-4194304, -4194304, 4194304, 4194304],
+          // 视野 = 以极点为中心（极地立体投影的原点就是极点，屏幕上 360° 完整不裁），
+          // z1 大约覆盖纬度 60° 以上，是「极区总览」的合适层级
+          view: [90, -45, 1],
+        },
+        south: {
+          label: "南极",
+          epsg: "3031",
+          code: "EPSG:3031",
+          def:
+            "+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +k=1 +x_0=0 +y_0=0 " +
+            "+datum=WGS84 +units=m +no_defs",
+          origin: [-4194304, 4194304],
+          resolutions: [8192, 4096, 2048, 1024, 512, 256, 128],
+          bounds: [-4194304, -4194304, 4194304, 4194304],
+          view: [-90, 0, 1],
+        },
+      },
+
+      defaultBasemap: "GIBS-海陆阴影水深",
+
+      basemaps: [
+        // —— GIBS：原生极地瓦片，默认 ——
+        gibs("GIBS-海陆阴影水深", "BlueMarble_ShadedRelief_Bathymetry"),
+        gibs("GIBS-真彩影像", "BlueMarble_NextGeneration"),
+        gibs("GIBS-地形阴影", "BlueMarble_ShadedRelief"),
+
+        // —— GEBCO：离线预烘影像（官方 WMS 不支持极地 SRS）——
+        {
+          name: "GEBCO2025-水深地形",
+          kind: "polarImage",
+          // 文件名里的 {epsg} 同样按模式替换（3413 / 3031）
+          url: "./assets/xyz/gebco_{epsg}.jpg",
+          attribution:
+            '<a href="https://www.gebco.net/" target="_blank">GEBCO 2025</a>',
+        },
+      ],
+
+      // 极地视图里的比例尺与鼠标坐标按投影坐标显示，不参与主视图的经纬度记忆键
+      showScale: true,
+      showMouseCoord: true,
+      // 右下角底图版权条（Leaflet attribution）。默认关闭：
+      // 极地视图已有左上角标题栏与自己的底图下拉，版权条在这里纯属噪声。
+      // 若要恢复（例如换成需要署名的商用底图），把它改成 true 即可。
+      showAttribution: false,
     };
   })();
 

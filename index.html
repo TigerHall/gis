@@ -9,6 +9,16 @@
     <title>海底地质一张图</title>
     <!-- Leaflet核心库 -->
     <script src="./assets/leaflet.js"></script>
+    <!-- 坐标系重投影：proj4 + proj4leaflet
+         极地投影视图（EPSG:3413 北极 / EPSG:3031 南极）依赖。
+         必须在 leaflet.js 之后（proj4leaflet 往 L 上挂 L.Proj.*），
+         且在其余 Leaflet 插件之前（它们可能读取 map.options.crs）。 -->
+    <script src="./assets/proj4.js"></script>
+    <script src="./assets/proj4leaflet.js"></script>
+    <!-- 渲染层「世界副本」：与瓦片同构的横向无限环绕 + 投影空间视口裁剪
+         必须在 leaflet.js 之后（它给 L.Polyline._project 打补丁），
+         且在 Leaflet.MarkersCanvas.js 之前（后者依赖 L.WorldWrap）。 -->
+    <script src="./assets/Leaflet.WorldWrap.js"></script>
     <!-- Esri Leaflet 插件（ArcGIS MapServer 矢量加载） -->
     <script src="./assets/esri-leaflet.js"></script>
     <link rel="stylesheet" href="./assets/leaflet.css" />
@@ -55,6 +65,11 @@
     <script src="./assets/georaster-layer-for-leaflet.min.js"></script>
     <!-- 站点配置（图层清单 / 路径 / 标题 / 主题色）：须在 geojsonloader.js 之前 -->
     <script src="./assets/geo-config.js"></script>
+    <!-- 极地投影视图（北极 EPSG:3413 / 南极 EPSG:3031）：
+         独立的第二张 L.map，主视图完全不受影响。
+         配置见 geo-config.js 的 POLAR_CONFIG，本模块不含任何图层名与 URL。 -->
+    <link rel="stylesheet" href="./assets/polar-view.css" />
+    <script src="./assets/Leaflet.PolarView.js"></script>
     <!-- 自定义css -->
     <link rel="stylesheet" href="./assets/main.css" />
     <!-- 投点编辑器样式 -->
@@ -340,6 +355,45 @@
     </div>
     <!-- 右侧地图容器 -->
     <div id="map"></div>
+    <!-- 极地投影视图容器：与 #map 占位规则相同、互斥显示（body.polar-active 切换）。
+         顶部控制条由 geo-config.js 的 POLAR_CONFIG 填充底图清单。 -->
+    <div id="polarView">
+      <div id="polarMap"></div>
+      <div class="polar-bar" role="group" aria-label="极地投影视图控制">
+        <span class="polar-bar__title" id="polarTitle">极地投影</span>
+        <div class="polar-seg" role="group" aria-label="选择极区">
+          <button
+            type="button"
+            class="polar-seg__btn"
+            data-polar-mode="north"
+            aria-pressed="false"
+          >
+            北极
+          </button>
+          <button
+            type="button"
+            class="polar-seg__btn"
+            data-polar-mode="south"
+            aria-pressed="false"
+          >
+            南极
+          </button>
+        </div>
+        <label class="polar-bar__field">
+          <span class="polar-bar__label">底图</span>
+          <select id="polarBasemap" aria-label="极地视图底图"></select>
+        </label>
+        <span class="polar-bar__hint" id="polarHint" aria-live="polite"></span>
+        <button
+          type="button"
+          class="polar-bar__close"
+          id="polarClose"
+          title="返回主视图"
+        >
+          ✕ 返回主视图
+        </button>
+      </div>
+    </div>
     <!-- Cesium 3D 容器（与 #map 同位置叠放，display 切换） -->
     <div id="cesiumContainer"></div>
     <!-- Esri 历史影像时相条（底部居中，仅当底图选中「Esri 历史影像」时显示） -->

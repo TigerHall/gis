@@ -818,16 +818,39 @@
     });
   }
 
+  // ========== 极区「空洞」（为什么这里不做任何垫图）==========
+  // Web Mercator 底图（ArcGIS / Bing / 天地图）纬度上限 ±85.0511287798°，极点附近
+  // 看着是空的。曾经尝试「用极区底图垫在下面」，**实测三条路线全部无效**：
+  //   · 极冠条带（SingleTileImageryProvider，20°~90°）→ 极点近黑 97.8%，与不加一样；
+  //   · 覆盖全球的单张等经纬图（同 provider，±90°）→ 同样无效；
+  //   · 手写「任何瓦片都返回同一张图」的 provider → 极点 100% 纯黑。
+  //   更糟的是：只要在底图之下**多加一层**影像，Cesium 原本「把基底层边缘瓦片拉伸
+  //   盖住极点」的兜底也会失效（单层 ArcGIS：近黑 0% → 加底层后 100%）。
+  //
+  // 根因不在影像，而在**地表**：没配 ion token 时的默认地形 ArcGIS World Elevation 3D
+  // 也是 Web Mercator 瓦片（tilingScheme 矩形 ±85.0511）。转储
+  // `globe._surface._tilesToRender`：相机停在 89.5°N 时，视锥内纬度 >80° 的地块只有
+  // 一个 `L1 lat[0,85.05]`，极点附近**一个地块都不存在**，像素直接露出星空。
+  // 换成覆盖 ±90° 的 EllipsoidTerrainProvider 后，同样位置立刻出现 112 个
+  // `lat[84.37,90]` 的地块 —— 但没有影像可铺，仍是暗的。
+  //
+  // 真正能解决的两条路都不是「垫图」：给 Cesium ion token（Cesium World Terrain
+  // 覆盖 ±90°）或进极区时切椭球地形。二者都会改变地形表现，已与用户确认
+  // 「加不了就算了」，故不做处理。若将来要做，先读这段再动手。
+
   function syncBasemap() {
     if (!viewer) return;
+    var mgr = window.BasemapManager;
     var name =
       window._currentBasemapName ||
-      (window.BasemapManager && window.BasemapManager.fallbackName) ||
+      (mgr && mgr.fallbackName) ||
       "ArcGIS-影像";
+    // 2D 选了「无底图」→ 3D 也不铺影像（地球只留 globe.baseColor，要素照常显示）
+    var isNone = !!(mgr && mgr.noneName && name === mgr.noneName);
     try {
-      var provider = createImageryProvider(name);
+      var provider = isNone ? null : createImageryProvider(name);
       viewer.imageryLayers.removeAll();
-      viewer.imageryLayers.addImageryProvider(provider);
+      if (provider) viewer.imageryLayers.addImageryProvider(provider);
       _overlayLayerCache = {}; // 清空覆盖层缓存，重新叠加
       // 重新叠加勾选的覆盖层（全球境界/标注等）
       syncOverlays();
