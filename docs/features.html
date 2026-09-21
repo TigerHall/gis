@@ -9,14 +9,37 @@
 <style>
   :root {
     --brand: #0c6b5f;
-    --brand-dark: #0a5a50;
+    --brand-strong: #0a5a50;
+    --brand-soft: #e3efec;
+    --brand-line: #cfe2de;
     --ink: #1c2b33;
-    --ink-2: #465a64;
+    --ink-2: #4a5e68;
     --line: #dfe8ec;
-    --bg: #f6f9fa;
+    --bg: #f4f8f9;
     --card: #ffffff;
-    --tip-bg: #eef7f4;
+    --chip: #eef4f3;
+    --tip-bg: #e9f5f1;
     --tip-line: #cfe2de;
+    --shadow: 0 10px 30px rgba(16, 42, 51, .10);
+    --shadow-lg: 0 18px 44px rgba(16, 42, 51, .16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --brand: #2fae97;
+      --brand-strong: #46c4ac;
+      --brand-soft: #12302a;
+      --brand-line: #1f4a3f;
+      --ink: #e4eef2;
+      --ink-2: #9fb6c0;
+      --line: #24363f;
+      --bg: #0e161a;
+      --card: #14222a;
+      --chip: #1a2c33;
+      --tip-bg: #10281f;
+      --tip-line: #1f4a3f;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .40);
+      --shadow-lg: 0 18px 44px rgba(0, 0, 0, .55);
+    }
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -25,100 +48,140 @@
     font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
     color: var(--ink);
     background: var(--bg);
-    line-height: 1.7;
+    line-height: 1.75;
     font-size: 15.5px;
+    -webkit-font-smoothing: antialiased;
   }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+  section { scroll-margin-top: 84px; }
 
   /* ---------- 顶栏 ---------- */
-  .topbar { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+  .topbar {
+    background: color-mix(in srgb, var(--card) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 20;
+  }
   .topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 0; }
   .brand { font-weight: 700; font-size: 17px; color: var(--ink); text-decoration: none; }
   .brand .dot { color: var(--brand); }
   .topnav { display: flex; gap: 4px; flex-wrap: wrap; }
-  .topnav a { color: var(--ink-2); text-decoration: none; font-size: 14px; padding: 6px 12px; border-radius: 8px; }
-  .topnav a:hover { background: #eef4f3; color: var(--brand-dark); }
-  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 8px; }
+  .topnav a { color: var(--ink-2); text-decoration: none; font-size: 14px; padding: 6px 13px; border-radius: 9px; transition: background .18s, color .18s; }
+  .topnav a:hover { background: var(--chip); color: var(--brand-strong); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 9px; }
 
-  /* ---------- 布局：左目录 + 右正文 ---------- */
-  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 30px; align-items: start; padding: 30px 0 0; }
+  /* ---------- 布局 ---------- */
+  .layout { display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 30px; align-items: start; padding: 30px 0 0; }
   .toc {
-    position: sticky; top: 74px;
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 14px 10px; max-height: calc(100vh - 100px); overflow-y: auto;
+    position: sticky; top: 78px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px 10px; max-height: calc(100vh - 104px); overflow-y: auto;
+    box-shadow: var(--shadow);
   }
-  .toc b { display: block; font-size: 13px; letter-spacing: .1em; color: var(--ink-2); padding: 2px 10px 8px; }
+  .toc b { display: block; font-size: 12.5px; letter-spacing: .12em; color: var(--ink-2); padding: 2px 10px 8px; }
   .toc a {
     display: block; font-size: 14px; color: var(--ink-2); text-decoration: none;
-    padding: 7px 10px; border-radius: 8px; line-height: 1.45;
+    padding: 7px 11px; border-radius: 9px; line-height: 1.45;
+    border-left: 3px solid transparent;
+    transition: background .16s, color .16s, border-color .16s;
   }
-  .toc a:hover { background: #eef4f3; color: var(--brand-dark); }
-  .toc a .em { margin-right: 6px; }
+  .toc a:hover { background: var(--chip); color: var(--brand-strong); }
+  .toc a.active { background: var(--brand-soft); color: var(--brand-strong); border-left-color: var(--brand); font-weight: 600; }
+  .toc a .em { margin-right: 7px; }
 
   /* ---------- 头部 ---------- */
-  .head { padding: 10px 0 6px; }
-  .head .kicker {
-    display: inline-block; font-size: 13px; letter-spacing: .12em;
-    color: var(--brand-dark); background: #e3efec; border: 1px solid #cfe2de;
-    padding: 3px 13px; border-radius: 999px; margin-bottom: 14px;
+  .head { padding: 8px 0 4px; position: relative; overflow: hidden; }
+  .head::before {
+    content: ""; position: absolute; inset: -60% -10% auto; height: 150%; pointer-events: none;
+    background: radial-gradient(520px 260px at 15% 0%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 70%);
   }
-  .head h1 { font-size: clamp(24px, 3.6vw, 34px); line-height: 1.3; margin: 0 0 10px; }
-  .head p.sub { color: var(--ink-2); max-width: 720px; margin: 0; }
+  .head > * { position: relative; }
+  .head .kicker {
+    display: inline-block; font-size: 13px; letter-spacing: .14em;
+    color: var(--brand-strong); background: var(--brand-soft); border: 1px solid var(--brand-line);
+    padding: 3px 15px; border-radius: 999px; margin-bottom: 16px; font-weight: 600;
+  }
+  .head h1 { font-size: clamp(25px, 3.6vw, 35px); margin: 0 0 10px; }
+  .head h1 .grad {
+    background: linear-gradient(100deg, var(--brand-strong), var(--brand));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .head p.sub { color: var(--ink-2); max-width: 740px; margin: 0; }
 
   /* ---------- 章节 ---------- */
-  section { padding: 38px 0 6px; }
-  section + section { border-top: 1px dashed var(--line); margin-top: 30px; }
-  h2 { font-size: clamp(20px, 2.8vw, 26px); margin: 0 0 10px; line-height: 1.35; }
+  section { padding: 40px 0 6px; }
+  section + section { border-top: 1px dashed var(--line); margin-top: 32px; }
+  h2 { font-size: clamp(20px, 2.8vw, 27px); margin: 0 0 12px; }
   h2 .fno {
     display: inline-flex; align-items: center; justify-content: center;
-    min-width: 34px; height: 34px; border-radius: 9px; margin-right: 10px;
-    background: var(--brand); color: #fff; font-size: 15px; font-weight: 700;
-    vertical-align: 3px;
+    min-width: 36px; height: 36px; border-radius: 11px; margin-right: 11px;
+    background: linear-gradient(135deg, var(--brand-strong), var(--brand));
+    color: #fff; font-size: 15px; font-weight: 700; vertical-align: 3px;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 30%, transparent);
   }
-  .lead { color: var(--ink-2); max-width: 760px; margin: 0 0 16px; }
+  .lead { color: var(--ink-2); max-width: 780px; margin: 0 0 16px; }
 
   .entry {
     display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
-    background: #eef4f3; border: 1px solid var(--line); border-radius: 10px;
-    padding: 7px 14px; font-size: 14px; margin: 0 0 18px;
+    background: var(--chip); border: 1px solid var(--line); border-radius: 11px;
+    padding: 8px 15px; font-size: 14px; margin: 0 0 20px;
   }
-  .entry b { color: var(--brand-dark); }
-  .entry code { background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; font-family: Consolas, monospace; font-size: 12.5px; color: var(--brand-dark); }
+  .entry b { color: var(--brand-strong); }
 
   .cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-  .cols figure { margin: 0; }
-  .cols img {
+  .cols figure, .duo figure { margin: 0; }
+  .cols img, .duo img {
     width: 100%; height: auto; display: block;
-    border-radius: 12px; border: 1px solid var(--line);
-    box-shadow: 0 8px 24px rgba(16, 42, 51, .10);
+    border-radius: 14px; border: 1px solid var(--line);
+    box-shadow: var(--shadow); cursor: zoom-in;
+    transition: transform .25s ease, box-shadow .25s ease;
   }
-  figcaption { font-size: 13.5px; color: var(--ink-2); margin-top: 8px; }
+  .cols img:hover, .duo img:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  figcaption { font-size: 13.5px; color: var(--ink-2); margin-top: 9px; }
   figcaption b { color: var(--ink); }
 
   ul.pts { margin: 0; padding-left: 20px; }
-  ul.pts li { margin-bottom: 10px; }
+  ul.pts li { margin-bottom: 11px; }
   ul.pts li b { color: var(--ink); }
   ol.steps2 { margin: 0; padding-left: 22px; }
-  ol.steps2 li { margin-bottom: 10px; }
+  ol.steps2 li { margin-bottom: 11px; }
+  ol.steps2 li b { color: var(--ink); }
 
   .tip {
-    background: var(--tip-bg); border: 1px solid var(--tip-line); border-radius: 10px;
-    padding: 10px 16px; font-size: 14px; margin-top: 16px;
+    background: var(--tip-bg); border: 1px solid var(--tip-line); border-left: 4px solid var(--brand);
+    border-radius: 11px; padding: 11px 16px; font-size: 14px; margin-top: 18px;
   }
-  .tip b { color: var(--brand-dark); }
+  .tip b { color: var(--brand-strong); }
 
-  table.kv { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 14px; }
-  table.kv th, table.kv td { text-align: left; padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  table.kv th { background: #eef4f3; font-size: 13.5px; }
+  table.kv { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; font-size: 14px; box-shadow: var(--shadow); }
+  table.kv th, table.kv td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.kv th { background: var(--chip); font-size: 13.5px; }
   table.kv tr:last-child td { border-bottom: none; }
-  .table-scroll { overflow-x: auto; margin-top: 18px; }
+  table.kv tbody tr { transition: background .15s; }
+  table.kv tbody tr:hover { background: var(--chip); }
+  .table-scroll { overflow-x: auto; margin-top: 20px; border-radius: 14px; box-shadow: var(--shadow); }
 
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
-  .duo figure { margin: 0; }
-  .duo img { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(16,42,51,.10); }
 
-  /* ---------- 页脚 ---------- */
-  footer { margin-top: 60px; border-top: 1px solid var(--line); background: var(--card); padding: 26px 0 34px; }
+  /* ---------- 灯箱 / 回到顶部 ---------- */
+  #lightbox {
+    position: fixed; inset: 0; z-index: 60; display: none;
+    background: rgba(8, 16, 20, .82); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 30px; cursor: zoom-out;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img { max-width: 96vw; max-height: 92vh; border-radius: 12px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  #toTop {
+    position: fixed; right: 22px; bottom: 24px; z-index: 30;
+    width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); color: var(--brand-strong); font-size: 18px;
+    box-shadow: var(--shadow); cursor: pointer; opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .2s;
+  }
+  #toTop.show { opacity: 1; pointer-events: auto; }
+  #toTop:hover { transform: translateY(-2px); }
+
+  footer { margin-top: 64px; border-top: 1px solid var(--line); background: var(--card); padding: 28px 0 36px; }
   footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
 
   @media (prefers-reduced-motion: reduce) {
@@ -129,6 +192,7 @@
     .layout { grid-template-columns: 1fr; }
     .toc { position: static; max-height: none; }
     .cols, .duo { grid-template-columns: 1fr; }
+    #toTop { right: 14px; bottom: 16px; }
   }
 </style>
 </head>
@@ -167,10 +231,10 @@
   <main>
     <div class="head">
       <span class="kicker">使用手册 · 按功能模块逐一说明</span>
-      <h1>OGV 功能详解</h1>
+      <h1>OGV <span class="grad">功能详解</span></h1>
       <p class="sub">
         本手册按功能模块逐一介绍 OGV 的能力：每个功能都有<strong>入口位置</strong>、<strong>操作步骤</strong>与<strong>实际界面截图</strong>。
-        所有截图均来自系统真实运行界面。
+        所有截图均来自系统真实运行界面，点击图片可放大。
       </p>
     </div>
 
@@ -241,11 +305,11 @@
       <p class="entry"><b>入口</b>：侧栏 <b>🏔️ DEM高程渲染</b> 区块；高程查询在 <b>⚙️ 设置</b> 中开启。</p>
       <div class="cols">
         <figure>
-          <img src="shots/feat-dem.jpg" loading="lazy" alt="侧栏下方的本地图层查看区与 DEM高程渲染（测试中）区块，含加载 GeoTIFF 按钮">
-          <figcaption><b>DEM 入口</b>：点击"加载 GeoTIFF"即可把高程栅格叠加到地图上</figcaption>
+          <img src="shots/feat-dem.jpg" loading="lazy" alt="南海海域加载水深 GeoTIFF 后的渲染效果：深海盆呈深蓝色，海山群与海岭脊以浅色高亮显示，与底图地名叠加">
+          <figcaption><b>DEM 渲染实测</b>：加载南海水深 GeoTIFF 后按"海底地形"色带渲染——深海盆、海山群与海岭脊一目了然</figcaption>
         </figure>
         <ul class="pts">
-          <li><b>本地 DEM 渲染</b>：加载 GeoTIFF 高程文件，按色带渲染为栅格图层；提供海底地形、自适应拉伸、直方图均衡、灰度 4 种色带，可调透明度。</li>
+          <li><b>本地 DEM 渲染</b>：加载 GeoTIFF 高程文件，按色带渲染为栅格图层；提供海底地形、自适应拉伸、直方图均衡、灰度 4 种色带，透明度可调。</li>
           <li><b>点击查高程</b>：开启"高程查询"后，点击地图任意位置即弹出该点的高程/水深值（数据源 GEBCO，可切换）。</li>
           <li><b>3D 地形</b>：进入 3D 视图后自动加载全球地形（含海底地形），山脊与海沟直接立体呈现。</li>
         </ul>
@@ -283,7 +347,7 @@
           <figcaption><b>单要素详情</b>：属性表 / 图表双标签，字段一行不落</figcaption>
         </figure>
       </div>
-      <div class="cols" style="margin-top:18px">
+      <div class="cols" style="margin-top:20px">
         <figure>
           <img src="shots/feat-attr.jpg" loading="lazy" alt="图层属性表：全球16大板块的 16 行要素表格，列为 OBJECTID、Name、Shape_Length、Shape_Area，顶部有搜索框与全部字段开关，每行带定位按钮">
           <figcaption><b>图层属性表</b>：整图层要素分页浏览，可搜索、可逐行定位到地图</figcaption>
@@ -302,12 +366,18 @@
       <h2 id="s7-t"><span class="fno" aria-hidden="true">07</span>属性图表</h2>
       <p class="lead">属性表不止能"看"，还能"算"：把数值字段一键变成统计图，数量关系一眼看清。</p>
       <p class="entry"><b>入口</b>：属性表面板顶部的 <b>图表</b> 标签页。</p>
-      <ul class="pts">
-        <li><b>五种图型</b>：柱状图、散点图、直方图、饼图、雷达图，按字段类型智能推荐。</li>
-        <li><b>交互</b>：悬停查看数值、图例筛选、坐标轴缩放。</li>
-        <li><b>导出</b>：图表可一键保存为图片，直接用于报告与汇报。</li>
-      </ul>
-      <div class="tip"><b>示例</b>：对"全球16大板块"的 Shape_Area 字段做柱状图，板块面积排序一目了然。</div>
+      <div class="cols">
+        <figure>
+          <img src="shots/feat-chart.jpg" loading="lazy" alt="属性表面板的图表页：全球16大板块 Shape_Area 字段的直方图，横轴为面积分箱区间，纵轴为板块数量">
+          <figcaption><b>直方图实测</b>：对"全球16大板块"的 Shape_Area 字段做直方图——板块面积分布一眼看清，图表随所选字段即时刷新</figcaption>
+        </figure>
+        <ul class="pts">
+          <li><b>五种图型</b>：柱状图、散点图、直方图、饼图、雷达图，按字段类型选择。</li>
+          <li><b>字段自选</b>：X 轴 / 数值字段 / 分组维度自由搭配，图表即时重绘。</li>
+          <li><b>交互</b>：悬停查看数值、图例筛选、坐标轴缩放。</li>
+          <li><b>导出</b>：图表可一键保存为图片，直接用于报告与汇报。</li>
+        </ul>
+      </div>
     </section>
 
     <!-- ============ 08 量测工具 ============ -->
@@ -317,8 +387,8 @@
       <p class="entry"><b>入口</b>：⚙️ 设置中开启 <b>绘制与量测</b>，地图右侧出现绘制工具条。</p>
       <div class="cols">
         <figure>
-          <img src="shots/feat-measure.jpg" loading="lazy" alt="地图上绘制的多边形，旁边弹出量算结果气泡显示面积，右侧是绘制工具条，图例仍正常显示">
-          <figcaption><b>面积量算</b>：绘制多边形后自动弹出面积结果，可缩放至、可删除</figcaption>
+          <img src="shots/feat-measure.jpg" loading="lazy" alt="南海海域绘制的多边形，弹出量算气泡显示面积 154142.83 平方公里，附缩放至与详情按钮，右侧为绘制工具条">
+          <figcaption><b>面积量算实测</b>：绘制多边形后自动弹出面积结果（154,142.83 km²），可缩放至、可删除、可进详情</figcaption>
         </figure>
         <ul class="pts">
           <li><b>五种绘制</b>：点、折线（距离）、多边形（面积）、矩形（面积）、圆（两点定圆，实时显示半径读数，弹窗中可直接改半径）。</li>
@@ -337,12 +407,12 @@
       <p class="entry"><b>入口</b>：侧栏顶部 <b>🔍 搜索框</b>（占位符"搜索图层名 / 要素属性"）。</p>
       <div class="cols">
         <figure>
-          <img src="shots/feat-search.jpg" loading="lazy" alt="搜索框输入火山后，下方出现高亮匹配的图层结果：火山 volcanos">
-          <figcaption><b>即时搜索</b>：输入关键字即出匹配结果，命中文字高亮</figcaption>
+          <img src="shots/feat-search.jpg" loading="lazy" alt="搜索海沟并点击结果后：顶部出现确认条，图层树中海沟图层行高亮，地图自动跳转到目标海域">
+          <figcaption><b>搜索跳转实测</b>：输入"海沟"并点击结果——顶部确认条 + 图层行高亮 + 地图自动飞到目标海域</figcaption>
         </figure>
         <ul class="pts">
           <li><b>双范围检索</b>：同时搜图层名与要素属性值，倒排索引毫秒级响应。</li>
-          <li><b>点击定位</b>：结果点击后地图飞行定位并高亮该要素；3D 模式下同样支持。</li>
+          <li><b>点击定位</b>：结果点击后地图飞行定位并高亮该要素/图层；3D 模式下同样支持。</li>
           <li><b>深链直达</b>：URL 带 <code>?focus=南海</code> 参数，打开链接直接飞到注册过的地名——分享一张"定位好的图"给同事就是这么简单。</li>
         </ul>
       </div>
@@ -411,6 +481,48 @@
     <span>蜀ICP备2025119436号-3 · 浙公网安备33030402001573号</span>
   </div>
 </footer>
+
+<div id="lightbox" role="dialog" aria-label="图片放大查看" aria-modal="true"><img alt=""></div>
+<button id="toTop" aria-label="回到顶部" title="回到顶部">↑</button>
+
+<script>
+  // 图片灯箱
+  (function () {
+    var lb = document.getElementById("lightbox"), lbImg = lb.querySelector("img");
+    document.querySelectorAll("main img").forEach(function (img) {
+      img.addEventListener("click", function () {
+        lbImg.src = img.src; lbImg.alt = img.alt || "";
+        lb.classList.add("open");
+      });
+    });
+    lb.addEventListener("click", function () { lb.classList.remove("open"); lbImg.src = ""; });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") { lb.classList.remove("open"); } });
+  })();
+  // 目录滚动高亮（scrollspy）
+  (function () {
+    var links = [...document.querySelectorAll(".toc a")];
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute("href").slice(1)] = a; });
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          links.forEach(function (a) { a.classList.remove("active"); });
+          var a = map[en.target.id];
+          if (a) a.classList.add("active");
+        }
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    document.querySelectorAll("main section[id]").forEach(function (s) { obs.observe(s); });
+  })();
+  // 回到顶部
+  (function () {
+    var btn = document.getElementById("toTop");
+    window.addEventListener("scroll", function () {
+      btn.classList.toggle("show", window.scrollY > 600);
+    }, { passive: true });
+    btn.addEventListener("click", function () { window.scrollTo({ top: 0, behavior: "smooth" }); });
+  })();
+</script>
 
 </body>
 </html>
