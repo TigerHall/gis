@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OGV · 功能详解 — 使用手册</title>
+<meta name="description" content="OGV 海洋地质一张图功能详解：地图设置、坐标投点、DEM 高程、3D 视图、属性表与图表、量测工具、搜索定位、极地视图、海量点位渲染与导出出图。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>📖</text></svg>">
+<style>
+  :root {
+    --brand: #0c6b5f;
+    --brand-dark: #0a5a50;
+    --ink: #1c2b33;
+    --ink-2: #465a64;
+    --line: #dfe8ec;
+    --bg: #f6f9fa;
+    --card: #ffffff;
+    --tip-bg: #eef7f4;
+    --tip-line: #cfe2de;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15.5px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+  .topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 0; }
+  .brand { font-weight: 700; font-size: 17px; color: var(--ink); text-decoration: none; }
+  .brand .dot { color: var(--brand); }
+  .topnav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .topnav a { color: var(--ink-2); text-decoration: none; font-size: 14px; padding: 6px 12px; border-radius: 8px; }
+  .topnav a:hover { background: #eef4f3; color: var(--brand-dark); }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 8px; }
+
+  /* ---------- 布局：左目录 + 右正文 ---------- */
+  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 30px; align-items: start; padding: 30px 0 0; }
+  .toc {
+    position: sticky; top: 74px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 10px; max-height: calc(100vh - 100px); overflow-y: auto;
+  }
+  .toc b { display: block; font-size: 13px; letter-spacing: .1em; color: var(--ink-2); padding: 2px 10px 8px; }
+  .toc a {
+    display: block; font-size: 14px; color: var(--ink-2); text-decoration: none;
+    padding: 7px 10px; border-radius: 8px; line-height: 1.45;
+  }
+  .toc a:hover { background: #eef4f3; color: var(--brand-dark); }
+  .toc a .em { margin-right: 6px; }
+
+  /* ---------- 头部 ---------- */
+  .head { padding: 10px 0 6px; }
+  .head .kicker {
+    display: inline-block; font-size: 13px; letter-spacing: .12em;
+    color: var(--brand-dark); background: #e3efec; border: 1px solid #cfe2de;
+    padding: 3px 13px; border-radius: 999px; margin-bottom: 14px;
+  }
+  .head h1 { font-size: clamp(24px, 3.6vw, 34px); line-height: 1.3; margin: 0 0 10px; }
+  .head p.sub { color: var(--ink-2); max-width: 720px; margin: 0; }
+
+  /* ---------- 章节 ---------- */
+  section { padding: 38px 0 6px; }
+  section + section { border-top: 1px dashed var(--line); margin-top: 30px; }
+  h2 { font-size: clamp(20px, 2.8vw, 26px); margin: 0 0 10px; line-height: 1.35; }
+  h2 .fno {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 34px; height: 34px; border-radius: 9px; margin-right: 10px;
+    background: var(--brand); color: #fff; font-size: 15px; font-weight: 700;
+    vertical-align: 3px;
+  }
+  .lead { color: var(--ink-2); max-width: 760px; margin: 0 0 16px; }
+
+  .entry {
+    display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    background: #eef4f3; border: 1px solid var(--line); border-radius: 10px;
+    padding: 7px 14px; font-size: 14px; margin: 0 0 18px;
+  }
+  .entry b { color: var(--brand-dark); }
+  .entry code { background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; font-family: Consolas, monospace; font-size: 12.5px; color: var(--brand-dark); }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .cols figure { margin: 0; }
+  .cols img {
+    width: 100%; height: auto; display: block;
+    border-radius: 12px; border: 1px solid var(--line);
+    box-shadow: 0 8px 24px rgba(16, 42, 51, .10);
+  }
+  figcaption { font-size: 13.5px; color: var(--ink-2); margin-top: 8px; }
+  figcaption b { color: var(--ink); }
+
+  ul.pts { margin: 0; padding-left: 20px; }
+  ul.pts li { margin-bottom: 10px; }
+  ul.pts li b { color: var(--ink); }
+  ol.steps2 { margin: 0; padding-left: 22px; }
+  ol.steps2 li { margin-bottom: 10px; }
+
+  .tip {
+    background: var(--tip-bg); border: 1px solid var(--tip-line); border-radius: 10px;
+    padding: 10px 16px; font-size: 14px; margin-top: 16px;
+  }
+  .tip b { color: var(--brand-dark); }
+
+  table.kv { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 14px; }
+  table.kv th, table.kv td { text-align: left; padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.kv th { background: #eef4f3; font-size: 13.5px; }
+  table.kv tr:last-child td { border-bottom: none; }
+  .table-scroll { overflow-x: auto; margin-top: 18px; }
+
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  .duo figure { margin: 0; }
+  .duo img { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(16,42,51,.10); }
+
+  /* ---------- 页脚 ---------- */
+  footer { margin-top: 60px; border-top: 1px solid var(--line); background: var(--card); padding: 26px 0 34px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .toc { position: static; max-height: none; }
+    .cols, .duo { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#top">OGV<span class="dot"> · </span>功能详解</a>
+    <nav class="topnav" aria-label="页面导航">
+      <a href="intro.html">← 产品说明</a>
+      <a href="https://dupal.cn" target="_blank" rel="noopener">在线访问 ↗</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap layout" id="top">
+
+  <!-- ============ 左侧目录 ============ -->
+  <nav class="toc" aria-label="功能目录">
+    <b>功能目录</b>
+    <a href="#s1"><span class="em">🗺️</span>地图设置与底图</a>
+    <a href="#s2"><span class="em">📑</span>图层管理</a>
+    <a href="#s3"><span class="em">📌</span>坐标投点</a>
+    <a href="#s4"><span class="em">🏔️</span>DEM 与高程查询</a>
+    <a href="#s5"><span class="em">🌐</span>3D 视图</a>
+    <a href="#s6"><span class="em">📋</span>弹窗与属性表</a>
+    <a href="#s7"><span class="em">📊</span>属性图表</a>
+    <a href="#s8"><span class="em">📐</span>量测工具</a>
+    <a href="#s9"><span class="em">🔍</span>搜索与定位</a>
+    <a href="#s10"><span class="em">🧭</span>极地视图</a>
+    <a href="#s11"><span class="em">⚡</span>海量点位渲染</a>
+    <a href="#s12"><span class="em">📷</span>导出与出图</a>
+  </nav>
+
+  <!-- ============ 正文 ============ -->
+  <main>
+    <div class="head">
+      <span class="kicker">使用手册 · 按功能模块逐一说明</span>
+      <h1>OGV 功能详解</h1>
+      <p class="sub">
+        本手册按功能模块逐一介绍 OGV 的能力：每个功能都有<strong>入口位置</strong>、<strong>操作步骤</strong>与<strong>实际界面截图</strong>。
+        所有截图均来自系统真实运行界面。
+      </p>
+    </div>
+
+    <!-- ============ 01 地图设置 ============ -->
+    <section id="s1" aria-labelledby="s1-t">
+      <h2 id="s1-t"><span class="fno" aria-hidden="true">01</span>地图设置与底图</h2>
+      <p class="lead">底图决定"数据画在什么纸上"。OGV 内置 30+ 全球底图源，配合显示辅助开关，让同一份数据呈现不同的阅读效果。</p>
+      <p class="entry"><b>入口</b>：地图右下角底图控件（单选切换）；显示开关集中在侧栏 <b>⚙️ 设置</b> 面板；常用开关也放在侧栏顶部"常用功能区"。</p>
+      <div class="cols">
+        <figure>
+          <img src="shots/feat-settings.jpg" loading="lazy" alt="设置面板展开状态：显示、快捷、数据、视图、高级、操作六个分组，下方是数据图层树">
+          <figcaption><b>设置面板</b>：开关按"显示 / 快捷 / 数据 / 视图 / 高级 / 操作"分组，每项都有说明文字</figcaption>
+        </figure>
+        <ul class="pts">
+          <li><b>30+ 底图源</b>：天地图（影像/矢量/地形）、ArcGIS（影像/街道/海洋/物理/地形）、GEBCO 2024/2025 全系列、ETOPO、EMODnet 水深、Macrostrat 全球地质、OpenStreetMap，以及"无底图"纯数据模式。</li>
+          <li><b>Esri Wayback 历史影像</b>：选择该底图时自动出现时相选择条，可回溯不同年份的卫星影像。</li>
+          <li><b>覆盖层</b>：天地图全球境界、地名标注可与任何底图叠加。</li>
+          <li><b>视图辅助</b>：比例尺、鼠标位置（经纬度/缩放读数）、经纬网、中心十字可独立开关。</li>
+          <li><b>深浅双主题</b>：一键切换，面板、图例与地图配色全站适配。</li>
+        </ul>
+      </div>
+      <div class="tip"><b>提示</b>：底图选择与覆盖层勾选会被记住，下次打开自动恢复上次的配置。</div>
+    </section>
+
+    <!-- ============ 02 图层管理 ============ -->
+    <section id="s2" aria-labelledby="s2-t">
+      <h2 id="s2-t"><span class="fno" aria-hidden="true">02</span>图层管理</h2>
+      <p class="lead">60+ 开箱即用图层按主题分组为图层树，勾选即上图；自带数据可拖入"本地图层"，不上传服务器。</p>
+      <p class="entry"><b>入口</b>：侧栏 <b>📑 数据图层</b>（内置图层树）、<b>🗺️ 本地图层查看</b>（自有数据）。</p>
+      <div class="cols">
+        <figure>
+          <img src="shots/promo-panel.jpg" loading="lazy" alt="图层面板：常用功能区、按主题分组的数据图层树，板块构造组已展开">
+          <figcaption><b>图层树</b>：全球板块构造、洋中脊作用域、海底基础信息等分组，勾选即显示</figcaption>
+        </figure>
+        <ul class="pts">
+          <li><b>主题分组</b>：板块构造、洋中脊作用域、海底基础信息、海洋地理、矿产资源、地质站位等 8 大主题，支持一键全选/全不选。</li>
+          <li><b>要素计数</b>：每个图层标注要素数量，加载进度实时可见。</li>
+          <li><b>逐图层控制</b>：图层行上的按钮可打开图层设置（颜色/图标/标签字段/透明度）、缩放到图层范围、打开图层属性表。</li>
+          <li><b>本地图层</b>：GeoJSON 文件可直接拖入浏览器或上传/选择文件夹，数据只在本地解析，不上传任何服务器。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 03 坐标投点 ============ -->
+    <section id="s3" aria-labelledby="s3-t">
+      <h2 id="s3-t"><span class="fno" aria-hidden="true">03</span>坐标投点</h2>
+      <p class="lead">把手里的一批经纬度坐标快速变成地图图层：粘贴即识别，一键生成点图层，还能顺手调整字段。</p>
+      <p class="entry"><b>入口</b>：侧栏 <b>🗺️ 坐标投点</b> 按钮，展开投点编辑器。</p>
+      <div class="cols">
+        <figure>
+          <img src="shots/feat-pointdrop.jpg" loading="lazy" alt="坐标投点编辑器：粘贴编辑器已识别 3 行坐标，表格中显示纬度、经度、Name 三列，下方有生成图层按钮与现在位置、测量转图层、导出JSON等按钮">
+          <figcaption><b>投点编辑器</b>：粘贴 3 行坐标自动填表，点"生成图层"即上图；下方一排是 GPS 定位与导入导出入口</figcaption>
+        </figure>
+        <ol class="steps2">
+          <li><b>录入坐标</b>：表格逐行填写纬度 / 经度 / 名称；或直接把 Excel、CSV、TSV 文本<strong>粘贴</strong>进粘贴框，前两列自动识别为纬度、经度。</li>
+          <li><b>全局剪贴板识别</b>：开启开关后，在页面任意位置 <kbd>Ctrl</kbd>+<kbd>V</kbd>，剪贴板里的坐标会被自动识别并询问是否生成图层。</li>
+          <li><b>生成图层</b>：点"生成图层"，坐标变成一个可勾选、可设置样式的点图层，与其他图层一样参与弹窗、属性表和导出。</li>
+          <li><b>GPS 打点</b>：📱 打开"现在的位置"，读取设备定位，填备注后记录为点位。</li>
+        </ol>
+      </div>
+      <div class="tip"><b>提示</b>：支持额外字段——粘贴更多列或点"+ 字段"即可扩展属性，生成的图层保留全部字段供查询。</div>
+    </section>
+
+    <!-- ============ 04 DEM 与高程 ============ -->
+    <section id="s4" aria-labelledby="s4-t">
+      <h2 id="s4-t"><span class="fno" aria-hidden="true">04</span>DEM 与高程查询</h2>
+      <p class="lead">三条路径看地形：本地 GeoTIFF 渲染、点图查高程水深、3D 场景直接看立体地形。</p>
+      <p class="entry"><b>入口</b>：侧栏 <b>🏔️ DEM高程渲染</b> 区块；高程查询在 <b>⚙️ 设置</b> 中开启。</p>
+      <div class="cols">
+        <figure>
+          <img src="shots/feat-dem.jpg" loading="lazy" alt="侧栏下方的本地图层查看区与 DEM高程渲染（测试中）区块，含加载 GeoTIFF 按钮">
+          <figcaption><b>DEM 入口</b>：点击"加载 GeoTIFF"即可把高程栅格叠加到地图上</figcaption>
+        </figure>
+        <ul class="pts">
+          <li><b>本地 DEM 渲染</b>：加载 GeoTIFF 高程文件，按色带渲染为栅格图层；提供海底地形、自适应拉伸、直方图均衡、灰度 4 种色带，可调透明度。</li>
+          <li><b>点击查高程</b>：开启"高程查询"后，点击地图任意位置即弹出该点的高程/水深值（数据源 GEBCO，可切换）。</li>
+          <li><b>3D 地形</b>：进入 3D 视图后自动加载全球地形（含海底地形），山脊与海沟直接立体呈现。</li>
+        </ul>
+      </div>
+      <div class="tip"><b>提示</b>：DEM 渲染目前为测试功能，大文件解析需要几秒钟；高程查询在 2D 与 3D 下均可使用。</div>
+    </section>
+
+    <!-- ============ 05 3D 视图 ============ -->
+    <section id="s5" aria-labelledby="s5-t">
+      <h2 id="s5-t"><span class="fno" aria-hidden="true">05</span>3D 视图</h2>
+      <p class="lead">基于 Cesium 的三维地球：地形立体、倾斜视角，2D 里勾选的数据图层自动同步到 3D 场景。</p>
+      <p class="entry"><b>入口</b>：常用功能区 / ⚙️ 设置中的 <b>3D 视图</b> 开关（与极地视图互斥，开启一方会自动关闭另一方）。</p>
+      <ul class="pts">
+        <li><b>懒加载</b>：Cesium 引擎（约 4MB）在首次开启时才下载，日常 2D 使用零负担。</li>
+        <li><b>地形</b>：默认加载含海底地形的全球地形源，也可切换为平滑椭球。</li>
+        <li><b>底图同步</b>：2D 当前底图自动映射为 3D 影像层，覆盖层数据同步渲染，换底图无需重开 3D。</li>
+        <li><b>操作</b>：左键拖拽平移、滚轮缩放、右键/Ctrl+拖拽倾斜旋转；提供三视图切换（球体 / 平面 / 哥伦布视图）。</li>
+        <li><b>场景联动</b>：深浅主题切换时 3D 场景的天空、雾效与配色同步调整；点击 3D 中的要素同样弹出属性。</li>
+      </ul>
+      <div class="tip"><b>提示</b>：3D 对显卡有一定要求；低性能设备建议缩小窗口或减少同步图层。</div>
+    </section>
+
+    <!-- ============ 06 弹窗与属性表 ============ -->
+    <section id="s6" aria-labelledby="s6-t">
+      <h2 id="s6-t"><span class="fno" aria-hidden="true">06</span>弹窗与属性表</h2>
+      <p class="lead">点任何要素都能看属性：轻查询用弹窗，深浏览用属性表面板——单要素全字段、整图层分页表格两种模式。</p>
+      <p class="entry"><b>入口</b>：点击地图上的点/线/面要素弹出属性弹窗；弹窗上的 <b>⚲ 缩放至</b>、<b>📋 详情</b> 按钮进入更深一层。</p>
+      <div class="duo">
+        <figure>
+          <img src="shots/feat-popup.jpg" loading="lazy" alt="点击印度板块后弹出的属性弹窗：OBJECTID、Name、Shape_Length、Shape_Area 字段与缩放至、详情按钮">
+          <figcaption><b>要素弹窗</b>：全部属性字段 + 缩放至 / 详情快捷按钮</figcaption>
+        </figure>
+        <figure>
+          <img src="shots/feat-detail.jpg" loading="lazy" alt="单要素详情面板：印度板块的属性表，含属性表与图表两个标签页">
+          <figcaption><b>单要素详情</b>：属性表 / 图表双标签，字段一行不落</figcaption>
+        </figure>
+      </div>
+      <div class="cols" style="margin-top:18px">
+        <figure>
+          <img src="shots/feat-attr.jpg" loading="lazy" alt="图层属性表：全球16大板块的 16 行要素表格，列为 OBJECTID、Name、Shape_Length、Shape_Area，顶部有搜索框与全部字段开关，每行带定位按钮">
+          <figcaption><b>图层属性表</b>：整图层要素分页浏览，可搜索、可逐行定位到地图</figcaption>
+        </figure>
+        <ul class="pts">
+          <li><b>弹窗</b>：点选即弹，显示全部属性；"缩放至"飞到该要素，"详情"进入面板。</li>
+          <li><b>单要素详情</b>：不分页展示所有字段，附带该要素的属性图表。</li>
+          <li><b>图层属性表</b>：从图层行的 📋 按钮进入，整图层要素以表格浏览——翻页、按字段值搜索、切换"当前图层/全部图层"范围、显示全部字段，每行可一键定位。</li>
+          <li><b>折线属性表</b>：测量转图层的折线会把长度等量算结果写入属性（如 长度_km），在属性表中与其他字段一起浏览、搜索、定位。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 07 属性图表 ============ -->
+    <section id="s7" aria-labelledby="s7-t">
+      <h2 id="s7-t"><span class="fno" aria-hidden="true">07</span>属性图表</h2>
+      <p class="lead">属性表不止能"看"，还能"算"：把数值字段一键变成统计图，数量关系一眼看清。</p>
+      <p class="entry"><b>入口</b>：属性表面板顶部的 <b>图表</b> 标签页。</p>
+      <ul class="pts">
+        <li><b>五种图型</b>：柱状图、散点图、直方图、饼图、雷达图，按字段类型智能推荐。</li>
+        <li><b>交互</b>：悬停查看数值、图例筛选、坐标轴缩放。</li>
+        <li><b>导出</b>：图表可一键保存为图片，直接用于报告与汇报。</li>
+      </ul>
+      <div class="tip"><b>示例</b>：对"全球16大板块"的 Shape_Area 字段做柱状图，板块面积排序一目了然。</div>
+    </section>
+
+    <!-- ============ 08 量测工具 ============ -->
+    <section id="s8" aria-labelledby="s8-t">
+      <h2 id="s8-t"><span class="fno" aria-hidden="true">08</span>量测工具</h2>
+      <p class="lead">距离、面积、半径随手量：画线量长度，画面量面积，画圆得半径——量算结果直接标注在图上。</p>
+      <p class="entry"><b>入口</b>：⚙️ 设置中开启 <b>绘制与量测</b>，地图右侧出现绘制工具条。</p>
+      <div class="cols">
+        <figure>
+          <img src="shots/feat-measure.jpg" loading="lazy" alt="地图上绘制的多边形，旁边弹出量算结果气泡显示面积，右侧是绘制工具条，图例仍正常显示">
+          <figcaption><b>面积量算</b>：绘制多边形后自动弹出面积结果，可缩放至、可删除</figcaption>
+        </figure>
+        <ul class="pts">
+          <li><b>五种绘制</b>：点、折线（距离）、多边形（面积）、矩形（面积）、圆（两点定圆，实时显示半径读数，弹窗中可直接改半径）。</li>
+          <li><b>量算防误触</b>：绘制过程中自动屏蔽要素点选，不会误弹数据弹窗。</li>
+          <li><b>管理</b>：工具条一键"清除全部测量"；每个图形也可单独删除、编辑。</li>
+          <li><b>量测转图层</b>：把测量结果转成正式图层（折线自动写入长度字段），参与属性表与导出。</li>
+          <li><b>导出 JSON</b>：全部测量图形一键导出为 GeoJSON 文件。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 09 搜索与定位 ============ -->
+    <section id="s9" aria-labelledby="s9-t">
+      <h2 id="s9-t"><span class="fno" aria-hidden="true">09</span>搜索与定位</h2>
+      <p class="lead">在几十万个要素里找目标：输入关键字，图层名与要素属性同时检索，点击结果直接飞过去。</p>
+      <p class="entry"><b>入口</b>：侧栏顶部 <b>🔍 搜索框</b>（占位符"搜索图层名 / 要素属性"）。</p>
+      <div class="cols">
+        <figure>
+          <img src="shots/feat-search.jpg" loading="lazy" alt="搜索框输入火山后，下方出现高亮匹配的图层结果：火山 volcanos">
+          <figcaption><b>即时搜索</b>：输入关键字即出匹配结果，命中文字高亮</figcaption>
+        </figure>
+        <ul class="pts">
+          <li><b>双范围检索</b>：同时搜图层名与要素属性值，倒排索引毫秒级响应。</li>
+          <li><b>点击定位</b>：结果点击后地图飞行定位并高亮该要素；3D 模式下同样支持。</li>
+          <li><b>深链直达</b>：URL 带 <code>?focus=南海</code> 参数，打开链接直接飞到注册过的地名——分享一张"定位好的图"给同事就是这么简单。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 10 极地视图 ============ -->
+    <section id="s10" aria-labelledby="s10-t">
+      <h2 id="s10-t"><span class="fno" aria-hidden="true">10</span>极地视图</h2>
+      <p class="lead">Web Mercator 在两极严重变形，看极区数据需要真正的极地投影。OGV 提供南北极两套独立投影视图。</p>
+      <p class="entry"><b>入口</b>：常用功能区 <b>🧭 认识极地</b>（或 ⚙️ 设置中的"极地投影视图"开关），顶部出现极地控制条。</p>
+      <div class="duo">
+        <figure>
+          <img src="shots/polar-gibs-north.jpg" loading="lazy" alt="北极视图：EPSG:3413 极球面立体投影，NASA GIBS 底图，北冰洋数据清晰分布">
+          <figcaption><b>北极</b>：EPSG:3413 立体投影 + NASA GIBS 底图</figcaption>
+        </figure>
+        <figure>
+          <img src="shots/polar-gebco-south.jpg" loading="lazy" alt="南极视图：EPSG:3031 极球面立体投影，GEBCO 2025 水深地形底图">
+          <figcaption><b>南极</b>：EPSG:3031 立体投影 + GEBCO 2025 水深</figcaption>
+        </figure>
+      </div>
+      <ul class="pts" style="margin-top:14px">
+        <li><b>独立投影</b>：北极 EPSG:3413 / 南极 EPSG:3031 极球面立体投影，极区形状与面积不再失真。</li>
+        <li><b>极地专属底图</b>：NASA GIBS、GEBCO 极地影像等对极区友好的底图源，下拉切换。</li>
+        <li><b>数据同步</b>：主视图勾选的图层自动在极地视图重建渲染，海量点位于极区同样流畅。</li>
+        <li><b>一键返回</b>：控制条"返回"按钮回到主视图，极地视图为只读浏览，不影响主视图状态。</li>
+      </ul>
+    </section>
+
+    <!-- ============ 11 海量点位 ============ -->
+    <section id="s11" aria-labelledby="s11-t">
+      <h2 id="s11-t"><span class="fno" aria-hidden="true">11</span>海量点位渲染</h2>
+      <p class="lead">几十万个点位不卡顿的秘诀：Canvas 批量渲染 + 视口裁剪 + 空间索引 + 分层缓存，浏览器里也能"秒开大表"。</p>
+      <ul class="pts">
+        <li><b>自动分档</b>：要素数超过阈值自动切 Canvas 渲染（零 DOM、滚动缩放不掉帧），小数据量仍走聚合气泡（MarkerCluster），阅读体验最优。</li>
+        <li><b>视口裁剪</b>：只渲染当前视野内的要素，平移缩放按需重建。</li>
+        <li><b>空间索引</b>：RBush 索引支撑聚合与点击命中，13 万+ 标记内存占用可控。</li>
+        <li><b>传输与缓存</b>：数据 gzip 压缩传输，IndexedDB 本地缓存——第二次打开秒加载，弱网/离线也能看。</li>
+        <li><b>点击不缺席</b>：Canvas 点位同样可点击弹窗、进属性表，与普通标记体验一致。</li>
+      </ul>
+      <div class="tip"><b>实测</b>：60 万级站点数据在此方案下流畅浏览；Canvas 渲染下点击、悬停提示均正常。</div>
+    </section>
+
+    <!-- ============ 12 导出与出图 ============ -->
+    <section id="s12" aria-labelledby="s12-t">
+      <h2 id="s12-t"><span class="fno" aria-hidden="true">12</span>导出与出图</h2>
+      <p class="lead">看到的就要能带走：截图出图、测量导出、属性数据外带，三条出口覆盖绝大多数汇报场景。</p>
+      <p class="entry"><b>入口</b>：常用功能区 <b>📷 导出图片</b>（快捷键 <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>E</kbd>）；测量/图层导出按钮在各功能区内。</p>
+      <table class="kv table-scroll">
+        <thead><tr><th scope="col">导出什么</th><th scope="col">怎么导</th><th scope="col">得到什么</th></tr></thead>
+        <tbody>
+          <tr><td>当前地图画面</td><td>导出图片按钮 / Ctrl+E；导出时自动隐藏侧栏与控件，完成自动恢复</td><td>PNG 截图（桌面走系统截屏，iOS 走内置渲染）</td></tr>
+          <tr><td>测量图形</td><td>量测工具条 → 导出 JSON</td><td>GeoJSON 文件（含长度/面积字段）</td></tr>
+          <tr><td>自有图层</td><td>本地图层导出入口</td><td>GeoJSON 文件</td></tr>
+          <tr><td>统计图表</td><td>图表面板 → 保存图片</td><td>PNG 图表</td></tr>
+        </tbody>
+      </table>
+      <div class="tip"><b>提示</b>：OGV 是 PWA 应用，安装到桌面/手机后可离线使用；底图与图层数据经缓存复用，断网也能浏览已看过的区域。</div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>OGV · 海洋地质一张图 — 功能详解</span>
+    <span>蜀ICP备2025119436号-3 · 浙公网安备33030402001573号</span>
+  </div>
+</footer>
+
+</body>
+</html>
