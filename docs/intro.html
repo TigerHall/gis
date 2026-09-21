@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OGV · 海洋地质一张图 — 产品说明</title>
+<meta name="description" content="OGV 海洋地质一张图：配置驱动的 WebGIS 数据查看与发布平台。60+ 开箱即用图层，30+ 全球底图，极地与 3D 视图，整站定制只改一份配置文件。">
+<style>
+  :root {
+    --brand: #0c6b5f;
+    --brand-dark: #0a5a50;
+    --ink: #1c2b33;
+    --ink-2: #465a64;
+    --line: #dfe8ec;
+    --bg: #f6f9fa;
+    --card: #ffffff;
+    --code-bg: #10242c;
+    --code-ink: #d7e6ea;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 16px;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar {
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; padding: 12px 0;
+  }
+  .brand { font-weight: 700; font-size: 17px; color: var(--ink); text-decoration: none; }
+  .brand .dot { color: var(--brand); }
+  .topnav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .topnav a {
+    color: var(--ink-2); text-decoration: none; font-size: 14px;
+    padding: 6px 12px; border-radius: 8px;
+  }
+  .topnav a:hover { background: #eef4f3; color: var(--brand-dark); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 8px; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 56px 0 28px; text-align: center; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; letter-spacing: .12em;
+    color: var(--brand-dark); background: #e3efec; border: 1px solid #cfe2de;
+    padding: 4px 14px; border-radius: 999px; margin-bottom: 18px;
+  }
+  .hero h1 { font-size: clamp(26px, 4.5vw, 40px); line-height: 1.3; margin: 0 0 14px; }
+  .hero p.sub { color: var(--ink-2); font-size: 17px; max-width: 640px; margin: 0 auto 26px; }
+  .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 36px; }
+  .btn {
+    display: inline-block; padding: 10px 22px; border-radius: 10px;
+    font-size: 15px; text-decoration: none; font-weight: 600;
+  }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-ghost { color: var(--brand-dark); border: 1.5px solid var(--brand); }
+  .btn-ghost:hover { background: #eef4f3; }
+
+  .hero-figure { margin: 0; }
+  .hero-figure img {
+    width: 100%; height: auto; display: block;
+    border-radius: 14px; border: 1px solid var(--line);
+    box-shadow: 0 18px 44px rgba(16, 42, 51, .14);
+  }
+  .hero-figure figcaption { font-size: 13px; color: var(--ink-2); margin-top: 10px; }
+
+  /* ---------- 统计条 ---------- */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin: 44px 0 8px;
+  }
+  .stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 12px; text-align: center;
+  }
+  .stat b { display: block; font-size: 24px; color: var(--brand-dark); }
+  .stat span { font-size: 13px; color: var(--ink-2); }
+
+  /* ---------- 章节通用 ---------- */
+  section { padding: 46px 0 8px; }
+  .sec-tag {
+    font-size: 13px; font-weight: 700; letter-spacing: .14em;
+    color: var(--brand-dark); margin: 0 0 6px;
+  }
+  h2 { font-size: clamp(21px, 3vw, 28px); margin: 0 0 10px; line-height: 1.35; }
+  .sec-lead { color: var(--ink-2); max-width: 720px; margin: 0 0 26px; }
+
+  /* ---------- 特性卡片 ---------- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px 20px 16px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 16.5px; }
+  .card p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+  .card .ico { font-size: 22px; display: inline-block; margin-bottom: 8px; }
+
+  /* ---------- 截图画廊 ---------- */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px; margin-top: 28px; }
+  figure.shot { margin: 0; }
+  figure.shot img {
+    width: 100%; height: auto; display: block;
+    border-radius: 12px; border: 1px solid var(--line);
+    box-shadow: 0 8px 24px rgba(16, 42, 51, .10);
+  }
+  figure.shot figcaption { font-size: 13.5px; color: var(--ink-2); margin-top: 8px; }
+  figure.shot figcaption b { color: var(--ink); }
+
+  /* ---------- 定制部分 ---------- */
+  .steps { counter-reset: step; display: grid; gap: 12px; margin: 0 0 30px; padding: 0; list-style: none; }
+  .steps li {
+    counter-increment: step; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 18px 14px 58px; position: relative; font-size: 15px;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--brand); color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .steps b { color: var(--ink); }
+
+  pre {
+    background: var(--code-bg); color: var(--code-ink);
+    border-radius: 12px; padding: 18px 20px;
+    overflow-x: auto; overflow-y: hidden;
+    font-size: 13.5px; line-height: 1.65;
+    font-family: Consolas, "Courier New", monospace;
+  }
+  pre .cm { color: #7fa08f; }
+  pre .kw { color: #8fd3c7; }
+  pre .str { color: #f2c98a; }
+  pre .fld { color: #9ecbff; }
+
+  table.cfg { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--line); font-size: 14.5px; }
+  table.cfg th, table.cfg td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.cfg th { background: #eef4f3; font-size: 13.5px; }
+  table.cfg tr:last-child td { border-bottom: none; }
+  table.cfg code { background: #eef4f3; border-radius: 5px; padding: 1px 6px; font-size: 13px; font-family: Consolas, monospace; color: var(--brand-dark); }
+  .table-scroll { overflow-x: auto; }
+
+  /* ---------- 使用说明 ---------- */
+  .guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .guide h3 { margin: 0 0 12px; font-size: 17px; }
+  .guide ul { margin: 0; padding-left: 20px; font-size: 14.5px; color: var(--ink-2); }
+  .guide li { margin-bottom: 9px; }
+  .guide li b { color: var(--ink); }
+  .guide code { background: #eef4f3; border-radius: 5px; padding: 1px 6px; font-size: 12.5px; font-family: Consolas, monospace; color: var(--brand-dark); }
+
+  /* ---------- 页脚 ---------- */
+  footer { margin-top: 56px; border-top: 1px solid var(--line); background: var(--card); padding: 26px 0 34px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
+  @media (max-width: 640px) {
+    .hero { padding-top: 36px; }
+    .stat b { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#top">OGV<span class="dot"> · </span>海洋地质一张图</a>
+    <nav class="topnav" aria-label="页面导航">
+      <a href="#features">查看数据</a>
+      <a href="#customize">迁移定制</a>
+      <a href="#guide">使用说明</a>
+      <a href="https://dupal.cn" target="_blank" rel="noopener">在线访问 ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ Hero ============ -->
+  <div class="wrap">
+    <div class="hero">
+      <span class="kicker">配置驱动的 WebGIS 数据平台</span>
+      <h1>看得清海洋地质数据，<br>改得动一份配置文件</h1>
+      <p class="sub">
+        OGV 是一套纯静态、可离线的 WebGIS「一张图」系统：打开浏览器即可查看全球海洋地质数据，
+        整站换肤、迁移、加图层，只需修改一份 <strong>geo-config.js</strong>。
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://dupal.cn" target="_blank" rel="noopener">打开在线演示</a>
+        <a class="btn btn-ghost" href="#customize">看看怎么定制</a>
+      </div>
+
+      <figure class="hero-figure">
+        <img src="shots/promo-hero.jpg" width="3200" height="2000"
+             alt="OGV 主界面：全球板块、洋中脊与转换断层、海沟、火山、热点、热液喷口与强震数据叠加显示，左下角为图例" fetchpriority="high">
+        <figcaption>主视图：板块构造 + 洋中脊/海沟 + 火山/热点/热液喷口 + 7.0 级以上强震（1800–2023）同时叠加</figcaption>
+      </figure>
+
+      <div class="stats" role="list" aria-label="平台关键指标">
+        <div class="stat" role="listitem"><b>60+</b><span>开箱即用数据图层</span></div>
+        <div class="stat" role="listitem"><b>30+</b><span>全球底图源</span></div>
+        <div class="stat" role="listitem"><b>2</b><span>极地投影视图</span></div>
+        <div class="stat" role="listitem"><b>1</b><span>份配置文件定制整站</span></div>
+      </div>
+    </div>
+
+    <!-- ============ 查看数据 ============ -->
+    <section id="features" aria-labelledby="features-title">
+      <p class="sec-tag">核心能力 · 查看数据</p>
+      <h2 id="features-title">把分散的数据，变成一张能交互的图</h2>
+      <p class="sec-lead">
+        点、线、面全要素渲染，海量点位流畅浏览，每一个要素都可以点开看属性 —— 数据不再是文件夹里的静态文件。
+      </p>
+
+      <div class="cards">
+        <div class="card"><span class="ico" aria-hidden="true">🗂️</span>
+          <h3>分主题图层树</h3>
+          <p>板块构造、洋中脊作用域、海底基础信息、海洋地理、矿产资源、地质站位等 8 大主题分组，勾选即上图，可调透明度、颜色、标签与图标。</p></div>
+        <div class="card"><span class="ico" aria-hidden="true">🗺️</span>
+          <h3>30+ 全球底图</h3>
+          <p>天地图、ArcGIS、GEBCO 2024/2025 全系列、ETOPO、EMODnet 水深、Macrostrat 地质、OpenStreetMap，以及 Esri Wayback 历史影像时相回溯。</p></div>
+        <div class="card"><span class="ico" aria-hidden="true">🔍</span>
+          <h3>要素点选与搜索</h3>
+          <p>点任意要素弹出属性表，一键缩放定位；顶部搜索支持地名与要素属性，URL 深链 <em>?focus=南海</em> 直接飞到目标海域。</p></div>
+        <div class="card"><span class="ico" aria-hidden="true">🧭</span>
+          <h3>极地与 3D 视图</h3>
+          <p>北极 EPSG:3413 / 南极 EPSG:3031 极球面立体投影独立视图；Cesium 3D 双视图切换，矢量数据 2D/3D 同源渲染。</p></div>
+        <div class="card"><span class="ico" aria-hidden="true">⚡</span>
+          <h3>数十万级点位流畅</h3>
+          <p>Canvas 批量渲染 + 视口按需裁剪 + 分层简化，gzip 压缩传输、IndexedDB 本地缓存，二刷秒开。</p></div>
+        <div class="card"><span class="ico" aria-hidden="true">📐</span>
+          <h3>量测与出图</h3>
+          <p>距离/面积测量、坐标拾取、要素聚类、图例外挂、深浅色主题、PWA 安装后离线可用，随时截一张能用的图。</p></div>
+      </div>
+
+      <div class="gallery">
+        <figure class="shot">
+          <img src="shots/promo-panel.jpg" width="3200" height="2000" loading="lazy"
+               alt="左侧图层面板：常用功能区、数据图层分组树，全球板块构造组已展开，火山、强震、热点等图层处于勾选状态">
+          <figcaption><b>图层管理面板</b>：常用功能一键直达，图层按主题分组，勾选即显示</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="shots/promo-popup.jpg" width="3200" height="2000" loading="lazy"
+               alt="点击印度板块面要素后弹出的属性详情：名称、Shape_Length、Shape_Area 等字段与所属图层">
+          <figcaption><b>要素详情弹窗</b>：点选「印度板块」，属性一目了然，支持缩放与详情页</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="shots/promo-basemap.jpg" width="3200" height="2000" loading="lazy"
+               alt="同一组数据叠加在天地图卫星影像底图上的效果">
+          <figcaption><b>多底图随切</b>：同一组数据，一键切到天地图卫星影像</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="shots/promo-dark.jpg" width="3200" height="2000" loading="lazy"
+               alt="深色主题下的同一视图，面板、图例与地图配色自动适配">
+          <figcaption><b>深浅双主题</b>：深夜看图不刺眼，配色全站自动适配</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="shots/polar-gibs-north.jpg" width="2120" height="1352" loading="lazy"
+               alt="北极极地视图：EPSG:3413 极球面立体投影，NASA GIBS 海陆阴影水深底图，北冰洋洋中脊数据点显示">
+          <figcaption><b>北极视图</b>：EPSG:3413 立体投影 + NASA GIBS 底图</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="shots/polar-gebco-south.jpg" width="2120" height="1352" loading="lazy"
+               alt="南极极地视图：EPSG:3031 立体投影，GEBCO 2025 水深地形底图，南大洋清晰可见">
+          <figcaption><b>南极视图</b>：EPSG:3031 立体投影 + GEBCO 2025 水深</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ 迁移定制 ============ -->
+    <section id="customize" aria-labelledby="customize-title">
+      <p class="sec-tag">核心能力 · 迁移定制</p>
+      <h2 id="customize-title">整站定制 = 一份 geo-config.js</h2>
+      <p class="sec-lead">
+        引擎不写死任何站点信息：标题、主题色、底图清单、图层列表、数据路径、地名深链，全部集中在一个配置文件里。
+        换个名字、换个颜色、换批数据，不动一行引擎代码。
+      </p>
+
+      <ol class="steps">
+        <li><b>换名换肤</b> —— 改 <code style="background:#eef4f3;border-radius:5px;padding:1px 6px;font-size:13px;font-family:Consolas,monospace;color:var(--brand-dark)">SITE_CONFIG</code> 两行，标题与全站主题色即刻生效（自动生成 hover / 深色变体）。</li>
+        <li><b>迁移数据</b> —— 数据可放本地目录、内网服务器或对象存储 COS/OSS，改路径配置段即可整体搬家。</li>
+        <li><b>增删图层</b> —— 放入一个 gzip 压缩的 GeoJSON，再在图层清单里加一行，其余全自动。</li>
+      </ol>
+
+      <pre><code><span class="cm">// ① 站点级：两行完成白标定制（换名 + 换主题色）</span>
+<span class="fld">window.SITE_CONFIG</span> = {
+  <span class="fld">title</span>: <span class="str">"××省海洋地质一张图"</span>,
+  <span class="fld">brandColor</span>: <span class="str">"#2f9e7f"</span>,
+};
+
+<span class="cm">// ③ 图层清单：加一个图层 = 放数据文件 + 加一行</span>
+{
+  <span class="fld">groupName</span>: <span class="str">"海底基础信息"</span>,
+  <span class="fld">layers</span>: [
+    {
+      <span class="fld">name</span>: <span class="str">"地幔柱"</span>,
+      <span class="fld">file</span>: <span class="str">"plumes.geojson"</span>,   <span class="cm">// 自动补路径与 .gz 后缀</span>
+      <span class="fld">color</span>: <span class="str">"#E63946"</span>,
+      <span class="fld">icon</span>: <span class="str">"volcano"</span>,          <span class="cm">// 内置图标，也可指定 SVG/PNG</span>
+      <span class="fld">labelField</span>: <span class="str">"NAME"</span>,
+    },
+  ],
+}</code></pre>
+
+      <div class="table-scroll">
+      <table class="cfg">
+        <caption class="visually-hidden" style="position:absolute;left:-9999px">geo-config.js 配置段说明</caption>
+        <thead>
+          <tr><th scope="col">配置段</th><th scope="col">管什么</th><th scope="col">什么时候动它</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>SITE_CONFIG</code></td><td>站点标题、品牌主题色、天地图密钥</td><td>做白标定制站 / 换 token</td></tr>
+          <tr><td><code>MAP_CONFIG</code></td><td>初始视野、缩放上限、无级缩放手感</td><td>想让客户打开就看到自家海域</td></tr>
+          <tr><td><code>BASEMAP_CONFIG</code></td><td>底图清单、覆盖层、2D/3D 底图映射</td><td>接入客户自有底图服务（XYZ/WMS/ArcGIS）</td></tr>
+          <tr><td>路径配置</td><td>数据从哪找（本地 / 内网 / COS）</td><td>整体迁移、内外网双部署</td></tr>
+          <tr><td>图层清单</td><td>有哪些图层、分组、颜色、图标、标签</td><td>日常加数据的唯一入口</td></tr>
+          <tr><td><code>PLACE_REGISTRY</code></td><td>地名 → 坐标注册表</td><td>让 <code>?focus=南海</code> 这类深链直达</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="gallery" style="margin-top:26px">
+        <figure class="shot">
+          <img src="shots/zj-zone-blue.jpg" width="2120" height="1352" loading="lazy"
+               alt="浙江省无人驾驶航空器适飞空域数据作为蓝色面图层叠加在矢量底图上的效果，是自有业务数据接入的实例">
+          <figcaption><b>自有数据接入实例</b>：浙江省无人机适飞空域（2026-05-12 版）作为面图层上图，含数据来源标注 —— 从拿到数据到上图，只改了配置</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ 使用说明 ============ -->
+    <section id="guide" aria-labelledby="guide-title">
+      <p class="sec-tag">使用说明</p>
+      <h2 id="guide-title">两分钟上手</h2>
+      <p class="sec-lead">看图的人不用学，部署的人不用编译。</p>
+
+      <div class="guide-grid">
+        <div class="card guide">
+          <h3>🗺️ 看图的人</h3>
+          <ul>
+            <li><b>显示数据</b>：点开左侧「数据图层」，按主题分组勾选即可上图；图层行上的按钮可调透明度、缩放到图层。</li>
+            <li><b>看属性</b>：直接点地图上的点、线、面，弹窗里看全部属性字段。</li>
+            <li><b>找位置</b>：顶部搜索框输入地名或要素属性；分享链接可带 <code>?focus=南海</code> 直达。</li>
+            <li><b>换底图</b>：右下角图层控件单选底图，可再叠加地名标注、全球境界。</li>
+            <li><b>量一量</b>：常用功能区提供测距、测面、坐标拾取与要素聚类开关。</li>
+            <li><b>极地 / 3D / 深色</b>：在设置中切换极地投影视图、Cesium 3D 与深浅主题。</li>
+          </ul>
+        </div>
+        <div class="card guide">
+          <h3>🚀 部署的人</h3>
+          <ul>
+            <li><b>纯静态托管</b>：整个目录丢到任意静态服务器或对象存储（COS / OSS / nginx）即可运行，无需后端。</li>
+            <li><b>加图层</b>：① 把 <code>xxx.geojson.gz</code>（gzip 压缩）放进数据目录；② 在 <code>geo-config.js</code> 图层清单加一行。</li>
+            <li><b>白标换肤</b>：改 <code>SITE_CONFIG</code> 的 title 与 brandColor，刷新即生效。</li>
+            <li><b>迁移</b>：数据在本地、内网、COS 之间搬家，只改路径配置段。</li>
+            <li><b>发新版</b>：修改 <code>service-worker.js</code> 的 <code>CACHE_NAME</code>，用户端自动弹出更新提示并重建缓存。</li>
+            <li><b>离线可用</b>：PWA 安装后，底图与图层数据经 IndexedDB 缓存，弱网/断网仍可浏览。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>OGV · 海洋地质一张图 — 产品说明</span>
+    <span>蜀ICP备2025119436号-3 · 浙公网安备33030402001573号</span>
+  </div>
+</footer>
+
+</body>
+</html>
