@@ -137,7 +137,6 @@ S.dropObsoleteKeys();
             id: "moreBasemapToggle",
             label: "更多底图",
             icon: "🗺️",
-            quick: true,
             desc: "开启后显示更多底图和覆盖层选项（ArcGIS扩展、天地图标注等）",
           },
         ],
@@ -149,7 +148,6 @@ S.dropObsoleteKeys();
             id: "clipboardToggle",
             label: "识别粘贴",
             icon: "📋",
-            quick: true,
             desc: "开启后自动读取剪贴板中的坐标/CSV数据并解析为投点图层；关闭后需手动粘贴",
             checked: true,
           },
@@ -208,6 +206,22 @@ S.dropObsoleteKeys();
             icon: "📷",
             quick: true,
             desc: "将当前地图截图导出为 PNG 图片（快捷键 Ctrl/⌘ + E）",
+          },
+          {
+            type: "button",
+            id: "featuresDocBtn",
+            label: "功能详解",
+            icon: "📖",
+            quick: true,
+            desc: "查看 OGV 平台全部功能与用法的图文详解",
+          },
+          {
+            type: "button",
+            id: "introDocBtn",
+            label: "介绍",
+            icon: "ℹ️",
+            quick: true,
+            desc: "查看 OGV 海洋地质一张图平台介绍",
           },
         ],
       },
@@ -467,6 +481,12 @@ S.dropObsoleteKeys();
     // 不再依赖 id（面板里那个是镜像，不能重复用 id）
     var ACTION_HANDLERS = {
       exportMapBtn: exportMapImage,
+      featuresDocBtn: function () {
+        window.open("docs/features.html", "_blank");
+      },
+      introDocBtn: function () {
+        window.open("docs/intro.html", "_blank");
+      },
     };
     var actionEls = document.querySelectorAll("[data-action]");
     for (var ai = 0; ai < actionEls.length; ai++) {
