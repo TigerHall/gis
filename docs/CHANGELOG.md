@@ -1,5 +1,78 @@
 # 更新记录
 
+## 2026-10-06 — v3.2.0：图层组支持小分组（通用能力）+ 地质站位组重整
+
+> 版本号 `v3.1.2` → **`v3.2.0`**。改动落在 `geojsonloader.js` / `geo-utils.js` /
+> `main.css` / `geo-config.js`，前三个都在 SW 预缓存清单里，故照例 bump。
+
+### 一、图层组可以挂小分组了（通用能力，不是只为地质站位写的）
+
+**需求**：「地质站位」这一个组里要塞 4 个小分组（IODP / 大西洋 / 太平洋 / 印度洋），
+所以先把它做成**任何图层组都能用**的通用功能。
+
+**做法**（`geo-config.js` 新增 `subgroups` 字段，与 group 同构）：
+
+```js
+{ groupName: "地质站位", subgroups: [
+    { groupName: "IODP 钻探计划", layers: [ ... ] },
+    { groupName: "太平洋", subgroups: [          // ← 可再嵌套
+        { groupName: "洋中脊", layers: [ ... ] },
+        { groupName: "洋盆",   layers: [ ... ] },
+    ]},
+]}
+```
+
+- **无限层级**：`buildSubgroup()` 递归渲染，subgroup 自己还能再挂 subgroups。
+- **不写 subgroups 的组，行为与之前完全一致** —— 引擎走的是同一条
+  `buildLayerItem()`，只是多了一层可选的容器。
+- **状态/全选天然复用**：小分组的 DOM 沿用 `.layer-group` + `.group-select-all` +
+  `.group-status` 结构，既有那几个选择器（都是后代选择器 `querySelectorAll`）
+  自动覆盖嵌套层级，不用为嵌套再写一套同步逻辑。
+- **搜索能按小分组名命中**：注册时 `groupName` 记的是**完整路径**
+  （`地质站位 › 印度洋`），所以搜「印度洋」「洋中脊」都能找到组内图层。
+- 修了两处**假设只有一层**的老逻辑：
+  - `expandToLayerGroup()` 原用 `closest("details.layer-group")` 只展开最近一层 →
+    改成逐级向上把整条链展开（否则勾选里层图层时父级还折叠着）。
+  - `updateLayerItemStatus()` 同理，`closest()` 改成逐级向上，父组状态点才会跟着刷新。
+  - Ctrl/Cmd+点 summary 的「全部收起/展开」判据改为只看**顶层组**
+    （`:not(.layer-subgroup)`），否则展开过某个小分组会让「全部收起」看起来像「全部展开」。
+- `geo-utils.js` 的 `getLayerPopupConfig()` 原本只扫 `group.layers` 一层，
+  改成递归收集 —— 否则小分组里图层的 `popup.hideFields` 会失效。
+
+**视觉**（`main.css`）：小分组去掉卡片外框、缩进一级、名字用次级文字色，
+与顶层的视觉权重拉开，层级一眼可辨。浅色/深色下关键文字对比度实测
+5.27:1 / 7.64:1，均过 WCAG AA。
+
+### 二、地质站位组重整 + 22 个新图层
+
+原来的组是 11 个图层平铺，现在按**计划 / 区域**重整为 4 个小分组：
+
+| 小分组 | 内容 |
+|--------|------|
+| IODP 钻探计划 | DSDP、ODP、IODP03-13、IODP13-26（原有 4 个） |
+| 大西洋 | 大西洋中脊 MAR、东大西洋、西大西洋（3 个新增） |
+| 太平洋 | ├ 洋中脊（6 个）<br>└ 洋盆（8 个） |
+| 印度洋 | 3 个新增 + NWIR / SWIR / SEIR / SEIR_offaxis / RedSea（原有 5 个） |
+
+- 22 个新数据源（太平洋 14 / 大西洋 3 / 印度洋 3 + 三叶虫、恐龙）已按
+  `!gzjson.ps1` 的口径压成 `.geojson.gz` 放进 `assets/geojson/`。
+  源文件名含空格与中文（如 `01 Juan de Fuca Ridge.geojson`），入库时统一改成
+  ASCII 安全名（`pac_JdF_Ridge.geojson` 等），配置里引用的就是新名。
+- 点数据统一 `labelField: "Name"`，并用 `popup.hideFields` 屏蔽 ArcGIS 导出的
+  残留列（`_featureIndex` / `_fileName`），弹窗只留站位号 + 题名 + 同位素比值。
+- 「三叶虫化石产地」（17421 点）与「恐龙化石产地」（11004 点）按属性判定为
+  陆地数据，从「地质站位」移到**陆地地理信息**组；两者均超 3000 点，
+  引擎自动走 Canvas 渲染（`useCanvasRenderer`），不会有 DOM 压力。
+  弹窗另屏蔽了 `coll_id` / 经纬度 / 古地理坐标 / 精度等冗余列。
+- `PBDB`、`Boucot` 两个无关图层仍保持隐藏。
+
+### 三、验证
+
+无头 Chrome 实测：81 个可见图层全部渲染且与配置数一致；小分组全选/全不选正常、
+父组状态点正确转为 indeterminate、不波及其他组；第二层嵌套的 Hawaii(1052 点)、
+JdF Ridge(265 点) 实测加载成功且状态沿「洋盆 → 太平洋 → 地质站位」逐级点亮；
+搜索「印度洋」「洋中脊」「三叶虫」均正确命中。无 JS 报错。
+
 ## 2026-09-27 — v3.1.2：常用功能快捷区替换「更多底图 / 识别粘贴」为文档入口
 
 > 版本号 `v3.1.1` → **`v3.1.2`**。改动落在 `app.js`（SW 预缓存），故照例 bump。

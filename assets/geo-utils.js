@@ -185,13 +185,20 @@
     if (_popupCfgSrc !== groups) {
       // 清单被整体替换时重建索引（只重建一次，不是每次调用都扫）
       _popupCfgMap = Object.create(null);
-      groups.forEach(function (group) {
-        (group.layers || []).forEach(function (layer) {
+      // 递归收集：小分组（subgroups）里的图层同样可以带 popup 配置，
+      // 且小分组可再嵌套，故用递归而不是只扫一层
+      const collect = (items) => {
+        (items || []).forEach((layer) => {
           if (layer && layer.file && layer.popup && !_popupCfgMap[layer.file]) {
             _popupCfgMap[layer.file] = layer.popup;
           }
         });
-      });
+      };
+      const walkGroup = (g) => {
+        collect(g.layers);
+        (g.subgroups || []).forEach(walkGroup);
+      };
+      groups.forEach(walkGroup);
       _popupCfgSrc = groups;
     }
     return _popupCfgMap[fileName] || null;

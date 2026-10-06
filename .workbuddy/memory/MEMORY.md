@@ -11,6 +11,7 @@
 ## 1 架构
 - `geo-config.js` 七段：①`SITE_CONFIG` ①-2`MAP_CONFIG` ①-3`BASEMAP_CONFIG` ①-4`POLAR_CONFIG` ②路径 ③`window.geoJsonGroups` ④`PLACE_REGISTRY`；须先于 `geojsonloader.js`/`basemap-manager.js` 加载。字段清单与消费点见 INTERNALS。
 - **加图层 = 2 处**：`assets/geojson/*.geojson.gz` + ③段加一条。gzip 走运行时缓存、**不进 SW `STATIC_ASSETS`** → 不动 HTML/SW。清单消费 5 处：`geojsonloader.js:3152/1449/1452/3091/3248`、`app.js:466`；`window.geoJsonGroups ||= []` 兜底别删。
+- ✅ **组内可挂小分组**（2026-10-06 加，通用能力）：`group.subgroups = [{groupName, hidden?, layers?, subgroups?}]`，与 group 同构、**可无限递归**。小分组 DOM 沿用 `.layer-group`/`.group-select-all`/`.group-status` → 既有那几个**后代选择器**的状态同步天然覆盖嵌套。⚠️ 凡是**假设只有一层**的老逻辑都要逐级向上改（`closest()` 只能拿最近一层）：`expandToLayerGroup`、`updateLayerItemStatus`、Ctrl+点全展开的判据（要 `:not(.layer-subgroup)`）、`getLayerPopupConfig`（否则小分组里 `popup.hideFields` 静默失效）。搜索按**完整路径**（`地质站位 › 印度洋`）注册，故搜小分组名能命中。
 - ⚠️ **map 引用三类**：`geojsonloader.js` 用全局 `map`（`waitForMap` 判 `typeof map` → 换 `window.map` 自动跟随）；`basemap-manager.js:21`/`feature-panel.js:11` 是**加载期快照** `var map = window.map` → 换实例**必须 rebind**；`app.js:548/605/618` 函数内读，安全。
 - ⚠️ **`map.getBounds()` 不可信**（主视图不 wrap；极地下退化成零高度线）→ 视口裁剪**一律用像素坐标**。
 
@@ -56,6 +57,8 @@
 ## 8 本机工具链坑
 - **Bash 工具 PATH 为空** → 前加 `export PATH="/c/Users/hehu/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin:/c/Users/hehu/.workbuddy/binaries/PortableGit/versions/1.2.0/bin:$PATH"`。
 - Node 绝对路径 `"C:/Users/hehu/.workbuddy/binaries/node/versions/22.22.2-3/node.exe"`。Playwright 脚本放 `.workbuddy/artifacts/`，头 `module.paths.push("C:/Users/hehu/.workbuddy/binaries/node/workspace/node_modules")`。
+- ⚠️ **本机没装 Playwright 浏览器**（`AppData/Local/ms-playwright` 为空），且 workspace 里只有 **`playwright-core`**（无 `playwright`）→ 必须 `chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" })`。
+- ⚠️ **侧栏默认折叠**（`#sidebarToggle` 未勾选 → 面板 `getBoundingClientRect().x` 为负）→ 截图前先 `sidebarToggle.click()` 再 `pinBtn.click()`，否则 clip 截到的是地图。触发搜索用 `page.fill("#searchInput", q)`，直接设 `value` 不触发。
 - **`getComputedStyle` 返回 transition 中间值** → 判样式前 `await 400ms`。**Playwright 默认 `--hide-scrollbars`** → 量宽度假阴性，须 `ignoreDefaultArgs`。`page.evaluate(fn,arg)` 只序列化 `fn`：内嵌 helper 必须定义在同一函数体内。
 - minified 单行文件别硬 grep → `node -e` 截 `s.slice(indexOf(k), +500)`；grep 的 `\{n\}` 在 Git Bash 报错。**SVG 元素没有 `.click()`** → `page.mouse.click(x,y)` 或 `dispatchEvent(new MouseEvent("click",{bubbles:true}))`。
 - 测试假阴性已踩 6 例：① transition 中间值 ② `--hide-scrollbars` ③ `typeof btn.onclick` 判委托按钮 ④ case 间状态不复位 ⑤ 错误的 `instanceof` 组合筛图层 ⑥ 用旧 map 引用断言新 map。

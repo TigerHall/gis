@@ -52,6 +52,34 @@
  * cesium          |  否  | 3D 专属：{ extrudeHeight, clampToGround, pointPixelSize, groundMode }
  *
  * ==========================================================
+ * 📌 分组与小分组（③ 里 group 这一层）
+ * ==========================================================
+ *
+ * 分组字段            | 必需 | 说明
+ * ------------------|------|----------
+ * groupName          |  是  | 组标题。null = 「平铺组」，不生成折叠箭头，图层直接铺开
+ * hidden             |  否  | 整组不在面板渲染（数据仍在配置里，便于恢复）
+ * layers             |  否  | 本组直属图层。省略 / 写成 [] 都合法
+ * subgroups          |  否  | 小分组数组，见下。通用能力，任意 group 都能用
+ *
+ * 小分组（subgroup）与分组同构：{ groupName, hidden?, layers?, subgroups? }
+ *   - 可无限层级嵌套（subgroup 里还能再放 subgroups）
+ *   - 直接挂在组里的 layers 与 subgroups 会按「layers 在前、subgroups 在后」渲染
+ *   - 整组（含所有子孙）都 hidden 时不生成空 <details>
+ *   - 子组自带全选/全不选 + 加载状态点，语义与顶层组一致
+ *   - 搜索框里按小分组名也能命中：注册时 groupName 记的是完整路径
+ *     （如「地质站位 › 印度洋」），所以搜「印度洋」能找到组内图层
+ *
+ * 例：
+ *   { groupName: "地质站位", subgroups: [
+ *       { groupName: "IODP 钻探计划", layers: [ ... ] },
+ *       { groupName: "太平洋", subgroups: [
+ *           { groupName: "洋中脊", layers: [ ... ] },
+ *           { groupName: "洋盆",   layers: [ ... ] },
+ *       ]},
+ *   ]}
+ *
+ * ==========================================================
  * 📌 如何添加一个新图层
  * ==========================================================
  *
@@ -881,18 +909,174 @@
       ],
     },
     {
+      // 2026-10-06 重整：按「计划/区域」拆成 4 个小分组（subgroups，通用能力）。
+      // 原来的 DSDP / ODP / IODP03-13 / IODP13-26 归 IODP；
+      // NWIR / SWIR / SEIR / SEIR_offaxis / RedSea 归印度洋（都是印度洋洋中脊与红海裂谷）。
+      // 点数据统一 labelField: "Name"（站位/样品编号），另用 popup 屏蔽导出残留列。
       groupName: "地质站位",
+      subgroups: [
+        {
+          groupName: "IODP 钻探计划",
+          layers: [
+            { name: "DSDP", file: "DSDP.geojson", labelField: "Hole" },
+            { name: "ODP", file: "ODP.geojson", labelField: "Fullname" },
+            { name: "IODP03-13", file: "IODP03-13.geojson" },
+            { name: "IODP13-26", file: "IODP13-26.geojson", labelField: "site" },
+          ],
+        },
+        {
+          groupName: "大西洋",
+          layers: [
+            {
+              name: "大西洋中脊 MAR",
+              file: "atl_MAR.geojson",
+              labelField: "Name",
+              popup: { hideFields: ["_featureIndex", "_fileName"] },
+            },
+            {
+              name: "东大西洋 East Atlantic",
+              file: "atl_East.geojson",
+              labelField: "Name",
+              popup: { hideFields: ["_featureIndex", "_fileName"] },
+            },
+            {
+              name: "西大西洋 West Atlantic",
+              file: "atl_West.geojson",
+              labelField: "Name",
+              popup: { hideFields: ["_featureIndex", "_fileName"] },
+            },
+          ],
+        },
+        {
+          groupName: "太平洋",
+          subgroups: [
+            {
+              groupName: "洋中脊",
+              layers: [
+                {
+                  name: "胡安·德富卡脊 JdF Ridge",
+                  file: "pac_JdF_Ridge.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "太平洋-科科斯脊 Pacific-Cocos",
+                  file: "pac_Cocos_Ridge.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "太平洋-纳斯卡脊 Pacific-Nazca",
+                  file: "pac_Nazca_Ridge.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "智利隆起 Chile Rise",
+                  file: "pac_Chile_Rise.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "东太平洋隆起 EPR",
+                  file: "pac_PAR.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "古尔卡裂谷 GSC",
+                  file: "pac_GSC.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+              ],
+            },
+            {
+              groupName: "洋盆",
+              layers: [
+                {
+                  name: "东太平洋-纳斯卡 East Pacific Nazca",
+                  file: "pac_East_Nazca.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "夏威夷海山 Hawaii",
+                  file: "pac_Hawaii.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "路易斯维尔海山 Louiville",
+                  file: "pac_Louiville.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "中南太平洋 Mid-south Pacific",
+                  file: "pac_MidSouth.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "东北太平洋 NE Pacific",
+                  file: "pac_NE.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "东南太平洋 SE Pacific",
+                  file: "pac_SE.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "沙茨基海山 Shatsky Rise",
+                  file: "pac_Shatsky.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+                {
+                  name: "西太平洋 West Pacific",
+                  file: "pac_West.geojson",
+                  labelField: "Name",
+                  popup: { hideFields: ["_featureIndex", "_fileName"] },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          groupName: "印度洋",
+          layers: [
+            {
+              name: "东印度洋 NE Indian Ocean",
+              file: "io_NE_Indian.geojson",
+              labelField: "Name",
+              popup: { hideFields: ["_featureIndex", "_fileName"] },
+            },
+            {
+              name: "南印度洋 South Indian Ocean",
+              file: "io_S_Indian.geojson",
+              labelField: "Name",
+              popup: { hideFields: ["_featureIndex", "_fileName"] },
+            },
+            {
+              name: "西印度洋 West Indian Ocean",
+              file: "io_W_Indian.geojson",
+              labelField: "Name",
+              popup: { hideFields: ["_featureIndex", "_fileName"] },
+            },
+            { name: "西北印度洋脊 NWIR_rock", file: "NWIR_ridge.geojson" },
+            { name: "西南印度洋脊 SWIR_rock", file: "SWIR_ridge.geojson" },
+            { name: "东南印度洋脊 SEIR_rock", file: "SEIR_ridge.geojson" },
+            { name: "SEIR_offaxis_rock", file: "SEIR_offaxis.geojson" },
+            { name: "红海裂谷 RedSea_rock", file: "RedSea_rift.geojson" },
+          ],
+        },
+      ],
+      // 以下两个图层暂与海洋地质主题无关（古生物 / 气候岩性指标），先隐藏保留
       layers: [
-        { name: "DSDP", file: "DSDP.geojson", labelField: "Hole" },
-        { name: "ODP", file: "ODP.geojson", labelField: "Fullname" },
-        { name: "IODP03-13", file: "IODP03-13.geojson" },
-        { name: "IODP13-26", file: "IODP13-26.geojson", labelField: "site" },
-        { name: "NWIR_rock", file: "NWIR_ridge.geojson" },
-        { name: "SWIR_rock", file: "SWIR_ridge.geojson" },
-        { name: "SEIR_rock", file: "SEIR_ridge.geojson" },
-        { name: "SEIR_offaxis_rock", file: "SEIR_offaxis.geojson" },
-        { name: "RedSea_rock", file: "RedSea_rift.geojson" },
-        // 以下两个图层暂与海洋地质主题无关（古生物 / 气候岩性指标），先隐藏保留
         { name: "古生物学 PBDB", file: "PBDB.geojson", hidden: true },
         { name: "气候岩性指标 PBDB", file: "Boucot.geojson", hidden: true },
       ],
@@ -901,8 +1085,59 @@
       // 陆地地理信息：以陆地国家/行政区为主体（海洋相关内容见「海洋地理信息」组）
       groupName: "陆地地理信息",
       layers: [
-        // 2026 世界杯系列与海洋地质主题无关，先隐藏保留
+        // —— 古生物化石产地（陆地，2026-10-06 由「地质站位」移入本组）——
+        // PBDB 导出的两个数据集，共 28k+ 个产地；属性里混有坐标/精度等
+        // 冗余列，弹窗里只留分类信息 + 产地名。
         {
+          name: "三叶虫化石产地 Trilobite Localities",
+          file: "trilo_localities.geojson",
+          labelField: "site_name",
+          color: "#6D4C41",
+          colorMode: "single",
+          popup: {
+            hideFields: [
+              "coll_id",
+              "longitude",
+              "latitude",
+              "paleo_lon",
+              "paleo_lat",
+              "paleo_mod",
+              "n_records",
+              "n_taxa",
+              "coord_base",
+              "coord_prec",
+              "geo_scale",
+              "_featureIndex",
+              "_fileName",
+            ],
+          },
+        },
+        {
+          name: "恐龙化石产地 Dinosaur Localities",
+          file: "dino_localities.geojson",
+          labelField: "site_name",
+          color: "#4E342E",
+          colorMode: "single",
+          popup: {
+            hideFields: [
+              "coll_id",
+              "longitude",
+              "latitude",
+              "paleo_lon",
+              "paleo_lat",
+              "paleo_mod",
+              "n_records",
+              "n_taxa",
+              "coord_base",
+              "coord_prec",
+              "geo_scale",
+              "_featureIndex",
+              "_fileName",
+            ],
+          },
+        },
+        {
+          // 2026 世界杯系列与海洋地质主题无关，先隐藏保留
           name: "2026世界杯8强",
           file: "wc2026_round8_teams.geojson",
           labelField: "name_zh",

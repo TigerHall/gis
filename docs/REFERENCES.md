@@ -48,6 +48,8 @@
 - **DSDP** — Deep Sea Drilling Project（1968-1983）
 - **ODP** — Ocean Drilling Program（1985-2003）
 - **IODP** — International Ocean Discovery Program
+- **洋中脊 / 洋盆岩石采样** — 各大洋中脊与洋盆的 Sr-Nd-Pb 同位素样品数据
+  （按洋区分为大西洋 / 太平洋 / 印度洋三个小分组）
 - **PBDB** — [Paleobiology Database](https://paleobiodb.org/)
 - **气候岩性指标** — Boucot 气候岩性指标（源自 PBDB）
 

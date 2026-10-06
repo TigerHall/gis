@@ -2436,15 +2436,18 @@
       S.safeSet(key, String(!!checked));
     }
 
-    // 展开 checkbox 所在的面板层级：子组 → section
+    // 展开 checkbox 所在的面板层级：子组 → 组 → section（逐级向上，任意深度）
     function expandToLayerGroup(cbOrId) {
       var cb =
         typeof cbOrId === "string" ? document.getElementById(cbOrId) : cbOrId;
       if (!cb) return;
-      var group = cb.closest("details.layer-group");
-      if (group) group.open = true;
-      var section = cb.closest("details.layer-section, details.toggle-section");
-      if (section && !section.open) section.open = true;
+      // closest 只能拿到最近的一个祖先；这里逐级向上把整条链都展开，
+      // 否则「地质站位 › 印度洋」这种嵌套下勾选图层时父级仍折叠着。
+      var node = cb.parentElement;
+      while (node && node !== document.body) {
+        if (node.tagName === "DETAILS" && !node.open) node.open = true;
+        node = node.parentElement;
+      }
     }
 
     // ========== 状态同步 ==========
@@ -2548,10 +2551,20 @@
           loaded: "已加载（点击下载）",
           error: "加载失败",
         }[status] || status;
-      const gd = li.closest(".layer-group");
-      if (gd) syncGroupLoadingStatus(gd);
-      // 状态变更后同步勾选框状态（解决加载完成后勾选框未同步的问题）
-      if (gd) syncGroupStatus(gd);
+      // 逐级向上同步所有祖先分组（小分组 → 父组 → …）。
+      // closest() 只能拿到最近的一个，嵌套下父组状态会不刷新。
+      var node = li.parentElement;
+      while (node && node !== document.body) {
+        if (
+          node.classList &&
+          node.classList.contains("layer-group")
+        ) {
+          syncGroupLoadingStatus(node);
+          // 状态变更后同步勾选框状态（解决加载完成后勾选框未同步的问题）
+          syncGroupStatus(node);
+        }
+        node = node.parentElement;
+      }
       // 同步图层要素面板全选状态
       syncSelectAllStatus();
       // 同步本地图层面板全选状态
@@ -3340,8 +3353,12 @@
             if (e.target === groupCb) return;
             if (e.ctrlKey || e.metaKey) {
               e.preventDefault(); // 阻止 details 原生 toggle
+              // 只拿顶层组做「是否有展开」的判据：小分组被展开不该让
+              // 「全部收起」看起来像是「全部展开」。收起时连小分组一起收。
               var allDetails = document.querySelectorAll("details.layer-group");
-              var anyOpen = document.querySelector("details.layer-group[open]");
+              var anyOpen = document.querySelector(
+                "details.layer-group:not(.layer-subgroup)[open]",
+              );
               allDetails.forEach(function (d) {
                 d.open = !anyOpen;
               });
@@ -3361,168 +3378,17 @@
           children.className = "layer-plain";
         }
 
-        group.layers.forEach(function (layerConfig) {
-          // geo-config 的 layer.hidden：单图层不在面板渲染，也不注册搜索索引
-          if (layerConfig.hidden) return;
-          visibleLayerCount++;
-          var idx = globalLayerIndex++;
-          var stableName = makeLayerStableId(
-            layerConfig.name,
-            layerConfig.file || layerConfig.url,
-          );
-          var checkboxId = "layer_" + stableName;
-          var fullPath = window.geoJsonPrimaryPath + layerConfig.file;
-          var fileName = layerConfig.file;
-          _layerIdByFileName[fileName] = checkboxId;
-          var fixedColor =
-            layerConfig.color || window.GeoUtils.getFixedColor(idx);
-          layerColorMap[checkboxId] = fixedColor;
-          // 点图标尺寸：geo-config.js 的 iconSize 作为默认值。
-          // 用户在图层设置弹窗里改过的尺寸会在加载时覆盖它（见 loadLayerSettings）。
-          if (layerConfig.iconSize)
-            layerIconSizeMap[checkboxId] = Number(layerConfig.iconSize);
-          if (layerConfig.labelField)
-            labelFieldMap[checkboxId] = layerConfig.labelField;
-          if (layerConfig.colorMode)
-            defaultColorModeMap[checkboxId] = layerConfig.colorMode;
-          if (layerConfig.colorField)
-            defaultColorFieldMap[checkboxId] = layerConfig.colorField;
-          if (layerConfig.icon) {
-            layerIconMap[checkboxId] = layerConfig.icon;
-            defaultIconMap[checkboxId] = layerConfig.icon;
+        // 本组直属图层（无 subgroups 时的老路径完全不变）
+        (group.layers || []).forEach(function (layerConfig) {
+          if (buildLayerItem(layerConfig, group.groupName || "", "", children)) {
+            visibleLayerCount++;
           }
+        });
 
-          var layerItem = document.createElement("div");
-          layerItem.className = "layer-item";
-          layerItem.dataset.layerId = checkboxId;
-
-          var checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.id = checkboxId;
-          checkbox.value = fullPath;
-          checkbox.dataset.layerName = layerConfig.name;
-          checkbox.dataset.groupName = group.groupName || "";
-          checkbox.style.setProperty("--layer-color", fixedColor);
-
-          // 默认透明度（geo-config 的 defaultOpacity）：未被用户设置覆盖时生效
-          if (
-            layerConfig.defaultOpacity !== undefined &&
-            layerOpacityMap[checkboxId] === undefined
-          ) {
-            layerOpacityMap[checkboxId] = Number(layerConfig.defaultOpacity);
-          }
-          // 搜索优先标记（如海底地名集）
-          if (layerConfig.searchPriority) {
-            layerSearchPriorityMap[checkboxId] = true;
-          }
-          // 图层级数据来源（显示在要素弹窗「数据源」字段）
-          if (layerConfig.source) {
-            layerSourceMap[checkboxId] = layerConfig.source;
-          }
-          // 可否选中（geo-config 默认设置，localStorage 保存后优先）
-          if (layerConfig.selectable !== undefined) {
-            layerSelectableMap[checkboxId] = layerConfig.selectable;
-          }
-          // Cesium 3D 专属配置（extrudeHeight, clampToGround, pointPixelSize 等）
-          if (layerConfig.cesium) {
-            window._ogv_cesiumConfig[checkboxId] = layerConfig.cesium;
-          }
-
-          // 注册到搜索列表（即使图层尚未加载）
-          if (
-            !searchRegistry.find(function (e) {
-              return e.checkboxId === checkboxId;
-            })
-          ) {
-            searchRegistry.push({
-              layerLabel: layerConfig.name,
-              groupName: group.groupName || "",
-              checkboxId: checkboxId,
-              fileName: fileName,
-              searchPriority: !!layerConfig.searchPriority,
-            });
-          }
-          checkbox.addEventListener("change", function () {
-            this.style.background = this.checked ? fixedColor : "#fff";
-            // 勾选时展开到对应面板层级
-            if (this.checked) expandToLayerGroup(this);
-            // 持久化内置图层的勾选状态
-            S.safeSet(S.KEY.LAYER_CHECK + checkboxId, String(this.checked));
-            syncAllGroupStatus();
-            if (this.checked) loadGeoJSONLayer(fullPath, checkboxId, false);
-            else removeGeoJSONLayer(checkboxId);
-          });
-
-          var label = document.createElement("label");
-          label.htmlFor = checkboxId;
-          label.textContent = layerConfig.name;
-          label.title = layerConfig.name;
-
-          var statusSpan = document.createElement("span");
-          statusSpan.className = "layer-status";
-          statusSpan.dataset.status = "idle";
-          (function (cbId, fPath, fName) {
-            statusSpan.addEventListener("click", function (e) {
-              e.stopPropagation();
-              if (statusSpan.dataset.status !== "loaded") return;
-              // 高级功能：未激活则提示
-              if (!window.premiumCheck || !window.premiumCheck()) {
-                if (typeof window.showToast === "function")
-                  window.showToast("🔒 下载 GeoJSON 需要激活高级功能", {
-                    duration: 3000,
-                  });
-                return;
-              }
-              downloadLayerGeoJson(cbId, fPath, fName);
-            });
-          })(checkboxId, fullPath, layerConfig.name);
-
-          var settingsBtn = document.createElement("button");
-          settingsBtn.className = "layer-color-btn";
-          settingsBtn.title = "图层设置";
-          settingsBtn.innerHTML = "⚙️";
-          settingsBtn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            openLayerDialog(
-              checkboxId,
-              layerConfig.file,
-              fullPath,
-              layerConfig.name,
-            );
-          });
-
-          var locateBtn = document.createElement("button");
-          locateBtn.className = "layer-locate-btn";
-          locateBtn.title = "定位到此图层";
-          locateBtn.innerHTML = "🔍";
-          locateBtn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            flyToLayer(checkboxId);
-          });
-
-          layerItem.appendChild(checkbox);
-          layerItem.appendChild(label);
-          layerItem.appendChild(statusSpan);
-          layerItem.appendChild(settingsBtn);
-          layerItem.appendChild(locateBtn);
-
-          // 属性表按钮
-          var attrBtn = document.createElement("button");
-          attrBtn.className = "layer-locate-btn layer-attr-btn";
-          attrBtn.title = "查看属性表";
-          attrBtn.innerHTML = "📋";
-          attrBtn.style.fontSize = "11px";
-          (function (cbId, lName) {
-            attrBtn.addEventListener("click", function (e) {
-              e.stopPropagation();
-              if (typeof window.openLayerAttributeTable === "function") {
-                window.openLayerAttributeTable(cbId, lName);
-              }
-            });
-          })(checkboxId, layerConfig.name);
-          layerItem.appendChild(attrBtn);
-
-          children.appendChild(layerItem);
+        // —— 小分组（通用能力，见 geo-config.js 的 subgroups 字段）——
+        // 递归渲染：subgroup 自己还能再挂 subgroups，故任意层数都成立。
+        (group.subgroups || []).forEach(function (sub) {
+          visibleLayerCount += buildSubgroup(sub, group, children, 1);
         });
 
         // 全部图层都被 hidden 时不生成空分组/空容器
@@ -3535,6 +3401,277 @@
           layerContent.appendChild(children);
         }
       });
+
+      // ================================================================
+      // 小分组（subgroups）—— 通用能力，任何图层组都能挂
+      // ================================================================
+      // 设计要点：
+      //  1. 复用同一套 .layer-item / .group-status / .group-select-all 结构，
+      //     所以现有的 syncGroupStatus / updateLayerItemStatus 等选择器
+      //     （都用后代选择器 querySelectorAll）天然覆盖嵌套层级，无需改动。
+      //  2. groupName 一律传「父组 › 子组」的完整路径：搜索结果里能看出
+      //     图层到底挂在哪一层，同时 checkbox.dataset.groupName 也能用于定位。
+      //  3. 递归：subgroup 自身也可再挂 subgroups，层数不限。
+
+      /** 渲染一个小分组节点，返回其内部可见图层数（0 = 不渲染） */
+      function buildSubgroup(sub, parentGroup, container, depth) {
+        if (sub.hidden) return 0;
+        var layers = sub.layers || [];
+
+        var subDetails = document.createElement("details");
+        subDetails.className = "layer-group layer-subgroup";
+        subDetails.dataset.depth = String(depth);
+
+        var subSummary = document.createElement("summary");
+
+        var subArrow = document.createElement("span");
+        subArrow.className = "layer-group-arrow";
+        subArrow.textContent = "▶";
+
+        var subName = document.createElement("span");
+        subName.className = "layer-group-name";
+        subName.textContent = sub.groupName || sub.name || "";
+
+        var subStatus = document.createElement("span");
+        subStatus.className = "group-status";
+        subStatus.dataset.status = "idle";
+
+        var subCb = document.createElement("input");
+        subCb.type = "checkbox";
+        subCb.className = "group-select-all";
+        subCb.title = "全选/全不选「" + (sub.groupName || "") + "」";
+        subCb.addEventListener("click", function (e) {
+          e.stopPropagation();
+        });
+        subCb.addEventListener("change", function () {
+          this.classList.remove("indeterminate");
+          var isChecked = this.checked;
+          // 只作用于本小分组内部的 checkbox（后代选择器，天然含孙分组）
+          subDetails
+            .querySelectorAll('.layer-item input[type="checkbox"]')
+            .forEach(function (cb) {
+              if (isChecked && !cb.checked) {
+                cb.checked = true;
+                cb.style.background = layerColorMap[cb.id] || "#fff";
+                persistLayerCheckState(cb, true);
+                loadGeoJSONLayer(cb.value, cb.id, false);
+              } else if (!isChecked && cb.checked) {
+                cb.checked = false;
+                cb.style.background = "#fff";
+                persistLayerCheckState(cb, false);
+                removeGeoJSONLayer(cb.id);
+              }
+            });
+          syncAllGroupStatus();
+          if (isChecked && !subDetails.open) subDetails.open = true;
+        });
+
+        subSummary.appendChild(subArrow);
+        subSummary.appendChild(subName);
+        subSummary.appendChild(subStatus);
+        subSummary.appendChild(subCb);
+        subDetails.appendChild(subSummary);
+
+        var subChildren = document.createElement("div");
+        subChildren.className = "layer-group-children layer-subgroup-children";
+
+        // 分组名传完整路径（父组 › 子组），搜索与 dataset 都用它
+        var parentName = parentGroup.groupName || parentGroup.name || "";
+        var subTitle = sub.groupName || sub.name || "";
+        var pathName = parentName ? parentName + " › " + subTitle : subTitle;
+
+        var count = 0;
+        layers.forEach(function (layerConfig) {
+          if (buildLayerItem(layerConfig, pathName, pathName, subChildren)) {
+            count++;
+          }
+        });
+        (sub.subgroups || []).forEach(function (s) {
+          count += buildSubgroup(
+            s,
+            { groupName: pathName },
+            subChildren,
+            depth + 1,
+          );
+        });
+
+        // 整组（含子孙）都不可见 → 不生成空的 <details>
+        if (count === 0) return 0;
+        subDetails.appendChild(subChildren);
+        container.appendChild(subDetails);
+        return count;
+      }
+
+      /**
+       * 渲染单个图层条目到 container。
+       * @param {Object} layerConfig geo-config 里的 layer 项
+       * @param {string} groupName   归属分组名（搜索/回显用）
+       * @param {string} pathName    完整层级路径（父组 › 子组）
+       * @param {HTMLElement} container 挂载容器
+       * @returns {boolean} 是否真的渲染了（hidden → false）
+       */
+      function buildLayerItem(layerConfig, groupName, pathName, container) {
+        // geo-config 的 layer.hidden：单图层不在面板渲染，也不注册搜索索引
+        if (layerConfig.hidden) return false;
+        var idx = globalLayerIndex++;
+        var stableName = makeLayerStableId(
+          layerConfig.name,
+          layerConfig.file || layerConfig.url,
+        );
+        var checkboxId = "layer_" + stableName;
+        var fullPath = window.geoJsonPrimaryPath + layerConfig.file;
+        var fileName = layerConfig.file;
+        _layerIdByFileName[fileName] = checkboxId;
+        var fixedColor = layerConfig.color || window.GeoUtils.getFixedColor(idx);
+        layerColorMap[checkboxId] = fixedColor;
+        // 点图标尺寸：geo-config.js 的 iconSize 作为默认值。
+        // 用户在图层设置弹窗里改过的尺寸会在加载时覆盖它（见 loadLayerSettings）。
+        if (layerConfig.iconSize)
+          layerIconSizeMap[checkboxId] = Number(layerConfig.iconSize);
+        if (layerConfig.labelField)
+          labelFieldMap[checkboxId] = layerConfig.labelField;
+        if (layerConfig.colorMode)
+          defaultColorModeMap[checkboxId] = layerConfig.colorMode;
+        if (layerConfig.colorField)
+          defaultColorFieldMap[checkboxId] = layerConfig.colorField;
+        if (layerConfig.icon) {
+          layerIconMap[checkboxId] = layerConfig.icon;
+          defaultIconMap[checkboxId] = layerConfig.icon;
+        }
+
+        var layerItem = document.createElement("div");
+        layerItem.className = "layer-item";
+        layerItem.dataset.layerId = checkboxId;
+
+        var checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = checkboxId;
+        checkbox.value = fullPath;
+        checkbox.dataset.layerName = layerConfig.name;
+        checkbox.dataset.groupName = groupName;
+        checkbox.style.setProperty("--layer-color", fixedColor);
+
+        // 默认透明度（geo-config 的 defaultOpacity）：未被用户设置覆盖时生效
+        if (
+          layerConfig.defaultOpacity !== undefined &&
+          layerOpacityMap[checkboxId] === undefined
+        ) {
+          layerOpacityMap[checkboxId] = Number(layerConfig.defaultOpacity);
+        }
+        // 搜索优先标记（如海底地名集）
+        if (layerConfig.searchPriority) {
+          layerSearchPriorityMap[checkboxId] = true;
+        }
+        // 图层级数据来源（显示在要素弹窗「数据源」字段）
+        if (layerConfig.source) {
+          layerSourceMap[checkboxId] = layerConfig.source;
+        }
+        // 可否选中（geo-config 默认设置，localStorage 保存后优先）
+        if (layerConfig.selectable !== undefined) {
+          layerSelectableMap[checkboxId] = layerConfig.selectable;
+        }
+        // Cesium 3D 专属配置（extrudeHeight, clampToGround, pointPixelSize 等）
+        if (layerConfig.cesium) {
+          window._ogv_cesiumConfig[checkboxId] = layerConfig.cesium;
+        }
+
+        // 注册到搜索列表（即使图层尚未加载）
+        if (
+          !searchRegistry.find(function (e) {
+            return e.checkboxId === checkboxId;
+          })
+        ) {
+          searchRegistry.push({
+            layerLabel: layerConfig.name,
+            groupName: groupName,
+            checkboxId: checkboxId,
+            fileName: fileName,
+            searchPriority: !!layerConfig.searchPriority,
+          });
+        }
+        checkbox.addEventListener("change", function () {
+          this.style.background = this.checked ? fixedColor : "#fff";
+          // 勾选时展开到对应面板层级
+          if (this.checked) expandToLayerGroup(this);
+          // 持久化内置图层的勾选状态
+          S.safeSet(S.KEY.LAYER_CHECK + checkboxId, String(this.checked));
+          syncAllGroupStatus();
+          if (this.checked) loadGeoJSONLayer(fullPath, checkboxId, false);
+          else removeGeoJSONLayer(checkboxId);
+        });
+
+        var label = document.createElement("label");
+        label.htmlFor = checkboxId;
+        label.textContent = layerConfig.name;
+        label.title = layerConfig.name;
+
+        var statusSpan = document.createElement("span");
+        statusSpan.className = "layer-status";
+        statusSpan.dataset.status = "idle";
+        (function (cbId, fPath, fName) {
+          statusSpan.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (statusSpan.dataset.status !== "loaded") return;
+            // 高级功能：未激活则提示
+            if (!window.premiumCheck || !window.premiumCheck()) {
+              if (typeof window.showToast === "function")
+                window.showToast("🔒 下载 GeoJSON 需要激活高级功能", {
+                  duration: 3000,
+                });
+              return;
+            }
+            downloadLayerGeoJson(cbId, fPath, fName);
+          });
+        })(checkboxId, fullPath, layerConfig.name);
+
+        var settingsBtn = document.createElement("button");
+        settingsBtn.className = "layer-color-btn";
+        settingsBtn.title = "图层设置";
+        settingsBtn.innerHTML = "⚙️";
+        settingsBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openLayerDialog(
+            checkboxId,
+            layerConfig.file,
+            fullPath,
+            layerConfig.name,
+          );
+        });
+
+        var locateBtn = document.createElement("button");
+        locateBtn.className = "layer-locate-btn";
+        locateBtn.title = "定位到此图层";
+        locateBtn.innerHTML = "🔍";
+        locateBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          flyToLayer(checkboxId);
+        });
+
+        layerItem.appendChild(checkbox);
+        layerItem.appendChild(label);
+        layerItem.appendChild(statusSpan);
+        layerItem.appendChild(settingsBtn);
+        layerItem.appendChild(locateBtn);
+
+        // 属性表按钮
+        var attrBtn = document.createElement("button");
+        attrBtn.className = "layer-locate-btn layer-attr-btn";
+        attrBtn.title = "查看属性表";
+        attrBtn.innerHTML = "📋";
+        attrBtn.style.fontSize = "11px";
+        (function (cbId, lName) {
+          attrBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (typeof window.openLayerAttributeTable === "function") {
+              window.openLayerAttributeTable(cbId, lName);
+            }
+          });
+        })(checkboxId, layerConfig.name);
+        layerItem.appendChild(attrBtn);
+
+        container.appendChild(layerItem);
+        return true;
+      }
 
       // 搜索优先图层的后台静默建索引：不渲染到地图，仅构建倒排索引，
       // 使其即使未勾选也能被搜索（如海底地名集 Gazetteer_*）

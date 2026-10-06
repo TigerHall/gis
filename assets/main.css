@@ -428,6 +428,50 @@ details.layer-section[open] > summary .layer-group-arrow {
   background: var(--group-bg);
 }
 
+/* ========== 图层组内的小分组（details.layer-subgroup） ==========
+   通用能力：geo-config.js 里任意 group 都能加 subgroups。
+   与顶层组共用 .layer-group 的类（这样 syncGroupStatus / 状态同步等
+   既有选择器天然覆盖嵌套层级），这里只覆盖视觉：去掉外框、缩进一级。 */
+details.layer-subgroup {
+  border: none;
+  border-radius: 0;
+  margin: 3px 0 0;
+  background: transparent;
+  box-shadow: none;
+}
+details.layer-subgroup:hover {
+  border-color: transparent;
+  box-shadow: none;
+}
+details.layer-subgroup[open] {
+  border-color: transparent;
+  box-shadow: none;
+}
+details.layer-subgroup > summary {
+  padding: 5px 8px 5px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  /* 分隔线而非卡片边框：与顶层的视觉权重拉开，暗示「次级」 */
+  border-bottom: 1px solid transparent;
+  border-radius: 5px;
+}
+details.layer-subgroup[open] > summary {
+  border-bottom-color: var(--group-border);
+}
+details.layer-subgroup > summary:hover {
+  background: var(--group-header-hover);
+}
+/* 小分组名用次级文字色，与顶层的 --section-text 区分 */
+details.layer-subgroup > summary .layer-group-name {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+/* 小分组内容区：比顶层再多缩进一点，层级一眼可辨 */
+.layer-subgroup-children {
+  padding: 3px 0 4px 10px;
+  background: transparent;
+}
+
 /* 图层项 */
 .layer-item {
   display: flex;
