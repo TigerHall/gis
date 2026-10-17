@@ -137,3 +137,163 @@
 2. Leaflet `Polyline._containsPoint` 是**到边距离**判定，不是填充判定 → 「没命中」不等于「没填充」。
 3. `svg.getScreenCTM()` 在**平移后过期** → 同一段 evaluate 里平移前后复用同一个 inverse
    会得到假阴性（我据此误判「世界副本平移后覆盖为 0」，靠截图才纠正）。每次采样前重取。
+
+## I 本机测试工具链（Playwright / 脚本套路）
+- Bash 工具 PATH 为空 → 命令前
+  `export PATH="/c/Users/hehu/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin:/c/Users/hehu/.workbuddy/binaries/PortableGit/versions/1.2.0/bin:$PATH"`。
+- Node：`C:/Users/hehu/.workbuddy/binaries/node/versions/22.22.2-6/node.exe`；脚本放 `.workbuddy/artifacts/`，
+  头 `module.paths.push("C:/Users/hehu/.workbuddy/binaries/node/workspace/node_modules")`。
+- 带 Pillow 的 Python：`/c/Users/hehu/.workbuddy/binaries/python/envs/default/Scripts/python.exe`。
+- 只有 **`playwright-core`**，没装 Playwright 自带浏览器 →
+  `chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" })`。
+- 本地静态服务重启用 Bash 的 `run_in_background`（`python -m http.server 8123`）；
+  用 `(… &)` 起会立刻消失 → `ERR_CONNECTION_REFUSED`。
+- 侧栏默认折叠（`#sidebarToggle` 未勾选 → 面板 `rect.x` 为负）→ 截图前先 `sidebarToggle.click()` 再 `pinBtn.click()`。
+- 触发搜索用 `page.fill("#searchInput", q)`，直接设 `value` 不触发事件。
+- `getComputedStyle` 会返回 transition 中间值 → 判样式前 `await 400ms`。
+- Playwright 默认带 `--hide-scrollbars` → 量宽度假阴性，须 `ignoreDefaultArgs`。
+- `page.evaluate(fn, arg)` 只序列化 `fn`：内嵌 helper 必须写在同一函数体内；
+  返回 Leaflet 对象会报 `object reference chain is too long` → 用花括号函数体、不返回值。
+- minified 单行文件别硬 grep → `node -e` 截 `s.slice(indexOf(k), +500)`；grep 的 `\{n\}` 在 Git Bash 报错。
+- **SVG 元素没有 `.click()`** → `page.mouse.click(x,y)` 或 `dispatchEvent(new MouseEvent("click",{bubbles:true}))`。
+- 假阴性 7 例：① transition 中间值 ② `--hide-scrollbars` ③ `typeof btn.onclick` 判委托按钮
+  ④ case 间状态不复位 ⑤ 错误的 `instanceof` 组合筛图层 ⑥ 用旧 map 引用断言新 map
+  ⑦ **zoom 动画中途量 `map.getBounds()`**（须等 `moveend`）。
+- **画布错位的终极探针**：包一层
+  `CanvasRenderingContext2D.prototype.drawImage` 打印实参 —— 一眼能看出 `NaN` 坐标
+  （`drawImage` 对 NaN 静默返回，不报错）。ETOPO 全白就是这么抓到的（`dbg_etopo2.js`）。
+
+## J 出图预览实时跟随 / 分辨率上限 / AI 入口 / 地名兜底 / PWA 提醒（2026-10-17, v3.5.0）
+
+### J-1 出图预览实时跟随（`map-export-ui.js`）
+四类事件源 → `liveRefresh(ms)` → `schedulePreview(ms, /*silent*/ true)`：
+| 源 | 为什么是它 |
+|---|---|
+| `map.moveend` / `zoomend` | 构图变了 |
+| `map.baselayerchange` / `overlayadd` / `overlayremove` | 换底图 / 开关覆盖层 |
+| `map.layeradd` / `layerremove` | **矢量图层懒加载真正完成**。勾选只是开始下 gzip，`addLayer` 时数据才画上去 |
+| `document` 的 `change`（**捕获阶段**，`el.contains(t)` 排除出图面板自己） | `<details>` 里的 checkbox 不冒泡，捕获能抓到 |
+
+- 静默 = 不盖「渲染中」遮罩、不改 meta 文案，否则拖地图时会一直闪。
+- `fullBusy`（下载/打印进行中）时预览直接让路，避免两个大 canvas 抢内存。
+- ⚠️ **strict mode 陷阱**：`renderPreview` 里误用未声明的 `pendingSilent`（实为模块级 `_pendingSilent`）→
+  IIFE 是 `"use strict"`，赋值直接抛 ReferenceError → **静默刷新一条都没跑，预览看着像「没实现」**。
+  同类假阴性：只在 console 一闪，页面其它功能全正常。静默路径必须单独验。
+
+### J-2 dpi 与画布上限
+- 默认 **300**（150 打印发虚）；档位 96/150/300/600/**1200** + 自定义输入 30~2400。
+- 上限：**单边 16384、面积 160M px**，超限按同一个 `s` **等比**压（旧代码分别 `min(6000)` → 宽高比例不一致会变形，
+  且 1200dpi 静默失效）。A4 横版 1200dpi = 14031×9921（139M）刚好过。
+- 提示行必须写「已压到 W×H（实际约 N dpi）」——否则用户以为出的是 1200dpi。
+- 旧存档迁移：`saveState` 写 `_v:2`，读到时 `!saved._v || <2` 且 `dpi<=150` → 改成 300。
+
+### J-3 AI 入口（`ai-chat.js`）
+- 悬浮球 = `L.Control.extend({position:"bottomright"})`，**自动排在图层控件上方**（不用手算 bottom，也不和 3D/极地控件打架）；
+  `L.DomEvent.disableClickPropagation` 防拖动地图；面板打开时 `display:none`。
+- 显隐开关 = `app.js` 的 `aiFabToggle`（`dupal_toggle_aiFab`）。⚠️ app.js **先于** ai-chat.js 执行 →
+  它的 `enable/disable` 里 `window.OGVAI` 可能还不存在；真正的初始值由 ai-chat 启动时读 `#aiFabToggle.checked` 决定。
+- 快捷键 **Ctrl/⌘+K**（Ctrl+E 出图、Ctrl+F 搜索已占）；已开时只聚焦输入框、不关面板。
+
+### J-4 地名（`assets/ogv-geocode.js` → `window.OGVGeo`）
+- `search(keyword,{count,bound,level})` / `reverse(lat,lng)` / `ready()`；LRU 60 条；永不 reject（返回 `{ok,items,error}`）。
+- 三级定位 `_locate`：站点矢量（可高亮属性）→ `PLACE_REGISTRY` → 天地图（只能定位）。
+- ⚠️ **`mapBound` 必须钳到 [-180,-90,180,90]**：世界副本态下 `getBounds()` 会给 west=-190 / east=380，
+  天地图收到越界值直接 **400**，一条都不返回（`_searchBound()` 就是干这个的）。
+- ⚠️ 天地图这个 token 是**浏览器端权限**：服务端 `curl` 一定返回 `301012 权限类型错误`，联调只能用浏览器。
+- 搜索框（`geojsonloader.js` 的 `renderResults`）：0 命中 → `autoGeoFallback(query)`（520ms 防抖 + `_autoGeoSeq`
+  令牌防被后续搜索覆盖）→ 直接把天地图结果铺进结果框，标题「矢量数据无匹配 · 以下为天地图地名」。
+
+### J-5 站点设置拨动（AI）
+`_optionItems()` 扫 `#toggleBody input[type=checkbox][id]`（**主控件只有这一份**，快捷区是 `<button data-quick-for>` 无 checkbox）；
+`_setOption` 改 `checked` + `dispatchEvent(new Event("change",{bubbles:true}))` → 持久化/副作用/快捷区同步全都走真实链路。
+名字要 `_cleanLabel()` 去 emoji（`ICON_NOISE` 只盖三个图标，设置项里的 🧩🌐🧊▦… 全漏）。
+
+### J-6 PWA 安装提醒（`assets/pwa-install.js`）
+- 6s 后弹；**分享深链（`#focus/`、`?search=`、`?loc=`、`?bbox=`…）2.5s**；`standalone`/`appinstalled` 不弹；
+  「以后再说」→ 静默 14 天 + 最多主动弹 3 次（`shownCount`）。
+- 只有真拿到 `beforeinstallprompt` 才 `prompt()`；否则给分步图文（iOS：分享 → 添加到主屏幕）。
+- 出图 / AI 面板开着 → 延后 5s 再试（右下角别叠三个浮层）。
+- 样式自包含注入（`<style id="ogvPwaCss">`）：单个卡片不值得单开 css 文件再动 index/SW 清单。
+
+## K 联网搜索 / 抓取（`ogv-websearch.js`，v3.6.0）
+- **为什么要它**：天地图只回答「这个地名在哪」。问到「最大深度多少」「洋中脊热液喷口
+  怎么形成」「某规范哪年实施」，天地图一条都返回不了 —— 那是 DeepSeek Search 的位置。
+  它因此是地名链的**第四级**，不是替代品。
+- **端点**（与 chat 同一个 Key、同一套 Bearer）：
+  `POST https://api.deepseek.com/v1/tools/search` `{query,count(1~50),ori_question?,need_content?}`
+  → `{results:[{rerank_score 0~3, title, url, snippet(~150字), summary(~700字), content, site_name, site_icon, date, authority -1~4}]}`
+  `POST https://api.deepseek.com/v1/tools/fetch` `{url}` → `{title, content(Markdown)}`
+  计费**按成功请求次数**（5 元/1000；失败/空结果不计），每账号 Search/Fetch 各 **5 QPS**。
+- ⚠️ **search 没有 bbox / mapBound 这类字段** —— 别把天地图那套参数习惯带过来，只认 query。
+- ⚠️ **浏览器直连可用**（与 chat/completions 同一 CORS 策略）。若被拦，`_post` 会把
+  `TypeError: Failed to fetch` 翻成「网络不通（可能被浏览器拦截或离线）」并 `ok:false`，
+  调用方退化成只用本地结果 —— 不会卡死。
+- ⚠️ **它不产生坐标**。`_locate` 的第四级故意回 `ok:false` + `web[]` + hint
+  「**图上没有这个名字（不许说已定位）**」：一旦回 `ok:true`，模型十有八九会顺手说
+  「已定位到 X」，而地图根本没动。
+- 省钱的三个闸：① 只在本地三级全空 / 模型主动调时触发（搜索框那颗按钮要用户点）；
+  ② 内存 LRU 40 + 同 query 在途合并（`_inflight`）；③ 只给模型 `summary`，
+  `content` 仅在 `need_content:true` 时才有；`web_fetch` 正文超 12000 字截断
+  （否则一次工具结果就吃掉整个上下文）。
+- **模型侧规则**（SYSTEM_PROMPT 第 7 条）：知识题直接搜、`locate` 失败时先声明没定位、
+  摘要够就不 fetch、一次最多 fetch 2 条、结论后给 `[站点名](url)`。
+  前端 `_md()` 因此加了链接规则（先 `_esc` 再套 `<a>`，只认 http(s)，URL 里的引号已转义）。
+- ⚠️ **`QA_INTENT` 陷阱**：「马里亚纳海沟最大深度是多少」里有地名 → 旧直通会把它整句
+  丢给天地图，POI 一命中就只回「已定位到马里亚纳海沟」，答非所问。凡是
+  多少/什么/怎么/哪里/？…一律**跳过本地直通**直接进模型。
+
+## L 模型名与思考模式（2026-10-17 核对官方文档）
+- 官方现行型号名只有两个：**`deepseek-flash`**（Flash 线，= **DeepSeek-V4.1-Flash-1017**，
+  1M 上下文、支持 tool calls、并发 2500）与 **`deepseek-v4-pro`**（Pro 线，= V4-Pro-0813）。
+  `deepseek-chat` / `deepseek-reasoner` 是上一代命名，仍可调用但语义随官方重定向漂移。
+- **思考模式 V4 默认开启**，且 `temperature`/`presence_penalty`/`frequency_penalty` 不生效
+  （传了不报错也不管用）；强度用 `reasoning_effort`（low/high/max）。
+- ⚠️ **带 `tools` 的请求，后续每一轮都必须回传 `reasoning_content`，漏传直接 400**。
+  本项目 `messages.push(msg)` 是整条 assistant 消息入栈（含 reasoning_content），
+  链路是通的；但为了延迟与成本，`THINKING = "disabled"`（`thinking:{type:"disabled"}`），
+  关掉之后这条陷阱根本不会触发。
+
+## M 出图「论文级」实现细节（v3.7.0，`map-export.js`）
+- **两套坐标系**：纸面 `0..W, 0..H`（图框、图外标注）与内容区 `0..VW, 0..VH = W-2PAD`（地图）。
+  `steps` 全程在 `translate(PAD,PAD)` + `rect(0,0,VW,VH).clip()` 里跑；**最后一步先 `ctx.restore()` 再 `drawFrame`**。
+  ⚠️ 漏 `clip` 的典型症状：底图瓦片/屏幕标签糊进图框留白（纸上「边上有半截地图」）。
+- `ptPx = (W ÷ (paperWidthMm/25.4)) / 72`（有效 dpi ÷ 72）。**只在没有 paperWidthMm 时**退回声明 dpi。
+  预览 = `render()` 传缩小后的 width/height + 原样的 paperWidthMm → 有效 dpi 自动变小，与大图严格等比。
+- `drawFrame(ctx, W, H, PAD, o, VW, VH, sf, {interval, labels, ptPx})`：
+  `o.shiftX/shiftY` 是**内容区**偏移，所以刻度位置 `x = PAD + (lngToXc(lng))`；
+  主刻度对齐经纬线、次刻度取 `(prev.p + p)/2`；标注间距下限 `fs*3.4`（太密宁可少标）。
+- 装饰字号约定（pt）：经纬度 8、图例 8/标题 8.5、比例尺 7.5、图注编号 11、标题 11/副标题 8、版权 6、指北针直径 34。
+- **两个只在导出图里才暴露的坑**：
+  ① `PAD` 按比例算 → 高 dpi 下标注被裁（必须按 pt）；② 纬度标注遍历方向 → 间距判据要 `Math.abs`。
+- 图例数据仍来自 `window._buildLegendData()`（与地图侧栏同源），符号只有 `color + geomType`，所以点要素画成圆点而非实际图标。
+
+## N AI 会话与运行开关（v3.7.0）
+- `_opt = {web, think}` 是**运行时真值**，存储只是镜像（`"true"/"false"`）。`open()` 会 `_loadOpts()` 重读 →
+  任何「改了没生效」先怀疑存储格式，而不是怀疑 `_apiRequest`。
+- `_toolsFor()` 是工具集唯一出口：`_apiRequest` 用它，`_execTool` 里另有**第二道拦截**（模型硬调也不放行）。
+- 会话：`_saveSessions()` 只排防抖（400ms），`_flushSave()` 真写；`_curId` 为空且 `_msgs` 空时**不建记录**
+  （否则历史里一堆空「新对话」）。标题 = 首条 user 消息 28 字。
+- `OGVChatStore` 的 `_run(idbFn, lsFn)`：IDB 打开失败或事务失败都走 lsFn；`list()` 返回**不含 msgs** 的摘要。
+
+## O PWA 安装状态 ⇄ 设置项同源（v3.8.0）
+- **两套机制的交汇点**：`pwa-install.js`（外部事实）+ `toggleConfig`（UI 开关）。桥是三个 API：
+  `isInstalled()`（真值）· `onChange(fn)`（广播）· `install()`（主动装）。
+- **`initToggle` 的 `cfg.truth` 分支**：
+  ```js
+  if (typeof cfg.truth === "function") { checked = !!cfg.truth(); cb.checked = checked;
+    S.safeSet(cfg.storageKey, String(checked)); cfg.syncStatus && cfg.syncStatus(checked); }
+  ```
+  之后仍走 `if (checked) cfg.enable(false)` —— 所以 **`enable` 必须判 `userInitiated`**，
+  否则"恢复一个已安装状态"会再触发一次安装流程。这条对所有带 truth 的项都成立。
+- **加载顺序**：`app.js` 先执行 → 渲染开关、`initToggle` 跑完（此时 `OGVInstall` 还不存在，
+  `truth()` 返回 false）；`pwa-install.js` 加载完调 `window._syncPwaToggle()` 补正，并借这次
+  调用订阅 `onChange`（`_pwaSubscribed` 保证只订一次）。因此 `syncPwaToggle` 必须**幂等**。
+- **取消安装的回弹**：`_doInstall` 的 `userChoice` 变 `dismissed`、或走 `_showSteps()`（没有原生弹窗）
+  都会 `_emit()` → 面板重算 → 开关回到 `false`。**不许停在 true**：那是在骗用户"装上了"。
+- ⚠️ **`_showSteps()` 里的顺序陷阱**：主按钮先被改成 `data-pwa="later"`，紧接着
+  `querySelector('.ogv-pwa-btn[data-pwa="later"]')` 会命中它自己 → 把「知道了」`display:none` 掉。
+  正确顺序：先取出/隐藏**原来的** later，再改主按钮属性。
+- **`neverAsk` 的边界**：它只管「自动弹窗」。`prompt()`（手动唤起提醒）受它约束，
+  `install()`（设置项主动装）**不受约束**。混在一起的后果是「点了不再提示 = 从此装不了」。
+- **已安装 = 不可逆**：浏览器没有卸载 API，所以已装时 `cb.disabled = true`；
+  `disable()` 里按真值回弹（会有 toast 指路去浏览器菜单卸载），绝不能留下 `checked=false` 的假象。

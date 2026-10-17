@@ -215,23 +215,19 @@ L.LatLngGraticule = L.Layer.extend({
         // 修浮点累加误差
         lng = Math.round(lng * 1000) / 1000;
 
-        // todo: format type of float
-        if (lng > 180) {
-            return '' + (360 - lng) + 'W';
-        }
-        else if (lng > 0 && lng < 180) {
+        // 世界副本会传入 |lng|>180 的值：先归一化到 (-180,180]，
+        // 与鼠标坐标控件（L.WorldWrap.normalizeLng）口径一致。
+        // 原来的 (360-lng) 折返只对 (180,360) 正确，|lng|>360 会算出负值标签。
+        lng = ((lng + 180) % 360 + 360) % 360 - 180;
+        if (lng === -180) lng = 180;
+
+        if (lng > 0 && lng < 180) {
             return '' + lng + 'E';
         }
         else if (lng < 0 && lng > -180) {
             return '' + (lng*-1) + 'W';
         }
-        else if (lng == -180) {
-            return '' + (lng*-1);
-        }
-        else if (lng < -180) {
-            return '' + (360 + lng) + 'W';
-        }
-        return '' + lng;
+        return '' + lng; // 0 / 180
     },
 
     __calcInterval: function() {
@@ -366,6 +362,9 @@ L.LatLngGraticule = L.Layer.extend({
             _lon_l = parseInt(_lon_l - _point_per_lon, 10);
 
             var ll, latstr, lngstr, _lon_delta = 0.5;
+            // 视野宽 ≥ 一个世界宽时，同一归一化经线会在多个世界副本里重复出现
+            // （如 -150 与 +210 都是「150W」）→ 标签按文本去重，只标第一次，线照画
+            var _drawnLngLabels = {};
             function __draw_lat_line(self, lat_tick) {
                 ll = map.latLngToContainerPoint(L.latLng(lat_tick, _lon_l));
                 latstr = self.__format_lat(lat_tick);
@@ -470,12 +469,14 @@ L.LatLngGraticule = L.Layer.extend({
                         var tt = map.latLngToContainerPoint(L.latLng(j, lon_tick));
                         ctx.lineTo(tt.x, tt.y);
 
-                        if (self.options.showLabel && label && _prev_p != null) {
+                        if (self.options.showLabel && label && _prev_p != null && !_drawnLngLabels[lngstr]) {
                             if (_prev_p.y > 8 && tt.y <= 8) {
                                 ctx.fillText(lngstr, tt.x - (txtWidth/2), txtHeight);
+                                _drawnLngLabels[lngstr] = 1;
                             }
                             else if (_prev_p.y >= hh && tt.y < hh) {
                                 ctx.fillText(lngstr, tt.x - (txtWidth/2), hh-2);
+                                _drawnLngLabels[lngstr] = 1;
                             }
                         }
 
@@ -503,9 +504,10 @@ L.LatLngGraticule = L.Layer.extend({
                     ctx.lineTo(bb.x, bb.y-1);
                     ctx.stroke();
 
-                    if (self.options.showLabel && label) {
+                    if (self.options.showLabel && label && !_drawnLngLabels[lngstr]) {
                         ctx.fillText(lngstr, tt.x - (txtWidth/2), txtHeight+1);
                         ctx.fillText(lngstr, bb.x - (txtWidth/2), hh-3);
+                        _drawnLngLabels[lngstr] = 1;
                     }
                 }
             };

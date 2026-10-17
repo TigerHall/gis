@@ -1,5 +1,5 @@
 // 缓存名称（更新时修改，触发缓存重建）
-const CACHE_NAME = "v3.2.0";
+const CACHE_NAME = "v3.8.0";
 
 // 全量预缓存：安装 PWA 后全部功能离线可用（后台静默执行，不阻塞页面）
 // 注意：assets/cesium/Cesium.js（4.9MB）故意不在此列 —— 它只在用户真正打开 3D 时
@@ -20,6 +20,8 @@ const STATIC_ASSETS = [
   "./assets/leaflet-geoman.css",
   "./assets/dialog.css",
   "./assets/feature-panel.css",
+  "./assets/map-export.css",
+  "./assets/ai-chat.css",
   "./assets/Leaflet.LegendControl.css",
   "./assets/pointdrop.css",
   "./assets/elevation-query.css",
@@ -56,7 +58,14 @@ const STATIC_ASSETS = [
   "./assets/geoblaze.min.js",
   "./assets/georaster-layer-for-leaflet.min.js",
   "./assets/app.js",
+  "./assets/ogv-geocode.js",
+  "./assets/ogv-websearch.js",
+  "./assets/ogv-chatstore.js",
   "./assets/html-to-image.min.js",
+  "./assets/map-export.js",
+  "./assets/map-export-ui.js",
+  "./assets/ai-chat.js",
+  "./assets/pwa-install.js",
   "./assets/dialog.js",
   "./assets/feature-panel.js",
   "./assets/Leaflet.LegendControl.js",

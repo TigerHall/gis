@@ -4870,7 +4870,7 @@
         });
       }
 
-      function renderTdtResults(pois, query) {
+      function renderTdtResults(pois, query, note) {
         resultsBox.innerHTML = "";
         if (!pois || pois.length === 0) {
           resultsBox.innerHTML =
@@ -4882,7 +4882,7 @@
         title.className = "search-empty";
         title.style.cssText =
           "font-size:11px;color:var(--text-dim);padding-bottom:4px;";
-        title.textContent = "🗺️ 天地图地名结果";
+        title.textContent = note || "🗺️ 天地图地名结果";
         resultsBox.appendChild(title);
 
         pois.forEach(function (poi) {
@@ -5374,7 +5374,55 @@
 
       // ========== 通用要素计数更新（已前移至文件头部）==========
 
+      // ---------- 自动接天地图（矢量库 0 命中时）----------
+      // 以前是「无匹配结果 + 一个『搜索地名』按钮」，得再点一次才查；
+      // 现在直接自动查：矢量是本站领域数据（板块/洋中脊/站位），地名大多不在里面，
+      // 让用户多点一次没有意义。延时 520ms 是为了等输入停下来，少打两次请求。
+      var _autoGeoTimer = null;
+      var _autoGeoSeq = 0;
+      function autoGeoFallback(query) {
+        var seq = ++_autoGeoSeq;
+        clearTimeout(_autoGeoTimer);
+        if (!query || query.length < 2) return;
+        if (!window.OGVGeo || !window.OGVGeo.ready()) return;
+        _autoGeoTimer = setTimeout(function () {
+          if (seq !== _autoGeoSeq) return;
+          window.OGVGeo.search(query, { count: 12 })
+            .then(function (r) {
+              if (seq !== _autoGeoSeq) return; // 期间又搜了别的
+              var items = (r && r.items) || [];
+              if (!items.length) return;
+              renderTdtResults(
+                items.map(function (it) {
+                  return {
+                    name: it.name,
+                    address: it.address,
+                    lonlat: it.lng + "," + it.lat,
+                    poiType: it.type,
+                  };
+                }),
+                query,
+                "矢量数据无匹配 · 以下为天地图地名（点一条定位）",
+              );
+            })
+            .catch(function () {});
+        }, 520);
+      }
+
+      // 搜索框「无结果 → 让 AI 联网查」的入口。onclick 字符串里只能调全局函数，
+      // 所以挂到 window；实体逻辑仍走 OGVAI.ask（打开面板 + 填入 + 立即发送）。
+      window.__ogvAskAI = function (text) {
+        var rb = document.getElementById("searchResults");
+        if (rb) rb.classList.remove("open"); // 先收起下拉，别压在 AI 面板上
+        if (window.OGVAI && typeof window.OGVAI.ask === "function") {
+          window.OGVAI.ask(text);
+        } else if (typeof showToast === "function") {
+          showToast("AI 助手还没加载完，稍后再试");
+        }
+      };
+
       function renderResults(results, query, totalCount, shownCount) {
+        _autoGeoSeq++; // 有新结果进来 → 作废任何还在路上的自动地名查询
         // 缓存最近一次完整结果列表，供「查看更多」分页复用
         _lastSearchItems = results;
         _lastSearchQuery = query;
@@ -5384,19 +5432,29 @@
 
         resultsBox.innerHTML = "";
         if (results.length === 0) {
+          var qHtml = query.replace(/</g, "&lt;").replace(/>/g, "&gt;");
           resultsBox.innerHTML =
             '<div class="search-empty"><div>无匹配结果</div>' +
             '<div class="tdt-search-btn" onclick="window.__tiandituSearch(\'' +
             query.replace(/\\/g, "\\\\").replace(/'/g, "\\'") +
             "')\">🔍 搜索地名「" +
-            query.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+            qHtml +
             "」</div>" +
             '<div class="tdt-search-btn" onclick="window.__unepwcmcSearch(\'' +
             query.replace(/\\/g, "\\\\").replace(/'/g, "\\'") +
             '\')" style="margin-left:6px;">🏝️ 搜索海岛名「' +
-            query.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+            qHtml +
+            '」</div>' +
+            // 第四级：矢量 / 地名 / 海岛都没有 → 让 AI 联网查（回答「这是什么东西」，
+            // 而不是「它在哪」）。走 OGVAI.ask，用户不点就不会花钱。
+            '<div class="tdt-search-btn tdt-ai-btn" onclick="window.__ogvAskAI(\'' +
+            query.replace(/\\/g, "\\\\").replace(/'/g, "\\'") +
+            '\')">🌐 让 AI 联网查「' +
+            qHtml +
             "」</div></div>";
           resultsBox.classList.add("open");
+          // 自动兜底天地图（命中就直接把结果铺进来，不必再点按钮）
+          autoGeoFallback(query);
           return;
         }
         var shown = results.slice(0, shownCount);

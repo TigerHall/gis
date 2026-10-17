@@ -87,6 +87,13 @@ S.dropObsoleteKeys();
             desc: "开启后点击搜索结果缩放至目标时，仅突出显示该目标（隐藏同图层其他目标、淡化其他图层），移动或缩放地图后自动恢复",
             checked: true,
           },
+          {
+            id: "aiFabToggle",
+            label: "AI 悬浮球",
+            icon: "🤖",
+            desc: "开启后地图右下角常驻 AI 助手入口（与图层控件同一列），点一下即开；快捷键 Ctrl/⌘ + K 随时唤起。关掉只隐藏小球，快捷键和「操作 → AI 助手」仍然可用",
+            checked: true,
+          },
         ],
       },
       {
@@ -173,7 +180,6 @@ S.dropObsoleteKeys();
             id: "elevationReadToggle",
             label: "读取高程",
             icon: "⛰️",
-            quick: true,
             desc: "开启后点击地图任意位置，实时查询该坐标的高程/水深（数据源可切换，默认 GEBCO）",
           },
           {
@@ -200,12 +206,30 @@ S.dropObsoleteKeys();
         category: "操作",
         items: [
           {
+            id: "pwaInstallToggle",
+            label: "安装到桌面",
+            icon: "📲",
+            // state:true → 渲染一枚「已安装 / 未安装」文字徽标。
+            // 这是唯一一个**状态不由存储决定**的开关：真值是「浏览器里装没装」，
+            // 见 toggleConfig.pwaInstallToggle.truth 与 pwa-install.js 的 isInstalled()。
+            state: true,
+            desc: "开关就是安装状态：已安装时显示为开且不可关闭（浏览器不提供「卸载」接口）；未安装时拨开即发起安装。没安装时每次进入页面都会弹一次提醒，点提醒里的「不再提示」可永久关闭自动提醒（仍可在这里手动安装）",
+          },
+          {
             type: "button",
             id: "exportMapBtn",
-            label: "导出图片",
-            icon: "📷",
+            label: "出图",
+            icon: "🖼️",
             quick: true,
-            desc: "将当前地图截图导出为 PNG 图片（快捷键 Ctrl/⌘ + E）",
+            desc: "出图设置：分辨率/格式/图例/比例尺/指北针，可出论文级大图（快捷键 Ctrl/⌘ + E）",
+          },
+          {
+            type: "button",
+            id: "aiChatBtn",
+            label: "AI 助手",
+            icon: "🤖",
+            quick: true,
+            desc: "AI 助手（快捷键 Ctrl/⌘ + K）：查地名定位、开关图层、改站点设置、调视野、自然语言辅助出图",
           },
           {
             type: "button",
@@ -391,6 +415,9 @@ S.dropObsoleteKeys();
             '<span class="cluster-toggle-text">' +
             (item.icon ? item.icon + " " : "") +
             item.label +
+            (item.state
+              ? '<span class="toggle-state" id="' + item.id + 'State"></span>'
+              : "") +
             "</span>" +
             '<input type="checkbox" id="' +
             item.id +
@@ -481,6 +508,14 @@ S.dropObsoleteKeys();
     // 不再依赖 id（面板里那个是镜像，不能重复用 id）
     var ACTION_HANDLERS = {
       exportMapBtn: exportMapImage,
+      aiChatBtn: function () {
+        // ai-chat.js 加载失败时静默降级（不阻塞其他按钮）
+        if (window.OGVAI && typeof window.OGVAI.toggle === "function") {
+          window.OGVAI.toggle();
+        } else {
+          showToast("❌ AI 助手模块未加载，请刷新页面", { duration: 3000 });
+        }
+      },
       featuresDocBtn: function () {
         window.open("docs/features.html", "_blank");
       },
@@ -844,7 +879,7 @@ S.dropObsoleteKeys();
       menu = document.createElement("div");
       menu.className = "refresh-menu";
       menu.innerHTML =
-        '<button data-mode="export">📷 导出图片</button>' +
+        '<button data-mode="export">🖼️ 出图设置</button>' +
         '<button data-mode="refresh">🔄 刷新页面</button>' +
         '<button data-mode="sw">🧹 清理网页缓存</button>' +
         '<button data-mode="all">🗑️ 彻底清理</button>' +
@@ -884,11 +919,32 @@ S.dropObsoleteKeys();
   })();
 
   // ========== 导出地图图片 ==========
+  // 2026-10-06 起改为打开「出图中台」（map-export-ui.js）。
+  // 旧实现（截屏 + 只等两帧）已废弃，原因实测记录在 map-export.js 文件头：
+  //   ① WMS 底图瓦片要几百 ms~数秒，两帧等不到 → 导出图瓦片大面积缺失
+  //      （实测「立刻导出 11 色 / 等瓦片后 2863 色」）
+  //   ② 输出分辨率被窗口尺寸锁死，无法出论文级大图
+  //   ③ 无任何设置项（分辨率/格式/图例/比例尺）
+  // 下方 exportMapImageLegacy 保留原实现作为参考与回退锚点。
+  function exportMapImage() {
+    if (window.MapExport && typeof window.MapExport.open === "function") {
+      window.MapExport.open();
+      return;
+    }
+    // 引擎未就绪（异常兜底）：退回旧的截屏方案
+    if (window._exportMapImageLegacy) {
+      window._exportMapImageLegacy();
+      return;
+    }
+    showToast("❌ 出图模块未加载，请刷新页面", { duration: 3000 });
+  }
+
+  // ---- 旧实现（原 exportMapImage 主体），保留备查 ----
   // 主方案：navigator.mediaDevices.getDisplayMedia() 系统屏幕截图。
   //   截图前隐藏侧边栏/控件，从视频帧裁剪到地图区域，统一 scale 防拉伸。
   // 降级方案（iOS / 不支持 getDisplayMedia 的平台）：
   //   隐藏 UI → 显示系统截图指引 → 用户自行截图后移动/缩放地图恢复。
-  function exportMapImage() {
+  window._exportMapImageLegacy = function exportMapImageLegacy() {
     if (!window.map) return;
     // 关掉已有 toast
     if (window._exportToast) {
@@ -1330,6 +1386,60 @@ S.dropObsoleteKeys();
   }
 
   var toggleConfig = {
+    // ── 安装到桌面 ──
+    // 唯一一个「状态不由存储决定」的开关：真值是浏览器里装没装（PWA standalone /
+    // appinstalled / 存过 installedAt）。localStorage 只写镜像，供排查用。
+    // 因此它带 truth + syncStatus 两个钩子，由 initToggle 在恢复阶段调用；
+    // 之后安装状态变了（用户装好、或在原生弹窗点了取消），由 pwa-install.js 的
+    // onChange 广播 → syncPwaToggle 重算 —— 不需要轮询。
+    pwaInstallToggle: {
+      storageKey: TOGGLE_PREFIX + "pwaInstall",
+      truth: function () {
+        var I = window.OGVInstall;
+        return !!(I && I.isInstalled && I.isInstalled());
+      },
+      syncStatus: function (on) {
+        var cb = document.getElementById("pwaInstallToggle");
+        // 已装 = 既成事实，开关不能再「关掉安装」（浏览器没有卸载 API）
+        if (cb) cb.disabled = !!on;
+        var bar = document.getElementById("pwaInstallToggleBar");
+        if (bar) bar.classList.toggle("is-locked", !!on);
+        var tag = document.getElementById("pwaInstallToggleState");
+        if (tag) {
+          tag.textContent = on ? "已安装" : "未安装";
+          tag.className = "toggle-state" + (on ? " is-on" : "");
+        }
+      },
+      enable: function (userInitiated) {
+        // 恢复镜像值（userInitiated=false）绝不能再触发一次安装流程
+        if (!userInitiated) return;
+        var I = window.OGVInstall;
+        if (!I || typeof I.install !== "function") {
+          window.showToast("❌ 安装模块未加载，请刷新页面", { duration: 3000 });
+          var cb0 = document.getElementById("pwaInstallToggle");
+          if (cb0) cb0.checked = false;
+          return;
+        }
+        if (I.isInstalled && I.isInstalled()) {
+          window.showToast("✅ 已经安装过了，可从桌面图标启动", { duration: 2400 });
+          return;
+        }
+        // 主动安装不受「不再提示」限制：那是「别自动弹窗」，不是「不许装」
+        I.install();
+      },
+      disable: function () {
+        // 走到这里说明有人把开关拨到了关 —— 但浏览器没有卸载 PWA 的接口，
+        // 状态只能是「装着」。按真值回弹，别让 UI 说假话。
+        var cb = document.getElementById("pwaInstallToggle");
+        var I = window.OGVInstall;
+        if (cb && I && I.isInstalled && I.isInstalled()) {
+          cb.checked = true;
+          window.showToast("要卸载请用浏览器菜单里的「卸载此应用」", {
+            duration: 2800,
+          });
+        }
+      },
+    },
     view3dToggle: {
       storageKey: TOGGLE_PREFIX + "view3d",
       enable: function (userInitiated) {
@@ -1559,7 +1669,9 @@ S.dropObsoleteKeys();
         if (window.OGVMeasureTools) window.OGVMeasureTools.installToolbarButtons();
       },
       disable: function () {
-        map.pm.removeControls();
+        // 插件没加载时 map.pm 不存在 —— 直接调会抛错，而 initToggle 的恢复
+        // 循环是串行的，一抛就会让后面的开关全都初始化不到
+        if (map.pm) map.pm.removeControls();
       },
     },
     zoomToggle: {
@@ -1597,6 +1709,13 @@ S.dropObsoleteKeys();
     legendToggle: {
       storageKey: TOGGLE_PREFIX + "legend",
       enable: function () {
+        // 图例插件（leaflet-legend）没加载时别抛错：initToggle 的恢复循环
+        // 是串行的，这里一抛后面所有开关都不会初始化 —— 表现为「面板一半开关失灵」。
+        if (!L.control || typeof L.control.legend !== "function") {
+          var cbMiss = document.getElementById("legendToggle");
+          if (cbMiss) cbMiss.checked = false;
+          return;
+        }
         if (!window._legendControl) {
           window._legendControl = L.control
             .legend({ position: "bottomleft" })
@@ -1626,6 +1745,18 @@ S.dropObsoleteKeys();
           map.removeControl(window._layerCtrlControl);
           window._layerCtrlControl = null;
         }
+      },
+    },
+    // AI 悬浮球：AI 模块比 app.js 晚加载，所以这里的 enable/disable 可能拿到
+    // 还没定义的 OGVAI —— 那时什么都不做也没关系：ai-chat.js 启动时会自己读
+    // 这个 checkbox 的当前值来决定挂不挂小球（存储值已经由 initToggle 恢复好了）。
+    aiFabToggle: {
+      storageKey: TOGGLE_PREFIX + "aiFab",
+      enable: function () {
+        if (window.OGVAI && window.OGVAI.setFab) window.OGVAI.setFab(true);
+      },
+      disable: function () {
+        if (window.OGVAI && window.OGVAI.setFab) window.OGVAI.setFab(false);
       },
     },
     premiumToggle: {
@@ -1795,8 +1926,19 @@ S.dropObsoleteKeys();
     if (!cb) return;
 
     var defaultChecked = cb.checked;
-    var checked = S.getBool(cfg.storageKey, defaultChecked);
-    cb.checked = checked;
+    var checked;
+    if (typeof cfg.truth === "function") {
+      // ── 状态由「外部事实」决定（目前只有「安装到桌面」这一项）──
+      // 存储里的值只是镜像：装没装由浏览器说了算 —— 不能因为 localStorage
+      // 写着 true 就假装装上了，也不能因为写着 false 就把已装的显示成关。
+      checked = !!cfg.truth();
+      cb.checked = checked;
+      S.safeSet(cfg.storageKey, String(checked));
+      if (typeof cfg.syncStatus === "function") cfg.syncStatus(checked);
+    } else {
+      checked = S.getBool(cfg.storageKey, defaultChecked);
+      cb.checked = checked;
+    }
 
     // 快捷区那个按钮的选中态跟着这里走。
     // 快捷区不带自己的 checkbox，状态只存在于这一个 cb 上，
@@ -1847,6 +1989,34 @@ S.dropObsoleteKeys();
     if (toggleConfig.hasOwnProperty(cbId)) initToggle(cbId, toggleConfig[cbId]);
   }
 
+  // ========== PWA 安装状态 ⇄「操作 → 安装到桌面」开关 ==========
+  // 真值只有一个（浏览器里装没装），但状态有两个来源，都要接上：
+  //   ① pwa-install.js 比本文件**晚执行**，它加载完会回调 window._syncPwaToggle()；
+  //   ② 之后装好 / 在原生弹窗里点取消 / 改「不再提示」→ OGVInstall.onChange 广播。
+  // 订阅只做一次（_pwaSubscribed），因此本函数可以被反复调用，零成本。
+  var _pwaSubscribed = false;
+  function syncPwaToggle() {
+    var cb = document.getElementById("pwaInstallToggle");
+    if (!cb) return;
+    var I = window.OGVInstall;
+    if (!I || typeof I.isInstalled !== "function") return; // 模块未就位，等它回调
+    if (!_pwaSubscribed && typeof I.onChange === "function") {
+      _pwaSubscribed = true;
+      I.onChange(syncPwaToggle);
+    }
+    var on = !!I.isInstalled();
+    if (cb.checked !== on) cb.checked = on;
+    var cfg = toggleConfig.pwaInstallToggle;
+    if (cfg.syncStatus) cfg.syncStatus(on);
+    // 存储只当镜像：值没变就不写，免得无谓地惊动别的标签页
+    var now = String(on);
+    if (S.safeGet(cfg.storageKey, "") !== now) S.safeSet(cfg.storageKey, now);
+    if (window._syncQuickStates) window._syncQuickStates();
+    if (window._updateSubBadges) window._updateSubBadges();
+  }
+  window._syncPwaToggle = syncPwaToggle;
+  syncPwaToggle();
+
   // ========== 跨标签同步 ==========
   // 别的标签页改了开关 → storage 事件通知本页。值的归属没有歧义：事件本身就是
   // 「对方已经写完」的通知，天然以后写入为准。真正的分歧在**下一步要不要在本页
@@ -1866,6 +2036,9 @@ S.dropObsoleteKeys();
     isLocationTracking: 1,
     premiumToggle: 1,
     elevationReadToggle: 1,
+    // 安装状态的真值是「本浏览器装没装」，不是存储里的字符串。
+    // 别的标签页写镜像值时，不该反过来指挥本页的开关 —— 由 OGVInstall.onChange 管。
+    pwaInstallToggle: 1,
   };
   window.addEventListener("storage", function (e) {
     if (!e || !e.key || e.key.indexOf(TOGGLE_PREFIX) !== 0) return;

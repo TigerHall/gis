@@ -78,6 +78,9 @@
     <link rel="stylesheet" href="./assets/feature-panel.css" />
     <!-- Cesium 3D 容器样式 -->
     <link rel="stylesheet" href="./assets/cesium-container.css" />
+    <!-- 出图：引擎 + 悬浮中台 -->
+    <link rel="stylesheet" href="./assets/map-export.css" />
+    <link rel="stylesheet" href="./assets/ai-chat.css" />
 
     <!-- WPA -->
     <link rel="manifest" href="./manifest.json" />
@@ -542,8 +545,23 @@
     </script>
     <!-- 高程读取插件（点击地图查询高程，数据源可切换） -->
     <script src="./assets/Leaflet.ElevationQuery.js"></script>
-    <!-- 应用管理：版本号、清理菜单、导出图片 -->
+    <!-- 应用管理：版本号、清理菜单、出图入口 -->
     <script src="./assets/app.js"></script>
+    <!-- 地名检索 / 逆地理编码（天地图）：搜索框与 AI 助手共用这一份实现 -->
+    <script src="./assets/ogv-geocode.js"></script>
+    <!-- 网页搜索 / 抓取（DeepSeek Search & Fetch）：本地三级都查不到时的第四级 -->
+    <script src="./assets/ogv-websearch.js"></script>
+    <!-- AI 历史对话存储（IndexedDB）：必须在 ai-chat.js 之前 ——
+         它在 IIFE 执行时就会取 window.OGVChatStore -->
+    <script src="./assets/ogv-chatstore.js"></script>
+    <!-- 出图引擎 + 悬浮中台：须在 app.js 之后（app.js 的按钮调 MapExport.open），
+         且必须在 basemap-manager.js 之后 —— 引擎要读底图图层的瓦片模板 -->
+    <script src="./assets/map-export.js"></script>
+    <script src="./assets/map-export-ui.js"></script>
+    <!-- AI 助手：运行时依赖 __OGV_search / MapExport，加载顺序随意 -->
+    <script src="./assets/ai-chat.js"></script>
+    <!-- 首次进入的「安装到桌面」提醒（PWA） -->
+    <script src="./assets/pwa-install.js"></script>
     <!-- 文件加载缓冲示意 -->
     <div id="loadingOverlay">
       <div class="loading-spinner"></div>

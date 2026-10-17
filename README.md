@@ -104,7 +104,7 @@
 | 倒排索引             | 全文搜索，支持中文分词 + 模糊匹配  |
 | Gzip 压缩            | GeoJSON 数据 gz 存储，PWA 加速加载 |
 | Geoman               | 测量与绘图编辑工具                 |
-| html2canvas          | 地图截图导出                       |
+| 自研 map-export.js   | 论文级地图出图（非截屏，可出 300dpi） |
 | PWA / Service Worker | 离线缓存与可安装应用               |
 
 ## 使用方法

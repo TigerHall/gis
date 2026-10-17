@@ -878,6 +878,14 @@ body.basemap-none #map {
   background: var(--content-hover-bg);
 }
 
+/* 「让 AI 联网查」：独占一行 —— 窄侧栏里三个按钮挤一行会乱折行 */
+.search-empty .tdt-ai-btn {
+  display: block;
+  margin: 8px auto 0;
+  border-color: var(--c-green-text-strong);
+  color: var(--c-green-text-strong);
+}
+
 /* 搜索结果「查看更多」分页按钮 */
 .search-loadmore {
   padding: 10px 12px;
@@ -1003,6 +1011,37 @@ body.basemap-none #map {
   position: relative;
   z-index: 0; /* 文字在按钮下方 */
   padding-right: 48px; /* 给按钮留出空间 */
+}
+
+/* 开关自带的状态徽标（目前只有「安装到桌面」用：已安装 / 未安装）。
+   为什么不只用开关颜色表达：安装是个**不可逆的既成事实**，光看滑块容易误读成
+   「勾选=我想装」，加一行文字才说得清当前到底是哪一种。
+   小字必须用 --c-green-text-strong：--c-green(#99cc99) 在白底只有 1.8:1。 */
+.toggle-state {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 15px;
+  vertical-align: 1px;
+  white-space: nowrap;
+  color: var(--text-muted);
+  background: rgba(127, 127, 127, 0.16);
+}
+.toggle-state.is-on {
+  color: var(--c-green-text-strong);
+  background: rgba(58, 116, 58, 0.14);
+}
+[data-theme="dark"] .toggle-state.is-on {
+  background: rgba(136, 204, 136, 0.16);
+}
+/* 状态已定、关不掉的项（已安装）：别诱惑用户去点，但保持可读 */
+.toggle-bar.is-locked .cluster-toggle-label {
+  cursor: default;
+}
+.toggle-bar.is-locked .cluster-toggle-switch {
+  opacity: 0.85;
 }
 
 .cluster-toggle-label {

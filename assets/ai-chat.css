@@ -1,0 +1,554 @@
+/* ai-chat.css —— OGV AI 助手浮层（配色走 main.css 的 --c-* 变量，深浅主题自适应） */
+
+.ogv-ai-root {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  height: min(620px, 78vh);
+  display: none;
+  flex-direction: column;
+  background: var(--c-bg);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+  z-index: 1500;
+  overflow: hidden;
+  font-size: 14px;
+}
+.ogv-ai-root.open {
+  display: flex;
+}
+
+/* ── 头部 ── */
+.ogv-ai-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--c-border);
+  flex: none;
+}
+.ogv-ai-title {
+  font-weight: 600;
+}
+.ogv-ai-model {
+  font-size: 11px;
+  color: var(--c-text-dim, #999);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 1px 6px;
+  margin-right: auto;
+}
+.ogv-ai-hbtn {
+  border: none;
+  background: transparent;
+  color: var(--c-text);
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ogv-ai-hbtn:hover {
+  background: var(--c-gray);
+}
+.ogv-ai-hbtn.unset {
+  outline: 1px dashed var(--c-red);
+  border-radius: 6px;
+}
+
+/* ── Key 行（默认收起） ── */
+.ogv-ai-keyrow {
+  display: none;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--c-border);
+  flex: none;
+}
+.ogv-ai-keyrow.open {
+  display: flex;
+}
+.ogv-ai-key {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: 13px;
+}
+.ogv-ai-key:focus-visible {
+  outline: 2px solid var(--c-green-text-strong, #3a743a);
+  outline-offset: 1px;
+}
+.ogv-ai-keysave {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--c-green);
+  color: #1a1a2e;
+  cursor: pointer;
+}
+
+/* ── 消息区 ── */
+.ogv-ai-msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ogv-ai-empty {
+  color: var(--c-text-dim, #999);
+  font-size: 13px;
+  padding: 8px 4px;
+}
+.ogv-ai-empty-t {
+  margin-bottom: 6px;
+}
+.ogv-ai-empty-i {
+  padding: 3px 0;
+}
+/* 快捷键提示：比功能清单更次要，单独压暗一行 */
+.ogv-ai-empty-k {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.ogv-ai-msg {
+  display: flex;
+  flex-direction: column;
+}
+.ogv-ai-user {
+  align-items: flex-end;
+}
+.ogv-ai-assistant {
+  align-items: flex-start;
+}
+.ogv-ai-bubble {
+  max-width: 88%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.ogv-ai-user .ogv-ai-bubble {
+  background: var(--c-green);
+  color: #1a1a2e;
+  border-bottom-right-radius: 3px;
+}
+.ogv-ai-assistant .ogv-ai-bubble {
+  background: var(--c-gray);
+  color: var(--c-text);
+  border-bottom-left-radius: 3px;
+}
+.ogv-ai-thinking {
+  opacity: 0.7;
+  font-style: italic;
+}
+.ai-code {
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  background: rgba(127, 127, 127, 0.18);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+/* 联网搜索的引用链接：下划线 + 主色，深色主题下用暖一点的对白亮色 */
+.ai-link {
+  color: var(--c-green-text-strong, #3a743a);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+[data-theme="dark"] .ai-link {
+  color: var(--c-green-text, #88cc88);
+}
+.ai-link:hover {
+  opacity: 0.8;
+}
+.ai-link:focus-visible {
+  outline: 2px solid var(--c-green-text-strong, #3a743a);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── 出图预览缩略图（preview_export）── */
+.ogv-ai-thumb {
+  display: block;
+  max-width: 88%;
+  margin-top: 6px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  /* 出图底色恒为白（论文图），深色主题下也保持白底 + 描边，不跟随面板底色 */
+  background: #fff;
+}
+
+/* ── 候选卡片 ── */
+.ogv-ai-cands {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  max-width: 88%;
+}
+.ogv-ai-cand {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+.ogv-ai-cand:hover {
+  border-color: var(--c-green-text-strong, #3a743a);
+}
+.ogv-ai-cand-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ogv-ai-cand-grp {
+  color: var(--c-text-dim, #999);
+  font-size: 12px;
+  flex: none;
+}
+
+/* ── 输入区 ── */
+.ogv-ai-comp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--c-border);
+  flex: none;
+}
+.ogv-ai-inputrow {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+/* 运行开关：深度思考 / 联网搜索（对齐 DeepSeek 官网输入框底部那两颗 pill） */
+.ogv-ai-opts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ogv-ai-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 25px;
+  padding: 0 10px;
+  border-radius: 13px;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-dim, #777);
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+.ogv-ai-pill:hover {
+  background: var(--c-gray);
+  color: var(--c-text);
+}
+.ogv-ai-pill:focus-visible {
+  outline: 2px solid var(--c-green-text-strong, #3a743a);
+  outline-offset: 1px;
+}
+/* 激活态：绿底深字（9.3:1）+ 左侧实心点，不只靠颜色区分 */
+.ogv-ai-pill.is-on {
+  background: var(--c-green);
+  border-color: transparent;
+  color: #1a1a2e;
+  font-weight: 600;
+}
+.ogv-ai-pill.is-on .ogv-ai-pill-i {
+  filter: none;
+}
+.ogv-ai-pill-i {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* 「测试中」徽标：功能仍在打磨，先明确告知，别让用户以为是稳定版 */
+.ogv-ai-beta,
+.mep-beta {
+  flex: none;
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid #c89428;
+  color: #8a6210; /* 对白底 5.3:1 */
+  background: transparent;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+[data-theme="dark"] .ogv-ai-beta,
+[data-theme="dark"] .mep-beta {
+  border-color: #8a6210;
+  color: #e0b355; /* 对深底 5:1 以上 */
+}
+.ogv-ai-input {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  padding: 8px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.4;
+  max-height: 120px;
+}
+.ogv-ai-input:focus-visible {
+  outline: 2px solid var(--c-green-text-strong, #3a743a);
+  outline-offset: 1px;
+}
+.ogv-ai-send {
+  align-self: flex-end;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--c-green);
+  color: #1a1a2e;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ogv-ai-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.ogv-ai-send:not(:disabled):hover {
+  background: var(--c-green-hover, var(--c-green));
+}
+
+/* ── 右下角悬浮球（L.Control，自动排在图层控件上方）── */
+.ogv-ai-fab {
+  /* Leaflet 给 .leaflet-control 自带 margin，这里只补一点点上间距，
+     让它和下面那摞图层控件看起来是一列 */
+  margin-bottom: 2px;
+}
+.ogv-ai-fab-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--c-border, #ddd);
+  background: var(--c-bg, #fff);
+  color: var(--c-text, #222);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+  /* 触屏：去掉双击缩放的 300ms 等待 */
+  touch-action: manipulation;
+}
+.ogv-ai-fab-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+}
+.ogv-ai-fab-btn:active {
+  transform: scale(0.94);
+  transition-duration: 0s;
+}
+.ogv-ai-fab-btn:focus-visible {
+  outline: 2px solid var(--c-green-text-strong, #3a743a);
+  outline-offset: 2px;
+}
+
+/* 出图面板打开时左移让位（出图面板宽 320 + right 12 + 间距 8） */
+.ogv-ai-root.dock-left {
+  right: 352px;
+}
+/* 中等宽度放不下两个面板时保持原位（AI 层级更高，临时盖住出图面板） */
+@media (max-width: 760px) {
+  .ogv-ai-root.dock-left {
+    right: 16px;
+  }
+}
+
+/* 窄屏：贴底全宽 */
+@media (max-width: 520px) {
+  .ogv-ai-root,
+  .ogv-ai-root.dock-left {
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 72vh;
+    border-radius: 12px 12px 0 0;
+  }
+}
+
+/* ── 历史对话抽屉（左侧滑出，覆盖消息区；仿 DeepSeek 官网分组列表）── */
+.ogv-ai-hist {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 272px;
+  max-width: 84%;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-bg-alt, #f7f7f8);
+  border-right: 1px solid var(--c-border);
+  box-shadow: 8px 0 26px rgba(0, 0, 0, 0.16);
+  z-index: 5;
+  animation: ogvAiHistIn 0.16s ease-out;
+}
+.ogv-ai-hist[hidden] {
+  display: none;
+}
+@keyframes ogvAiHistIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.ogv-ai-hist-top {
+  display: flex;
+  gap: 6px;
+  padding: 10px 10px 6px;
+  flex: none;
+}
+.ogv-ai-newbtn {
+  flex: 1;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ogv-ai-newbtn:hover {
+  background: var(--c-gray);
+}
+.ogv-ai-hist-x {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-dim, #777);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ogv-ai-hist-x:hover {
+  background: var(--c-gray);
+}
+.ogv-ai-hist-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 8px 10px;
+}
+.ogv-ai-hist-tip {
+  padding: 14px 6px;
+  font-size: 12.5px;
+  color: var(--c-text-dim, #888);
+  text-align: center;
+}
+.ogv-ai-hist-group {
+  padding: 10px 6px 4px;
+  font-size: 11px;
+  color: var(--c-text-dim, #999);
+  letter-spacing: 0.02em;
+}
+.ogv-ai-hist-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--c-text);
+  line-height: 1.35;
+}
+.ogv-ai-hist-item:hover {
+  background: var(--c-gray);
+}
+.ogv-ai-hist-item.is-on {
+  background: var(--c-green);
+  color: #1a1a2e;
+  font-weight: 600;
+}
+.ogv-ai-hist-t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ogv-ai-hist-acts {
+  display: flex;
+  gap: 1px;
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.ogv-ai-hist-item:hover .ogv-ai-hist-acts,
+.ogv-ai-hist-item.is-on .ogv-ai-hist-acts,
+.ogv-ai-hist-item:focus-within .ogv-ai-hist-acts {
+  opacity: 1;
+}
+/* 触屏没有 hover：常显操作按钮 */
+@media (hover: none) {
+  .ogv-ai-hist-acts {
+    opacity: 1;
+  }
+}
+.ogv-ai-hist-act {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.55;
+}
+.ogv-ai-hist-act:hover {
+  opacity: 1;
+  background: rgba(127, 127, 127, 0.18);
+}
+.ogv-ai-hist-act.is-on {
+  opacity: 1;
+}

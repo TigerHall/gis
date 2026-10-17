@@ -606,6 +606,14 @@
       // --- 极地投影视图 ---
       POLAR_MODE: PREFIX + "polar_mode", // north / south
       POLAR_BASEMAP: PREFIX + "polar_basemap",
+      // --- 出图 ---
+      EXPORT_OPTIONS: PREFIX + "map_export_options",
+      // --- AI 助手 ---
+      AI_KEY: PREFIX + "ai_key",
+      AI_SESSIONS: PREFIX + "ai_sessions",
+      // AI 输入框下方的两个运行开关（联网搜索 / 深度思考），值一律 "true" / "false"
+      AI_WEB_SEARCH: PREFIX + "ai_web_search",
+      AI_THINKING: PREFIX + "ai_thinking",
     };
 
     // 本应用的键前缀（清理时只动这些，不碰同域其他页面）
