@@ -1239,21 +1239,67 @@
     return n;
   }
 
-  // ========== 经纬网（与屏幕上的 Leaflet.Graticule 同规则）==========
-  // 间隔表直接照搬 Leaflet.Graticule.js 的 zoomInterval，保证「图上有的导出也有」。
-  var GRAT_INTERVALS = [
-    { start: 2, end: 2, interval: 40 },
-    { start: 3, end: 3, interval: 20 },
-    { start: 4, end: 4, interval: 10 },
-    { start: 5, end: 7, interval: 5 },
-    { start: 8, end: 20, interval: 1 },
-  ];
-  function graticuleInterval(z) {
-    for (var i = 0; i < GRAT_INTERVALS.length; i++) {
-      var g = GRAT_INTERVALS[i];
-      if (z >= g.start && z <= g.end) return g.interval;
+  // ========== 经纬网间隔：按像素密度自动挑「整齐度数」 ==========
+  // ⚠️ 旧实现照搬 Leaflet.Graticule.js 的 zoomInterval 表（按**整数 zoom** 查表）。
+  //    本项目开了 zoomSnap:0（无级缩放），zoom 常是 4.3 这种小数 → 表里每个
+  //    {start,end} 都是整数区间，一律命中不了 → 落到兜底的 1°，于是 100° 宽的图里
+  //    画出 101 条经线、图框刻度和外框标注挤成一排梳齿（2026-10-18 报的问题）。
+  //    现在改成：按「标注之间至少留几倍字宽」反推一个整齐的度数，
+  //    网格线、图框刻度、图外标注**共用同一个间隔**（论文图的规矩：线跟着标注走）。
+  var NICE_DEG = [0.1, 0.2, 0.5, 1, 2, 2.5, 5, 10, 15, 20, 30, 45, 60, 90, 180];
+
+  function niceInterval(pxPerDeg, minPx) {
+    if (!(pxPerDeg > 0) || !(minPx > 0)) return 10;
+    for (var i = 0; i < NICE_DEG.length; i++) {
+      if (NICE_DEG[i] * pxPerDeg >= minPx - 1e-6) return NICE_DEG[i];
     }
-    return z < 2 ? 60 : 1;
+    return NICE_DEG[NICE_DEG.length - 1];
+  }
+
+  /** 图外经纬度标注字号（px）= 8pt。drawFrame 与「选间隔」必须用同一个值。 */
+  function frameLabelFontPx(ptPx) {
+    return Math.max(9, 8 * (Number(ptPx) || 8));
+  }
+
+  /**
+   * 选经纬网间隔（度）。两轴各自独立：
+   *   · 经度：画布上「像素/度」是常数；
+   *   · 纬度：墨卡托非线性 → 取可见范围**最靠赤道的那条边**的像素/度（那里最挤），
+   *     这样整幅图里每个格子都不小于阈值，两极方向只会更疏，不会挤成一团。
+   * 阈值 = 相邻标注的最小像素间距，按字号（8pt）折算，与纸面/dpi 无关：
+   *   经度标注横排要容下「180°E」（约 2.5 字宽）→ 4.0 字宽；
+   *   纬度标注只要上下不压住 → 2.6 字高。
+   */
+  function pickGraticuleIntervals(o, VW, VH, ptPx) {
+    var fs = frameLabelFontPx(ptPx);
+    // 画布上「每度经度 = 多少像素」= 整幅世界宽 ÷ 360（经度方向恒等距）
+    var pxPerDegLng = Math.max(1e-6, (o.worldSize * o.S) / 360);
+    var north = unproject(o, VW / 2, 0).y;
+    var south = unproject(o, VW / 2, VH).y;
+    var latRef = south <= 0 && north >= 0 ? 0 : Math.abs(south) < Math.abs(north) ? south : north;
+    latRef = Math.max(-84, Math.min(84, latRef));
+    var yA = latToY(clampLat(latRef), o.worldSize, 0) * o.S - o.shiftY;
+    var yB = latToY(clampLat(latRef + 1), o.worldSize, 0) * o.S - o.shiftY;
+    var pxPerDegLat = Math.abs(yB - yA);
+    if (!(pxPerDegLat > 1e-9)) pxPerDegLat = pxPerDegLng;
+    var ivLng = niceInterval(pxPerDegLng, fs * 4.0);
+    var ivLat = niceInterval(pxPerDegLat, fs * 2.2);
+    // 两轴尽量用同一个度数：格网是「网」，一横一竖两套刻度会让格子变成细长条。
+    // 但只在**两轴都还剩得下至少 3 条线**时才统一——极端长条图（宽 3000×高 700）
+    // 若强行统一，短边只剩 1~2 条纬线，等于没有格网。
+    var ivMax = Math.max(ivLng, ivLat);
+    if (ivMax / Math.min(ivLng, ivLat) <= 2.5) {
+      var spanLng = (VW / (o.worldSize * o.S)) * 360;
+      var spanLat = Math.abs(north - south);
+      if (spanLng / ivMax >= 4 && spanLat / ivMax >= 4) {
+        ivLng = ivMax;
+        ivLat = ivMax;
+      }
+    }
+    return { lng: ivLng, lat: ivLat };
+  }  /** 把起点吸附到「step 整数倍」的格点上（收掉浮点尾巴，避免 60.00000000001 这种标注） */
+  function latticeStart(v, step) {
+    return Math.round(Math.ceil(v / step - 1e-9) * step * 1e6) / 1e6;
   }
 
   function fmtLng(v) {
@@ -1282,11 +1328,9 @@
    *    而画布可能覆盖一个以上世界宽度（低缩放 + 大幅面时），
    *    直接按未归一化的经度算 x 才能正确重复出多份网格。
    */
-  function drawGraticule(ctx, o, W, H, scaleFactor, screenZoom) {
-    // ⚠️ 间隔要按**屏幕 zoom** 取，不是内部瓦片级 zoomTile：
-    //    画布与屏幕覆盖同一地理范围，所以「每多少度一条线」必须与屏幕一致，
-    //    否则同一视野导出后网格会比屏幕上疏（zoomTile 常低于屏幕 zoom）。
-    var iv = graticuleInterval(screenZoom == null ? o.zoom : screenZoom);
+  function drawGraticule(ctx, o, W, H, scaleFactor, ivs) {
+    var ivLng = ivs && ivs.lng ? ivs.lng : 10;
+    var ivLat = ivs && ivs.lat ? ivs.lat : ivLng;
     var worldSize = o.worldSize;
     var S = o.S;
 
@@ -1311,9 +1355,11 @@
     ctx.lineWidth = lineW;
     ctx.setLineDash([]);
 
-    // 经线
-    var l0 = Math.ceil(west / iv) * iv;
-    for (var lng = l0; lng <= east; lng += iv) {
+    // 经线（格点 = ivLng 的整数倍，与 drawFrame 的刻度/标注同一套格点）
+    var l0 = latticeStart(west, ivLng);
+    for (var k = 0; ; k++) {
+      var lng = l0 + k * ivLng;
+      if (lng > east + 1e-9) break;
       var x = lngToX(lng);
       if (x < 0 || x > W) continue;
       ctx.beginPath();
@@ -1322,8 +1368,11 @@
       ctx.stroke();
     }
     // 纬线（墨卡托在 ±85 以外已无意义）
-    var b0 = Math.ceil(Math.max(-84, south) / iv) * iv;
-    for (var lat = b0; lat <= Math.min(84, north); lat += iv) {
+    var b0 = latticeStart(Math.max(-84, south), ivLat);
+    var latTop = Math.min(84, north);
+    for (var j = 0; ; j++) {
+      var lat = b0 + j * ivLat;
+      if (lat > latTop + 1e-9) break;
       var y = latToYc(lat);
       if (y < 0 || y > H) continue;
       ctx.beginPath();
@@ -1334,9 +1383,9 @@
 
     // ⚠️ 经纬度标注**不在这里画**：论文图的标注在图框**外侧**，必须画在图廓留白里。
     //    那部分在 render() 里是 clip 掉的（内容区 0..VW），所以由 drawFrame 负责。
-    //    这里只返回间隔，供 drawFrame 对齐刻度。
+    //    这里只返回两轴间隔，供 drawFrame 对齐刻度。
     ctx.restore();
-    return iv;
+    return { lng: ivLng, lat: ivLat };
   }
 
   // ========== 图廓 / 刻度 / 图外经纬度标注（论文图的关键） ==========
@@ -1353,11 +1402,13 @@
    *    **内容区坐标**（0..VW）—— 所以每个位置都要 + PAD 才是纸面坐标。
    *    这两套坐标搞混的典型症状：刻度整体偏移一个边距、标注跑到图里面。
    *
-   * @returns {{xTicks:number,yTicks:number,interval:number,labels:string}}
+   * @returns {{xTicks:number,yTicks:number,intervalLng:number,intervalLat:number,labels:string}}
    */
   function drawFrame(ctx, W, H, PAD, o, VW, VH, scaleFactor, opts) {
     opts = opts || {};
-    var iv = Number(opts.interval) || 10;
+    // 两轴各有自己的间隔（墨卡托下同一度数的纬度在画布上比经度更疏）
+    var ivLng = Number(opts.intervalLng) || Number(opts.interval) || 10;
+    var ivLat = Number(opts.intervalLat) || ivLng;
     var sf = Math.min(scaleFactor, 6);
     // 印刷单位（1pt 的像素数）；拿不到就按 96dpi 近似
     var P = Number(opts.ptPx) || sf * 1.33;
@@ -1379,11 +1430,18 @@
     var south = unproject(o, VW / 2, VH).y;
 
     var xs = [];
-    var l0 = Math.ceil(west / iv) * iv;
-    for (var lng = l0; lng <= east + 1e-9; lng += iv) xs.push({ v: lng, p: lngToXc(lng) });
+    var l0 = latticeStart(west, ivLng);
+    for (var k = 0; ; k++) {
+      var lng = l0 + k * ivLng;
+      if (lng > east + 1e-9) break;
+      xs.push({ v: lng, p: lngToXc(lng) });
+    }
     var ys = [];
-    var b0 = Math.ceil(Math.max(-84, south) / iv) * iv;
-    for (var lat = b0; lat <= Math.min(84, north) + 1e-9; lat += iv) {
+    var b0 = latticeStart(Math.max(-84, south), ivLat);
+    var latTop = Math.min(84, north);
+    for (var j = 0; ; j++) {
+      var lat = b0 + j * ivLat;
+      if (lat > latTop + 1e-9) break;
       ys.push({ v: lat, p: latToYc(lat) });
     }
 
@@ -1426,31 +1484,34 @@
     }
 
     ctx.lineWidth = Math.max(0.4, 0.45 * P);
-    xs.forEach(function (t) {
-      var i = xs.indexOf(t);
-      // 次刻度：本格与前格之间
+    // 次刻度只在「半格还看得见」时画：间隔自动选到很密时（<8px 半格）会退化成梳齿
+    xs.forEach(function (t, i) {
       var prev = xs[i - 1];
-      if (prev) vTick((prev.p + t.p) / 2, minorLen);
+      if (prev && t.p - prev.p >= 16) vTick((prev.p + t.p) / 2, minorLen);
       vTick(t.p, tickLen);
     });
-    ys.forEach(function (t) {
-      var i = ys.indexOf(t);
+    ys.forEach(function (t, i) {
       var prev = ys[i - 1];
-      if (prev) hTick((prev.p + t.p) / 2, minorLen);
+      if (prev && Math.abs(prev.p - t.p) >= 16) hTick((prev.p + t.p) / 2, minorLen);
       hTick(t.p, tickLen);
     });
 
     // ③ 图框外经纬度标注
     var mode = opts.labels == null ? "all" : String(opts.labels);
-    var fs = Math.max(9, 8 * P);
+    var fs = frameLabelFontPx(P); // 与 pickGraticuleIntervals 用同一字号
     ctx.font = "500 " + fs + "px " + FONT_SERIF;
     ctx.fillStyle = "#111";
     var gap = Math.max(3, 1.3 * P);
     var cornerGuard = fs * 2.8;
-    // 标注间距下限：格子太密时宁可少标几个（论文图不会把数字排成一排）
-    var minGap = fs * 3.4;
+    // 兜底跳过：间隔已由 pickGraticuleIntervals 按字宽/像素反选（不会密），
+    // 阈值取在「选中间隔的最小间距」之下 → 正常情况下 dropped 恒为 0，
+    // 只在极地夹到 ±84°、跨 180° 这类边界情况下兜一下，宁可少标一个也不重叠。
+    var minGapX = fs * 3.4;
+    var minGapY = fs * 2.0;
     var lastX = -1e9;
     var lastY = -1e9;
+    var dropX = 0;
+    var dropY = 0;
 
     function put(text, x, y, align, baseline) {
       ctx.textAlign = align;
@@ -1470,7 +1531,10 @@
       xs.forEach(function (t) {
         var x = x0 + t.p;
         if (x < x0 + cornerGuard || x > x1 - cornerGuard) return;
-        if (x - lastX < minGap) return; // 太密就跳过
+        if (x - lastX < minGapX) {
+          dropX++;
+          return;
+        }
         lastX = x;
         var s = fmtLng(t.v);
         if (topOn) put(s, x, y0 - gap, "center", "bottom");
@@ -1482,7 +1546,10 @@
         // ⚠️ 纬度是**从南往北**遍历的，y 递减 → 必须用绝对值比较间距，
         //    写成 y - lastY 会让「第二个开始的每一个」都判成太密而全部跳过
         //    （症状：只有最下面一个纬度标注）。
-        if (Math.abs(y - lastY) < minGap * 0.85) return;
+        if (Math.abs(y - lastY) < minGapY) {
+          dropY++;
+          return;
+        }
         lastY = y;
         var s = fmtLat(t.v);
         if (leftOn) put(s, x0 - gap, y, "right", "middle");
@@ -1491,7 +1558,15 @@
     }
 
     ctx.restore();
-    return { xTicks: xs.length, yTicks: ys.length, interval: iv, labels: mode };
+    return {
+      xTicks: xs.length,
+      yTicks: ys.length,
+      interval: ivLng,
+      intervalLng: ivLng,
+      intervalLat: ivLat,
+      labels: mode,
+      dropped: dropX + dropY,
+    };
   }
 
   /** 图注编号「(a)」：论文图左上角的小标号，白描边保证压深色底图也可读 */
@@ -2073,7 +2148,7 @@
     // 用「W 的百分之几」定留白会在高 dpi 下直接放不下（字被裁掉一半）。
     // 宽度要能容下最长的纬度标注「25°N」（4 个字符 ≈ 3.4em），否则左右标注会被纸边裁掉。
     var PAD = frameOn
-      ? Math.round(Math.max(14, Math.min(W * 0.12, 8 * ptPx * 3.6)))
+      ? Math.round(Math.max(14, Math.min(W * 0.12, 8 * ptPx * 3.6), frameLabelFontPx(ptPx) * 3.2))
       : 0;
     var VW = W - PAD * 2;
     var VH = H - PAD * 2;
@@ -2265,6 +2340,12 @@
       if (opts.onProgress) opts.onProgress(p);
     };
 
+    // ---- 经纬网间隔：一次算好，网格线 / 图框刻度 / 图外标注共用 ----
+    // 必须在 steps 之前算：drawGraticule 与 drawFrame 各画一半，间隔不一致就会
+    // 出现「网格比标注密一档」的散乱感（也正是 2026-10-18 报的问题之一）。
+    var gratIvs = pickGraticuleIntervals(o, VW, VH, ptPx);
+    report.graticuleIntervalDeg = { lng: gratIvs.lng, lat: gratIvs.lat };
+
     // ---- 1. 底图 ----
     if (opts.includeBase !== false && desc) {
       steps.push(function () {
@@ -2369,14 +2450,7 @@
     // ---- 3. 经纬网（在矢量之下，与屏幕层级一致）----
     if (opts.graticule) {
       steps.push(function () {
-        report.graticuleIntervalDeg = drawGraticule(
-          ctx,
-          o,
-          VW,
-          VH,
-          scaleFactor,
-          zoomNow,
-        );
+        drawGraticule(ctx, o, VW, VH, scaleFactor, gratIvs);
       });
     }
 
@@ -2492,7 +2566,8 @@
       ctx.restore();
       if (!frameOn) return;
       report.frameTicks = drawFrame(ctx, W, H, PAD, o, VW, VH, scaleFactor, {
-        interval: report.graticuleIntervalDeg,
+        intervalLng: gratIvs.lng,
+        intervalLat: gratIvs.lat,
         labels: opts.frameLabels == null ? "all" : opts.frameLabels,
         ptPx: ptPx,
       });

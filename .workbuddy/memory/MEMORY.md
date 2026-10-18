@@ -7,20 +7,19 @@
 - ⭐ **首要参考平台 = [GeoLibre](https://github.com/opengeos/GeoLibre)**：加/改功能先看它的实现与取舍。见 `docs/REFERENCES.md`。
 
 ## 1 架构
-- **AI = `assets/ai-chat.js`**（`window.OGVAI`）：本地直通（`__OGV_search`）→ `PLACE_REGISTRY` → 天地图 → **联网** → 模型 tool-calling（≤8 轮、非流式、工具串行；触顶再来一轮 `noTools` 收尾）。出图走 `MapExport.applyOptions`/`exportNow`/`resolveOpts`。
-  - 入口 = 右下角 **`L.Control` 悬浮球**（在图层控件上方，`aiFabToggle` 可关）+ **Ctrl/⌘+K**（`Ctrl+E`/`Ctrl+F` 已占）；模型 `deepseek-flash` = **V4.1-Flash-1017**（`deepseek-chat` 是旧名，能跑但不稳），`OGV_AI_MODEL` 可覆盖。
-  - 输入框两颗 pill = 运行开关（`_opt.web/think` → `ogv_ai_web_search`/`ogv_ai_thinking`）：关联网 = 工具集剔除 `web_*` 且不自动联网；关思考 = `thinking:{type:"disabled"}`。⚠️ `getBool` 只认 `"true"`，写 `"1"` 会被 `open()` 读回 false（症状：点了像没生效）。
-  - 历史对话 = `ogv-chatstore.js`（IDB `ogv-ai/sessions`，永不 reject，不可用降级 localStorage）；`☰` 抽屉分组；400ms 防抖 + 关窗/切后台立即 flush；旧 `ogv_ai_sessions` 自动迁移。
-  - ⚠️ 开思考时每轮须回传 `reasoning_content`（`messages.push(msg)` 整条入栈即成立，真 API 已验）。
-  - ⚠️ **提问意图必须拦**（`QA_INTENT`：多少/什么/怎么/哪里/？…）→ 否则「最大深度多少」被天地图当 POI 命中，只回「已定位」。
+- **AI = `assets/ai-chat.js`**（`window.OGVAI`）：本地直通（`__OGV_search`）→ `PLACE_REGISTRY` → 天地图 → **联网** → 模型 tool-calling（≤8 轮、非流式、串行；触顶再一轮 `noTools` 收尾）。出图走 `MapExport.applyOptions`/`exportNow`/`resolveOpts`。入口 = 右下 `L.Control` 悬浮球（`aiFabToggle` 可关）+ **Ctrl/⌘+K**（`Ctrl+E/F` 已占）；模型 `deepseek-flash` = **V4.1-Flash-1017**（`deepseek-chat` 旧名，能跑但不稳），`OGV_AI_MODEL` 可覆盖。
+  - 输入框两颗 pill = 运行开关（`_opt.web/think` → `ogv_ai_web_search`/`ogv_ai_thinking`）：关联网 = 工具集剔 `web_*` 且不自动联网；关思考 = `thinking:{type:"disabled"}`。⚠️ `getBool` 只认 `"true"`，写 `"1"` 会被读回 false（症状：点了像没生效）。
+  - 历史 = `ogv-chatstore.js`（IDB `ogv-ai/sessions`，永不 reject，降级 localStorage）；`☰` 抽屉分组；400ms 防抖 + 关窗/切后台立即 flush；旧 `ogv_ai_sessions` 自动迁移。
+  - ⚠️ 开思考时每轮须回传 `reasoning_content`（`messages.push(msg)` 整条入栈即成立）。
+  - ⚠️ **提问意图必须拦**（`QA_INTENT`：多少/什么/怎么/哪里/？）→ 否则「最大深度多少」被天地图当 POI 命中，只回「已定位」。
 - **地名 = `ogv-geocode.js`（`OGVGeo`）**、**联网 = `ogv-websearch.js`（`OGVWeb`）**：全站唯一出口 + LRU + **永不 reject**。
   - ⚠️ 天地图 `mapBound` 须钳 ±180/±90（世界副本态给 -190/380 → 400）；token 是**浏览器端权限**，curl 必报 301012。
   - ⚠️ 联网**无坐标** → 只作第四级，`_locate` 回 `ok:false`+`web[]`+hint「不许说已定位」；按成功计费、QPS 5 → 缓存 + 在途合并。
 - ⚠️ **要素搜索只覆盖已加载过的图层**（懒加载建索引）→ 搜不到 ≠ 没有；0 命中回 hint 让模型先 `toggle_layer`。
-- ⚠️ **世界副本护栏必须 `fitBounds({animate:false})`**：动画期 `getBounds()` 是中间态（实测停在 1.61/653°）。第三方定位用 `_clampWorldSpanSoon`（`moveend` 后再量 + 6s 兜底）。
+- ⚠️ **世界副本护栏必须 `fitBounds({animate:false})`**：动画期 `getBounds()` 是中间态（实测停 1.61/653°）。第三方定位用 `_clampWorldSpanSoon`（`moveend` 后再量 + 6s 兜底）。
 - `geo-config.js` 七段：①`SITE_CONFIG` ①-2`MAP_CONFIG` ①-3`BASEMAP_CONFIG` ①-4`POLAR_CONFIG` ②路径 ③`window.geoJsonGroups` ④`PLACE_REGISTRY`；须先于 `geojsonloader.js`/`basemap-manager.js`。
 - **加图层 = 2 处**：`assets/geojson/*.geojson.gz` + ③段一条。gzip 走运行时缓存、**不进 SW** → 不动 HTML/SW。清单消费 5 处（`geojsonloader.js` 4 + `app.js:466`）；`window.geoJsonGroups ||= []` 兜底别删。
-- ✅ **组内可挂小分组**：`group.subgroups=[{groupName,hidden?,layers?,subgroups?}]`，可无限递归。DOM 沿用 `.layer-group` 等 → 后代选择器天然覆盖。⚠️ 假设只有一层的老逻辑要逐级向上改（`closest()` 只给最近一层）：`expandToLayerGroup`、`updateLayerItemStatus`、Ctrl+点判据（`:not(.layer-subgroup)`）、`getLayerPopupConfig`。搜索按完整路径注册。
+- ✅ **组内可挂小分组**：`group.subgroups=[{groupName,hidden?,layers?,subgroups?}]`，可无限递归；DOM 沿用 `.layer-group` 等 → 后代选择器天然覆盖。⚠️ 假设只有一层的老逻辑要逐级向上改（`closest()` 只给最近一层）：`expandToLayerGroup`、`updateLayerItemStatus`、Ctrl+点判据（`:not(.layer-subgroup)`）、`getLayerPopupConfig`。搜索按完整路径注册。
 - ⚠️ **map 引用三类**：`geojsonloader.js` 用全局 `map`（自动跟随）；`basemap-manager.js:21`/`feature-panel.js:11` 是**加载期快照** → 换实例必须 rebind；`app.js:548/605/618` 函数内读，安全。
 - ⚠️ **`map.getBounds()` 不可信**（不 wrap；极地退化成零高度线）→ 视口裁剪**一律像素坐标**。
 
@@ -42,11 +41,13 @@
 - **底图失败不许静默**：全失败 / ≥30% / `skipped` / 影像失败，四类都进 `report.warnings`。
 - **跨180°环绕** = 反环绕（逐点选最近的 ±360° 副本）+ 按 k×worldW 平移多副本。**底图识别**认 `baseLayers` ∩ 实际挂着的图层；⚠️ `ArcGIS-海洋` 是 LayerGroup 且 `ibo_w` 排第一 → 先剔除 `overlays/moreOverlays`。
 - **WMS** 自己拼 GetMap，**`srs` 必须与 bbox 单位一致**（度→4326；写 3857 得空白图而 `loadImage` 仍「成功」）。GEBCO 20~54s → 超时 120s + 屏幕瓦片回退。
-- **`L.Polygon extends L.Polyline`** → 判面先判 Polygon；多环**同一 path 再 `fill("evenodd")`**；`_isHitLayer` 排除。**`dashArray` 是字符串** → `setLineDash` 前归一。**经纬网**照搬 `Leaflet.Graticule.js` 间隔但按**屏幕 zoom** 取、**不走 `project()`**。
+- **`L.Polygon extends L.Polyline`** → 判面先判 Polygon；多环**同一 path 再 `fill("evenodd")`**；`_isHitLayer` 排除。**`dashArray` 是字符串** → `setLineDash` 前归一。
+- **经纬网间隔 = 按像素自动挑**（`pickGraticuleIntervals`，2026-10-18）：梯子 `0.1…180`，经度 ≥**4.0 字宽**、纬度 ≥**2.2 字高**（墨卡托取**最靠赤道那条边**的像素/度，那里最挤）；**网格线/图框刻度/图外标注共用同一个值**；两轴度数差 ≤1 档且两边都排得下 ≥4 条线时统一（格网才像「网」）。⚠️ 旧实现照搬 `Leaflet.Graticule.js` 的 `zoomInterval` 表——**表是按整数 zoom 分档的**，本项目 `zoomSnap:0` 时 zoom=4.3 每个档都命中不了 → 兜底 `1`°（100° 宽的图画出 101 条经线）。**凡照搬「按 zoom 分档」的表，先问 zoom 是不是小数**。
+  `report.graticuleIntervalDeg = {lng,lat}`、`report.frameTicks.dropped`（正常恒 0，可当回归断言）。
 - **点图标复刻屏幕 DOM**：`createImageBitmap` **不支持 SVG** → 走 `<img>`；点必须在**面/线后**画；>3000 点走 `L.MarkersCanvas`。
 - **要素标签读 DOM**（`.station-label:not(.hidden)`+`.leaflet-tooltip`）按 `k=W/屏宽` 映射（低缩放时标签被隐藏）。标签要**矩形避让**。
 - **构图护栏**：`maxWorlds`（默认 1）给 zoom 地板；`report.warnings` 必须说清「为什么长这样」。
-- **论文级图廓**（`frame`，默认开）：`PAD` 留白 + 内容区 `VW×VH` 与纸面 `W×H` **分离**；绘制前 `translate(PAD,PAD)`+`clip`，收尾 `restore()` 后再画图框。⚠️ `zoom` 反算 / `shiftX·Y` / `scaleFactor` / `frame` **必须全用 VW·VH**（混用纸面宽 = 构图跑偏）。⚠️ 留白按 **pt** 算（`8pt×3.6`）：按「纸宽 2.6%」算时 300dpi 下 `25°N` 被裁成 `5°N`。
+- **论文级图廓**（`frame`，默认开）：`PAD` 留白 + 内容区 `VW×VH` 与纸面 `W×H` **分离**；绘制前 `translate(PAD,PAD)`+`clip`，收尾 `restore()` 后再画图框。⚠️ `zoom` 反算 / `shiftX·Y` / `scaleFactor` / `frame` **必须全用 VW·VH**（混用纸面宽 = 构图跑偏）。⚠️ 留白按 **pt** 算（`8pt×3.6`）且同时受 `标注字号×3.2` 约束（`fs` 有 9px 下限，小图时按 pt 算的留白会小于字宽 → 缩略图「15°N」剩「5°N」）。
 - ⚠️ **装饰字号走有效 dpi**：`ptPx = (画布宽 ÷ 纸宽英寸) / 72`，**不是**声明 dpi。预览同纸面但像素少（170mm@322px = 48dpi），按 300dpi 算 → 8pt 字占缩略图 10% 宽（图例盖半张图）。
 - ⚠️ **纬度标注遍历是南→北（y 递减）**：间距判据必须 `Math.abs(y - lastY)`，写成 `y - lastY` 会把除第一个外的全判「太密」跳过（症状：只标一个纬度）。
 - ⚠️ 别在 `state` 对象上挂方法（`Object.assign` 会覆盖）。图例/比例尺用**直角**（圆角像 App UI），字体 `FONT_SERIF`(Times→宋体) 给标注·图例·图注。
