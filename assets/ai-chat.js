@@ -2574,6 +2574,7 @@
     _renderKeyHint();
     _renderMessages();
     _watchExportPanel();
+    _bindMapAutoCollapse(); // 窄屏：点地图即收起（地图可能还没就绪，open 时再试一次）
     _root.classList.add("open");
     _open = true;
     _syncFab();
@@ -2603,16 +2604,42 @@
     _loadedOnce = true;
     _loadSessions();
   }
-  function close() {
+  /**
+   * 收起面板。
+   * @param {{keepRequest?: boolean}} [opts]
+   *   keepRequest=true 时不中断在途请求 —— 「点地图收起」走这条路：
+   *   用户只是想看地图上的结果，答案要继续流式写进消息区，重新打开就能看到。
+   */
+  function close(opts) {
     if (_root) _root.classList.remove("open");
     _open = false;
     _flushSave(); // 关面板/切标签页前把最后一句立刻落盘（别丢在防抖窗口里）
     _syncFab();
-    if (_abort) _abort.abort();
+    if (!(opts && opts.keepRequest) && _abort) _abort.abort();
   }
   function toggle() {
     if (_open) close();
     else open();
+  }
+
+  // ─────────────────────────────────────────────
+  //  点地图自动收起（窄屏专属）
+  //  窄屏面板贴底、几乎盖满全屏，用户点地图就是想看地图 → 面板自动让位。
+  //  宽屏不动：桌面上面板只占右下角，边看答案边点图是正常用法。
+  // ─────────────────────────────────────────────
+  var _clickBoundMap = null;
+  function _isNarrowScreen() {
+    if (typeof global.matchMedia !== "function") return false;
+    return global.matchMedia("(max-width: 760px), (max-height: 520px)").matches;
+  }
+  function _bindMapAutoCollapse() {
+    var m = global.map;
+    if (!m || typeof m.on !== "function" || _clickBoundMap === m) return;
+    _clickBoundMap = m; // 地图实例可能被重建（2D/3D 切换），换了就重新绑
+    m.on("click", function () {
+      if (!_open || !_isNarrowScreen()) return;
+      close({ keepRequest: true });
+    });
   }
 
   // ─────────────────────────────────────────────
@@ -2640,6 +2667,7 @@
     _initFab();
     _loadOpts(); // 开关状态与面板是否打开无关：AI 被快捷键唤起前就要生效
     if (_els.optWeb) _syncOptBtns();
+    _bindMapAutoCollapse(); // 点地图自动收起（窄屏）
     // 关标签页/切到后台：把还在防抖窗口里的最后一句写进 IDB
     global.addEventListener("pagehide", _flushSave);
     document.addEventListener("visibilitychange", function () {

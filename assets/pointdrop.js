@@ -3,6 +3,12 @@
  * 依赖：window.addUserLayer（由 geojsonloader.js 挂载）
  *       pointdrop.css（样式）
  * 在 geojsonloader.js 之后加载
+ *
+ * 功能：
+ *   · 坐标投点：粘贴 CSV/TSV/Excel → 表格编辑 → 生成点图层
+ *   · 点集转线 / 转面：按「分组字段」把点分成若干条线 / 若干个面，
+ *     组内按「排序字段」（含「# 表格行序」）排序，可选闭合线；
+ *     一次只产出一个图层，图层里可以有多条线 / 多个面。
  */
 (function () {
   "use strict";
@@ -11,6 +17,7 @@
   var pointDropData = []; // [{lat, lng, Name, ...extra}]
   var pointDropCols = []; // 额外字段名（不含固定三列）
   var pointDropTable = null; // DOM 容器
+  var _conv = null; // 点集转线/转面的控件引用
 
   // ========== 初始化：在图层面板"上传矢量"按钮上方插入投点按钮 ==========
   function initPointDropUI() {
@@ -121,6 +128,9 @@
     btnBar.appendChild(clearBtn);
     btnBar.appendChild(genBtn);
     pointDropTable.appendChild(btnBar);
+
+    // 点集 → 线 / 面（折叠区：默认收起，免得把 240px 宽的侧栏撑得老长）
+    pointDropTable.appendChild(buildConvertPanel());
 
     // 表格容器
     var tableWrap = document.createElement("div");
@@ -244,6 +254,404 @@
     html += "</tbody></table>";
 
     wrap.innerHTML = html;
+
+    // 字段可能变了（粘贴 / 改名 / 加删字段）→ 同步转线转面的下拉选项
+    refreshConvOptions();
+  }
+
+  // ========== 点集 → 线 / 面 ==========
+  // 设计要点（用户需求）：
+  //   · 分组字段 = 「哪些点属于同一条线 / 同一个面」（可多选，按组合值分区）；
+  //   · 排序字段 = 「点在这条线上的先后顺序」，也允许直接用「# 表格行序」；
+  //   · 闭合线勾选 → 首尾相接（面本身必须闭合，自动补）；
+  //   · 一次只生成 **一个** 图层，图层里可以有多条线 / 多个面。
+  function buildConvertPanel() {
+    var box = document.createElement("details");
+    box.className = "pd-conv";
+
+    var sum = document.createElement("summary");
+    sum.className = "pd-conv-sum";
+    sum.textContent = "🔗 点集转线 / 转面";
+    sum.title = "按字段分组把点连成线或面，一次生成一个图层（可含多条线/多个面）";
+    box.appendChild(sum);
+
+    var body = document.createElement("div");
+    body.className = "pd-conv-body";
+
+    // ① 分组字段（多选）
+    var rowG = document.createElement("div");
+    rowG.className = "pd-conv-row";
+    var lbG = document.createElement("span");
+    lbG.className = "pd-conv-lb";
+    lbG.textContent = "分组";
+    var groupSel = document.createElement("select");
+    groupSel.id = "pdConvGroup";
+    groupSel.className = "pd-conv-sel";
+    groupSel.multiple = true;
+    groupSel.size = 3;
+    groupSel.title =
+      "区分不同线 / 面的字段（可多选，按组合值分组）。不选 = 所有点连成一条线 / 一个面";
+    rowG.appendChild(lbG);
+    rowG.appendChild(groupSel);
+    body.appendChild(rowG);
+
+    // ② 排序字段 + 降序
+    var rowO = document.createElement("div");
+    rowO.className = "pd-conv-row";
+    var lbO = document.createElement("span");
+    lbO.className = "pd-conv-lb";
+    lbO.textContent = "排序";
+    var orderSel = document.createElement("select");
+    orderSel.id = "pdConvOrder";
+    orderSel.className = "pd-conv-sel";
+    orderSel.title = "决定点连成线 / 面的先后顺序。默认按表格行序（#），也可选任意字段";
+    var chkDesc = document.createElement("input");
+    chkDesc.type = "checkbox";
+    chkDesc.id = "pdConvDesc";
+    var lbDesc = document.createElement("label");
+    lbDesc.className = "pd-conv-chk";
+    lbDesc.htmlFor = "pdConvDesc";
+    lbDesc.appendChild(chkDesc);
+    lbDesc.appendChild(document.createTextNode("降序"));
+    rowO.appendChild(lbO);
+    rowO.appendChild(orderSel);
+    rowO.appendChild(lbDesc);
+    body.appendChild(rowO);
+
+    // ③ 闭合线
+    var rowC = document.createElement("div");
+    rowC.className = "pd-conv-row";
+    var chkClose = document.createElement("input");
+    chkClose.type = "checkbox";
+    chkClose.id = "pdConvClose";
+    var lbClose = document.createElement("label");
+    lbClose.className = "pd-conv-chk";
+    lbClose.htmlFor = "pdConvClose";
+    lbClose.appendChild(chkClose);
+    lbClose.appendChild(document.createTextNode("闭合线"));
+    lbClose.title = "首尾相接（转线有效；转面本身就必须闭合，自动补）";
+    var hint = document.createElement("span");
+    hint.className = "pd-conv-hint";
+    hint.textContent = "面自动闭合";
+    rowC.appendChild(lbClose);
+    rowC.appendChild(hint);
+    body.appendChild(rowC);
+
+    // ④ 两个动作按钮
+    var rowB = document.createElement("div");
+    rowB.className = "pd-conv-row pd-conv-btns";
+    var bLine = document.createElement("button");
+    bLine.type = "button";
+    bLine.className = "pd-action-btn";
+    bLine.textContent = "➡ 转线";
+    bLine.title = "每组点连成一条 LineString（≥2 点）";
+    var bPoly = document.createElement("button");
+    bPoly.type = "button";
+    bPoly.className = "pd-action-btn";
+    bPoly.textContent = "△ 转面";
+    bPoly.title = "每组点围成一个 Polygon（≥3 点，自动闭合）";
+    rowB.appendChild(bLine);
+    rowB.appendChild(bPoly);
+    body.appendChild(rowB);
+
+    // 一句话说明两个下拉到底在管什么（不能全靠 title，触屏没有 hover）
+    var note = document.createElement("div");
+    note.className = "pd-conv-note";
+    note.textContent = "分组：区分不同线/面（可多选）· 排序：组内点的先后";
+    body.appendChild(note);
+
+    box.appendChild(body);
+
+    _conv = {
+      root: box,
+      groupSel: groupSel,
+      orderSel: orderSel,
+      desc: chkDesc,
+      closeRing: chkClose,
+    };
+
+    bLine.onclick = function () {
+      convertPoints("line");
+    };
+    bPoly.onclick = function () {
+      convertPoints("polygon");
+    };
+
+    return box;
+  }
+
+  /** 可当作分组 / 排序依据的字段（Name + 所有额外字段，去重去空） */
+  function convFieldList() {
+    var out = [];
+    var seen = {};
+    var arr = ["Name"].concat(pointDropCols);
+    for (var i = 0; i < arr.length; i++) {
+      var f = String(arr[i] == null ? "" : arr[i]).trim();
+      if (!f || seen[f]) continue;
+      seen[f] = 1;
+      out.push(f);
+    }
+    return out;
+  }
+
+  /** 重建下拉选项；保留用户已选中的字段（渲染表格时会被反复调用） */
+  function refreshConvOptions() {
+    if (!_conv) return;
+    var fields = convFieldList();
+
+    // 分组（多选）
+    var keepG = {};
+    var gi;
+    for (gi = 0; gi < _conv.groupSel.options.length; gi++) {
+      var og = _conv.groupSel.options[gi];
+      if (og.selected) keepG[og.value] = 1;
+    }
+    _conv.groupSel.innerHTML = "";
+    for (gi = 0; gi < fields.length; gi++) {
+      var o = document.createElement("option");
+      o.value = fields[gi];
+      o.textContent = fields[gi];
+      o.selected = !!keepG[fields[gi]];
+      _conv.groupSel.appendChild(o);
+    }
+    _conv.groupSel.disabled = fields.length === 0;
+
+    // 排序（单选；"" = 表格行序）
+    var keepO = _conv.orderSel.value;
+    _conv.orderSel.innerHTML = "";
+    var oSeq = document.createElement("option");
+    oSeq.value = "";
+    oSeq.textContent = "# 表格行序";
+    _conv.orderSel.appendChild(oSeq);
+    for (gi = 0; gi < fields.length; gi++) {
+      var oo = document.createElement("option");
+      oo.value = fields[gi];
+      oo.textContent = fields[gi];
+      _conv.orderSel.appendChild(oo);
+    }
+    var ok = false;
+    for (gi = 0; gi < _conv.orderSel.options.length; gi++) {
+      if (_conv.orderSel.options[gi].value === keepO) {
+        ok = true;
+        break;
+      }
+    }
+    _conv.orderSel.value = ok ? keepO : "";
+  }
+
+  /** 取出表格里经纬度合法的行（带行号 n 与展开后的属性） */
+  function collectValidRows() {
+    var out = [];
+    for (var i = 0; i < pointDropData.length; i++) {
+      var r = pointDropData[i] || {};
+      var lat = Number(r.lat);
+      var lng = Number(r.lng);
+      if (!isFinite(lat) || !isFinite(lng)) continue;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+      if (String(r.lat).trim() === "" || String(r.lng).trim() === "") continue;
+
+      var props = {};
+      if (r.Name) props["Name"] = r.Name;
+      for (var k = 0; k < pointDropCols.length; k++) {
+        var key = pointDropCols[k];
+        if (r[key] !== undefined && r[key] !== "") props[key] = r[key];
+      }
+      out.push({ lat: lat, lng: lng, props: props, n: i });
+    }
+    return out;
+  }
+
+  function _rad(d) {
+    return (d * Math.PI) / 180;
+  }
+  /** 折线长度（km，球面 haversine 累加） */
+  function lineKm(coords) {
+    var R = 6371.0088;
+    var sum = 0;
+    for (var i = 1; i < coords.length; i++) {
+      var a = coords[i - 1];
+      var b = coords[i];
+      var dLat = _rad(b[1] - a[1]);
+      var dLng = _rad(b[0] - a[0]);
+      var h =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(_rad(a[1])) *
+          Math.cos(_rad(b[1])) *
+          Math.sin(dLng / 2) *
+          Math.sin(dLng / 2);
+      sum += 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+    return sum;
+  }
+  /** 球面多边形面积（km²，与 index.html 的 calculatePolygonArea 同一算法，单位换成 km） */
+  function areaKm2(coords) {
+    if (coords.length < 3) return 0;
+    var R = 6371.0088;
+    var sum = 0;
+    for (var i = 0; i < coords.length; i++) {
+      var j = (i + 1) % coords.length;
+      var lng1 = _rad(coords[i][0]);
+      var lng2 = _rad(coords[j][0]);
+      var lat1 = _rad(coords[i][1]);
+      var lat2 = _rad(coords[j][1]);
+      sum += (lng2 - lng1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+    }
+    return (Math.abs(sum) * R * R) / 2;
+  }
+
+  /** 点集 → 线 / 面：一次生成一个图层，里面可以有多条线 / 多个面 */
+  function convertPoints(mode) {
+    var isPoly = mode === "polygon";
+    var rows = collectValidRows();
+    if (rows.length === 0) {
+      alert("没有有效的经纬度数据！\n请先填写或粘贴纬度和经度。");
+      return;
+    }
+
+    // 读选项
+    var groupFields = [];
+    var orderField = "";
+    var desc = false;
+    var closeRing = false;
+    if (_conv) {
+      for (var i = 0; i < _conv.groupSel.options.length; i++) {
+        if (_conv.groupSel.options[i].selected) {
+          groupFields.push(_conv.groupSel.options[i].value);
+        }
+      }
+      orderField = _conv.orderSel.value || "";
+      desc = !!_conv.desc.checked;
+      closeRing = !!_conv.closeRing.checked;
+    }
+
+    // ① 分组：组合值相同的点归为同一条线 / 同一个面
+    var buckets = {};
+    var order = [];
+    for (var ri = 0; ri < rows.length; ri++) {
+      var row = rows[ri];
+      var key = "__all__";
+      if (groupFields.length) {
+        var parts = [];
+        for (var gi = 0; gi < groupFields.length; gi++) {
+          var v = row.props[groupFields[gi]];
+          parts.push(v === undefined || v === null ? "" : String(v));
+        }
+        key = parts.join("\u0001");
+      }
+      if (!buckets[key]) {
+        buckets[key] = [];
+        order.push(key);
+      }
+      buckets[key].push(row);
+    }
+
+    // ② 组内排序（数字按数值比，其它按自然序：A2 < A10）
+    function cmp(a, b) {
+      if (orderField) {
+        var va = a.props[orderField];
+        var vb = b.props[orderField];
+        var sa = va === undefined || va === null ? "" : String(va);
+        var sb = vb === undefined || vb === null ? "" : String(vb);
+        var na = Number(sa);
+        var nb = Number(sb);
+        var num =
+          sa !== "" && sb !== "" && isFinite(na) && isFinite(nb);
+        var r = num
+          ? na - nb
+          : sa.localeCompare(sb, "zh-Hans-CN", { numeric: true });
+        return desc ? -r : r;
+      }
+      return desc ? b.n - a.n : a.n - b.n;
+    }
+
+    // ③ 输出要素
+    var features = [];
+    var skipped = 0;
+    var minPts = isPoly ? 3 : 2;
+    for (var bi = 0; bi < order.length; bi++) {
+      var grp = buckets[order[bi]].slice().sort(cmp);
+      if (grp.length < minPts) {
+        skipped++;
+        continue;
+      }
+      var coords = [];
+      for (var ci = 0; ci < grp.length; ci++) {
+        coords.push([grp[ci].lng, grp[ci].lat]);
+      }
+      var first = coords[0];
+      var last = coords[coords.length - 1];
+      var isClosed = first[0] === last[0] && first[1] === last[1];
+
+      var props = {};
+      var labelParts = [];
+      for (var fi = 0; fi < groupFields.length; fi++) {
+        var gf = groupFields[fi];
+        var gv = grp[0].props[gf];
+        gv = gv === undefined || gv === null ? "" : gv;
+        props[gf] = gv;
+        labelParts.push(gv === "" ? "(空)" : String(gv));
+      }
+      // Name 用分组值当标签，图层列表 / 弹窗标题才有意义；分组字段里已含 Name 时不覆盖
+      if (!props["Name"]) {
+        props["Name"] =
+          labelParts.length > 0
+            ? labelParts.join(" / ")
+            : (isPoly ? "面" : "线") + (features.length + 1);
+      }
+      props["点数"] = grp.length;
+
+      if (isPoly) {
+        if (!isClosed) coords.push([first[0], first[1]]); // 面必须闭合
+        props["面积_km²"] = Math.round(areaKm2(coords) * 10000) / 10000;
+        features.push({
+          type: "Feature",
+          properties: props,
+          geometry: { type: "Polygon", coordinates: [coords] },
+        });
+      } else {
+        if (closeRing && !isClosed) coords.push([first[0], first[1]]);
+        props["长度_km"] = Math.round(lineKm(coords) * 1000) / 1000;
+        features.push({
+          type: "Feature",
+          properties: props,
+          geometry: { type: "LineString", coordinates: coords },
+        });
+      }
+    }
+
+    if (features.length === 0) {
+      alert(
+        "没有可生成的" +
+          (isPoly ? "面" : "线") +
+          "。\n" +
+          (isPoly ? "每个面至少需要 3 个点" : "每条线至少需要 2 个点") +
+          (groupFields.length ? "（当前分组下每组点数不足）" : "") +
+          "。",
+      );
+      return;
+    }
+
+    var geojson = { type: "FeatureCollection", features: features };
+    var layerName =
+      (isPoly ? "点集转面_" : "点集转线_") +
+      new Date().toLocaleTimeString("zh-CN");
+    if (typeof window.addUserLayer !== "function") {
+      alert("图层加载器尚未就绪，请稍后再试。");
+      return;
+    }
+    window.addUserLayer(geojson, layerName, true);
+
+    var msg =
+      "已生成「" +
+      layerName +
+      "」：" +
+      features.length +
+      " 个" +
+      (isPoly ? "面" : "线");
+    if (skipped) msg += "（跳过 " + skipped + " 组点数不足）";
+    if (typeof window.showToast === "function") {
+      window.showToast(msg, { duration: 3000 });
+    }
   }
 
   // ========== 粘贴解析 ==========
@@ -297,24 +705,35 @@
       startIdx = 1;
     }
 
+    // ⚠️ 先把数据行切出来，**确认真的有数据**再改 pointDropCols。
+    // 顺序反了会踩坑：本函数在 textarea 的每次 input 都跑，而解析完又把
+    // 提示文字回写进同一个 textarea —— 用户接着敲一个字，就会拿提示文字
+    // 再解析一遍，把 pointDropCols 清空（数据行还在、字段却全丢）。
+    var rawRows = [];
+    var ri;
+    for (ri = startIdx; ri < lines.length; ri++) {
+      var parts = splitLine(lines[ri], sep);
+      if (parts.length < 2) continue;
+      rawRows.push(parts);
+    }
+    if (rawRows.length === 0) return; // 没有数据行 → 保持原状，什么都不改
+
     // 重建 pointDropCols（额外字段从第四列起）
     if (headerNames && headerNames.length > 0) {
       pointDropCols = headerNames.slice();
     } else {
       // 无表头：根据数据列数生成默认字段名（减去前3列：纬度、经度、Name）
-      var sampleParts = splitLine(lines[startIdx], sep);
-      var extraCount = Math.max(0, sampleParts.length - 3);
+      var extraCount = Math.max(0, rawRows[0].length - 3);
       pointDropCols = [];
       for (var gi = 0; gi < extraCount; gi++) {
         pointDropCols.push("字段" + (gi + 1));
       }
     }
 
-    // 解析数据行
+    // 用已切好的 rawRows 组装数据行（同一份 parts，避免重复 split）
     var newData = [];
-    for (var i = startIdx; i < lines.length; i++) {
-      var parts = splitLine(lines[i], sep);
-      if (parts.length < 2) continue;
+    for (var i = 0; i < rawRows.length; i++) {
+      var parts = rawRows[i];
       var row = {
         lat: (parts[0] || "").trim(),
         lng: (parts[1] || "").trim(),
@@ -327,15 +746,13 @@
       newData.push(row);
     }
 
-    if (newData.length > 0) {
-      pointDropData = newData;
-      renderTable();
-      var info = "已解析 " + newData.length + " 行（前两列：纬度、经度）";
-      if (headerNames && headerNames.length > 0) {
-        info += "\n字段：「" + headerNames.join(" | ") + "」";
-      }
-      area.value = info + "\n可编辑后点击「生成图层」";
+    pointDropData = newData;
+    renderTable();
+    var info = "已解析 " + newData.length + " 行（前两列：纬度、经度）";
+    if (headerNames && headerNames.length > 0) {
+      info += "\n字段：「" + headerNames.join(" | ") + "」";
     }
+    area.value = info + "\n可编辑后点击「生成图层」";
   }
 
   function splitLine(line, sep) {
@@ -401,18 +818,7 @@
 
   // ========== 生成图层 ==========
   function generateLayer() {
-    var valid = pointDropData.filter(function (r) {
-      var lat = Number(r.lat);
-      var lng = Number(r.lng);
-      return (
-        !isNaN(lat) &&
-        !isNaN(lng) &&
-        lat >= -90 &&
-        lat <= 90 &&
-        lng >= -180 &&
-        lng <= 180
-      );
-    });
+    var valid = collectValidRows();
 
     if (valid.length === 0) {
       alert("没有有效的经纬度数据！\n请检查纬度和经度列是否已正确填写。");
@@ -421,20 +827,12 @@
 
     // 构建 GeoJSON
     var features = valid.map(function (r) {
-      var props = {};
-      // 固定字段
-      if (r.Name) props["Name"] = r.Name;
-      // 额外字段
-      for (var ki = 0; ki < pointDropCols.length; ki++) {
-        var k = pointDropCols[ki];
-        if (r[k] !== undefined && r[k] !== "") props[k] = r[k];
-      }
       return {
         type: "Feature",
-        properties: props,
+        properties: r.props,
         geometry: {
           type: "Point",
-          coordinates: [Number(r.lng), Number(r.lat)],
+          coordinates: [r.lng, r.lat],
         },
       };
     });

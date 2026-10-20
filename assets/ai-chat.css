@@ -395,7 +395,16 @@
   }
 }
 
-/* 窄屏：贴底全宽 */
+/* 中等宽度（横屏手机 / 小平板）：面板别顶到 78vh，给地图留出可视区 */
+@media (max-width: 760px) {
+  .ogv-ai-root {
+    height: min(520px, 62vh);
+  }
+}
+
+/* 窄屏：贴底全宽。
+   手机上面板会盖住大半张图，所以高度压到「半屏多一点」，
+   并用 dvh（动态视口）跟着地址栏收起/展开走 —— 只写 vh 会在栏收起时露白。 */
 @media (max-width: 520px) {
   .ogv-ai-root,
   .ogv-ai-root.dock-left {
@@ -403,8 +412,22 @@
     bottom: 0;
     width: 100vw;
     max-width: 100vw;
-    height: 72vh;
+    height: clamp(240px, 56vh, 430px);
+    height: clamp(240px, 56dvh, 430px);
     border-radius: 12px 12px 0 0;
+  }
+  /* 窄屏挤一挤：头/输入区的固定高度直接吃掉消息区，各减一档内边距 */
+  .ogv-ai-head {
+    padding: 8px 10px;
+  }
+  .ogv-ai-msgs {
+    padding: 10px;
+  }
+  .ogv-ai-comp {
+    padding: 6px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .ogv-ai-bubble {
+    max-width: 92%;
   }
 }
 

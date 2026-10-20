@@ -314,3 +314,36 @@
   按 pt 算的留白小于字宽 → 左边「15°N」被裁成「5°N」）。
 - 回归锚点：`report.graticuleIntervalDeg = {lng,lat}`、`report.frameTicks.dropped`（正常恒 0）。
   实测：全球 30/30、东亚 10/10、东经 120° 附近 2/2、舟山 0.2/0.2、竖版 10/10、长条 15/10。
+
+## Q 出图：坐标 / 合成 / 失败面（2026-10-20 从 MEMORY 下沉，细节照旧有效）
+> MEMORY.md 只留一句索引，实际规则都在这里。
+
+- **尺寸 = 纸面 mm + dpi，zoom 由引擎反算**：`zoomNeeded = zoomNow + log2(目标px/屏宽)`
+  → `zoomTile = floor()`、`S = 2^(need-tile)`。⚠️ 不许直接填像素（填 px 只是把瓦片拉伸）。
+  ⇒ **不变量：出图范围 == 屏幕视野**。
+- ⚠️ **坐标系只能有一套**：`画布坐标 = 瓦片像素 × S`。`project()` 不含 S、`drawXYZ` 含 S，
+  两者混用只在 `S===1` 时碰巧对。同源还有 `metersPerPx ÷S`、`scaleFactor = W/屏宽`。
+- **验收锚点**：`report.frame` 必须 ≈ `map.getBounds()`；改任何坐标代码都跑这条断言。
+- **预览必须与成品同源**：走 `MapExport.resolveOpts()`。⚠️ `preset:"a4w"` 只是 UI 概念，
+  直接喂 `render()` 会被忽略 → 预览 ≠ 成品。
+- **预览实时跟随四类源**：`moveend/zoomend`、`baselayerchange/overlay*`、
+  **`layeradd/layerremove`**（懒加载真完成）、面板 checkbox 的 `change`（**捕获阶段**）。一律静默防抖。
+- **dpi** 默认 300，档位 96/150/300/600/**1200** + 自定义 30~2400；画布上限
+  **单边 16384 / 面积 160M**，超限**等比**压并写出实际 dpi（分别夹宽高会变形）。
+- ⚠️ **`b.getNorth()` 返回数字不是 LatLng**：写成 `.getNorth().lat` → `NaN` → `drawImage`
+  **静默不画**而 `ok` 仍是 1（症状：ETOPO 全白）。**坐标出 NaN 先查这类 `.lat`**。
+- **底图失败不许静默**：全失败 / 失败 ≥30% / `skipped` / 影像失败，四类都要进 `report.warnings`。
+- **跨 180° 环绕** = 反环绕（逐点选最近的 ±360° 副本）+ 按 `k×worldW` 平移多副本。
+  底图识别认 `baseLayers` ∩ 实际挂着的图层；⚠️ `ArcGIS-海洋` 是 LayerGroup 且 `ibo_w` 排第一
+  → 先剔除 `overlays/moreOverlays`。
+- **WMS** 自己拼 GetMap，**`srs` 必须与 bbox 单位一致**（度→4326；写 3857 得空白图而
+  `loadImage` 仍「成功」）。GEBCO 20~54s → 超时 120s + 屏幕瓦片回退。
+- **`L.Polygon extends L.Polyline`** → 判面先判 Polygon；多环**同一 path 再 `fill("evenodd")`**；
+  `_isHitLayer` 排除。⚠️ **`dashArray` 是字符串** → `setLineDash` 前归一。
+- **点图标复刻屏幕 DOM**：`createImageBitmap` **不支持 SVG** → 走 `<img>`；点必须在**面/线之后**画；
+  >3000 点走 `L.MarkersCanvas`。
+- **要素标签读 DOM**（`.station-label:not(.hidden)` + `.leaflet-tooltip`）按 `k = W/屏宽` 映射
+  （低缩放时标签被隐藏）。标签要**矩形避让**。
+- **构图护栏**：`maxWorlds`（默认 1）给 zoom 地板；`report.warnings` 必须说清「为什么长这样」。
+- ⚠️ 别在 `state` 对象上挂方法（`Object.assign` 会覆盖）。图例/比例尺用**直角**（圆角像 App UI），
+  字体 `FONT_SERIF`（Times→宋体）给标注·图例·图注。
