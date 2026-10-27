@@ -10,6 +10,9 @@
 - **AI = `assets/ai-chat.js`**（`OGVAI`）：本地直通 → `PLACE_REGISTRY` → 天地图 → 联网 → 模型 tool-calling（≤8 轮、非流式、串行；触顶再一轮 `noTools` 收尾）。入口 = 右下 `L.Control` 悬浮球（`aiFabToggle`）+ **Ctrl/⌘+K**；模型 `deepseek-flash` = `V4.1-Flash-1017`（`deepseek-chat` 旧名能跑但不稳），`OGV_AI_MODEL` 可覆盖。
 - 两颗 pill = `_opt.web/think`：关联网 = 剔 `web_*` 且不自动联网；关思考 = `thinking:{type:"disabled"}`。⚠️ `getBool` 只认 `"true"`（写 `"1"` 像没生效）。会话存 `ogv-chatstore.js`（IDB `ogv-ai/sessions`，永不 reject，降级 localStorage）。见 §N。
 - ⚠️ 开思考每轮须回传 `reasoning_content`（整条 msg 入栈即成立）。
+- ⚠️ **内置 Key 已删**（2026-10-27 泄露失效）：`DEFAULT_API_KEY` 必须为空，没 Key 只走本地直通；401/402 要翻成人话。
+- **输入框** = 一个 `.ogv-ai-box` 包住「textarea + 工具条」（🧠 思考 / 🌐 联网 / 🎤 语音 + ↑ 发送）；语音双入口（点 🎤 开关 / 按住输入框 380ms），**发送与关窗必先 `_voiceCancel`**，`_voiceFinish` 要保留未定稿 interim。**已改成浮层**（`.ogv-ai-comp` absolute、无分割线、静止态 `border:1px solid transparent`），消息区靠 `_syncComposerPad()`（ResizeObserver）写 `padding-bottom = 浮层高 + 10`，否则最后一条被永久压住；窄屏上限由 **CSS `max-height`** 决定（JS 读 computedStyle，别写死）。
+- **矢量属性分析** = `describe_layer`（前端统计：类型/缺失/唯一值/Top/均值/中位数/标准差，>6 万行等距抽样）+ `query_features`（≤5 行、字段白名单）。**绝不把整份 properties 喂给模型**。
 - ⚠️ **提问意图必须拦**（`QA_INTENT`：多少/什么/怎么/哪里/？）→ 否则被天地图当 POI，只回「已定位」。
 - ⚠️ **窄屏浮层**：高度 `clamp(px, dvh, px)` 且留 `vh` 兜底（地址栏收起不露白）；「点地图自动收起」走 `close({keepRequest:true})` —— **绝不中断在途请求**。判定 `(max-width:760px),(max-height:520px)`，宽屏不收起。
 - **地名 `ogv-geocode.js`（`OGVGeo`）/ 联网 `ogv-websearch.js`（`OGVWeb`）**：全站唯一出口 + LRU + **永不 reject**。
@@ -36,6 +39,8 @@
 - **预览必须与成品同源**（走 `resolveOpts()`）；跟随源 = `moveend/zoomend` + 底图切换 + `layeradd/remove` + 面板 checkbox（捕获阶段），一律静默防抖。
 - ⚠️ **`b.getNorth()` 是数字不是 LatLng**：`.getNorth().lat` → NaN → `drawImage` **静默不画**而 `ok` 仍是 1（ETOPO 全白）。**坐标出 NaN 先查这类 `.lat`**。
 - ⚠️ **论文级图廓**：`PAD` + 内容区 `VW×VH` 与纸面 `W×H` **分离**；`zoom` 反算 / `shiftX·Y` / `scaleFactor` **全用 VW·VH**；留白按 **pt** 且受 `标注字号×3.2` 约束；**装饰字号走有效 dpi**（`ptPx = 画布宽 ÷ 纸宽英寸 ÷ 72`）；**纬度标注遍历南→北，间距判据必须 `Math.abs`**。
+- ⚠️ **点要素「和看到的不一样」三个根因**（已修 2026-10-27）：① 只认 `<svg>/<img>` → `.station-dot` 掉进 3px 红点兜底；② 只按 `L.Marker` 对象收 → 藏在 `WorldCopyGroup`/`markerClusterGroup` 里的收不到；③ Canvas 点层自套规则（拉伸 iconSize²、兜底 `iconSize/2`、永不聚类）。**正解 = 抄屏幕**：DOM 点扫 `markerPane` 真实元素，Canvas 点直接用 `layer._lastClusters`；兜底圆半径 = 屏幕的 8。
+- **模板/样式**：`TEMPLATES` + `STYLE_ENUM` + `resolveStyle()`（`paper/report/slide/field` × 指北针/图例/格网/图框）。新增样式 = 枚举加值 + `draw*` 加分支，**不为模板写单独绘制代码**；模板只给「未显式指定」的项兜底。
 
 ## 4 配色 / 布局（WCAG）
 - 选中态边框/焦点环**不能用 `--accent`**(1.58:1) → 用 `--c-green-text-strong`(浅 4.84/深 8.06)。开关可用 `--accent`（滑块位移是非颜色线索）。

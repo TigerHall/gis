@@ -38,6 +38,14 @@
 
   var DEFAULTS = {
     preset: "col2",
+    // ── 图面模板（2026-10-27）──
+    // 模板只决定「图面语言」（指北针/图例/格网/图框 + 几个开关的初值），
+    // 之后手改任何一项就自动变 "custom"。真正的取值表在 map-export.js TEMPLATES。
+    template: "paper",
+    northArrowStyle: "classic",
+    legendStyle: "card",
+    graticuleStyle: "solid",
+    frameStyle: "double",
     paperWidthMm: 170,
     paperHeightMm: 0, // 0 = 按地图宽高比自动
     dpi: 300, // 默认 300：150 打出来字和图例都发虚，论文/汇报基本都要 300 起
@@ -98,6 +106,46 @@
       "</div>",
 
       '<div class="mep-body">',
+
+      // —— 模板：一整套图面语言，选完还能逐项微调 ——
+      '<section class="mep-sec">',
+      '  <div class="mep-sec-title">模板</div>',
+      '  <div class="mep-tpls" role="group" aria-label="图面模板"></div>',
+      '  <div class="mep-row">',
+      '    <label class="mep-lbl">指北针</label>',
+      '    <select class="mep-sel" data-k="northArrowStyle" aria-label="指北针样式">',
+      '      <option value="classic">双环指针（论文）</option>',
+      '      <option value="compact">细箭头（汇报）</option>',
+      '      <option value="compass">罗盘玫瑰（报告）</option>',
+      '      <option value="cross">十字准星（野外）</option>',
+      "    </select>",
+      "  </div>",
+      '  <div class="mep-row">',
+      '    <label class="mep-lbl">图例</label>',
+      '    <select class="mep-sel" data-k="legendStyle" aria-label="图例样式">',
+      '      <option value="card">白底细框</option>',
+      '      <option value="plain">无底（带描边）</option>',
+      '      <option value="swatch">色条式</option>',
+      "    </select>",
+      "  </div>",
+      '  <div class="mep-row">',
+      '    <label class="mep-lbl">格网</label>',
+      '    <select class="mep-sel" data-k="graticuleStyle" aria-label="格网样式">',
+      '      <option value="solid">实线</option>',
+      '      <option value="dashed">虚线</option>',
+      '      <option value="dotted">点线</option>',
+      '      <option value="none">不画线（只留刻度）</option>',
+      "    </select>",
+      "  </div>",
+      '  <div class="mep-row">',
+      '    <label class="mep-lbl">图框</label>',
+      '    <select class="mep-sel" data-k="frameStyle" aria-label="图框样式">',
+      '      <option value="double">双线（外粗内细）</option>',
+      '      <option value="single">单线</option>',
+      "    </select>",
+      "  </div>",
+      '  <div class="mep-hint mep-tpl"></div>',
+      "</section>",
 
       // —— 尺寸：纸面 + dpi ——
       '<section class="mep-sec">',
@@ -243,6 +291,29 @@
       dpiBox.appendChild(b);
     });
 
+    // 模板按钮（取值表来自 map-export.js，UI 不另存一份）
+    var tplBox = root.querySelector(".mep-tpls");
+    var TPLS = (window.MapExport && window.MapExport.TEMPLATES) || {};
+    Object.keys(TPLS).forEach(function (id) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "mep-preset mep-tplbtn";
+      b.dataset.tpl = id;
+      b.textContent = TPLS[id].label || id;
+      b.title = "套用「" + (TPLS[id].label || id) + "」模板（之后仍可逐项微调）";
+      b.addEventListener("click", function () {
+        applyTemplate(id);
+      });
+      tplBox.appendChild(b);
+    });
+    var bCustom = document.createElement("button");
+    bCustom.type = "button";
+    bCustom.className = "mep-preset mep-tplbtn";
+    bCustom.dataset.tpl = "custom";
+    bCustom.textContent = "自定义";
+    bCustom.title = "当前是手调组合（不套模板）";
+    tplBox.appendChild(bCustom);
+
     // 绑定字段
     root.querySelectorAll("[data-k]").forEach(function (input) {
       var k = input.dataset.k;
@@ -254,6 +325,11 @@
         else if (input.type === "range" || input.type === "number") v = Number(input.value);
         else v = input.value;
         state[k] = v;
+        // 手改了样式项 → 模板标记退出（「已套用的模板」不再成立，避免误导）
+        if (/Style$/.test(k) && state.template !== "custom") {
+          state.template = "custom";
+          syncTemplateButtons();
+        }
         // 尺寸类字段（纸宽/纸高/dpi）先把提示行刷新掉：数字是即时反馈，
         // 让用户等 420ms 的预览防抖才知道「1200dpi 到底出了多大」
         if (k === "dpi" || k === "paperWidthMm" || k === "paperHeightMm" || k === "keepAspect") {
@@ -296,6 +372,7 @@
     el.querySelectorAll(".mep-preset").forEach(function (b) {
       b.classList.toggle("is-on", b.dataset.preset === state.preset);
     });
+    syncTemplateButtons();
     syncDpiButtons();
     updateValLabels();
     updateHint();
@@ -386,6 +463,48 @@
   }
 
   /**
+   * 套模板：一次性铺满「图面语言 + 相关开关」，但**不锁**任何一项。
+   * 之后手改样式下拉 → template 自动降级为 custom（见 [data-k] 的绑定），
+   * 这样面板上不会出现「显示套了论文、实际画的是别的东西」。
+   */
+  function applyTemplate(id) {
+    var TPLS = (window.MapExport && window.MapExport.TEMPLATES) || {};
+    var t = TPLS[id];
+    state.template = t ? id : "custom";
+    if (t) {
+      if (t.style) {
+        Object.keys(t.style).forEach(function (k) {
+          state[k] = t.style[k];
+        });
+      }
+      if (t.flags) {
+        Object.keys(t.flags).forEach(function (k) {
+          state[k] = t.flags[k];
+        });
+      }
+    }
+    syncInputs();
+    schedulePreview(60);
+  }
+
+  function syncTemplateButtons() {
+    if (!el) return;
+    el.querySelectorAll(".mep-tplbtn").forEach(function (b) {
+      var on = b.dataset.tpl === (state.template || "custom");
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    var hint = el.querySelector(".mep-tpl");
+    var TPLS = (window.MapExport && window.MapExport.TEMPLATES) || {};
+    if (hint) {
+      var t = TPLS[state.template];
+      hint.textContent = t
+        ? "已套用「" + t.label + "」模板 —— 下面任何一项都能再改（改完变自定义）"
+        : "自定义组合：指北针 / 图例 / 格网 / 图框按下面选的值画";
+    }
+  }
+
+  /**
    * 提示行：纸面 + dpi + 反推出的**地面覆盖范围**。
    * 不给「dpi 数字」当主信息 —— 那东西只有配了物理尺寸才有意义，
    * 写「≈300 dpi」对用户没有可操作性。
@@ -461,6 +580,12 @@
       attribution: state.attribution,
       title: state.title,
       subtitle: state.subtitle,
+      // 模板 + 四项图面样式（引擎侧 resolveStyle 负责兜底与校验）
+      template: state.template,
+      northArrowStyle: state.northArrowStyle,
+      legendStyle: state.legendStyle,
+      graticuleStyle: state.graticuleStyle,
+      frameStyle: state.frameStyle,
       format: state.format,
       quality: state.quality,
       background: state.background === "transparent" ? "#ffffff" : state.background,

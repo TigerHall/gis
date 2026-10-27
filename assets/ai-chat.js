@@ -50,8 +50,11 @@
  *    并排铺 2~3 个世界副本，出图会把它们照抄下来（标签也跟着重复）。宁可放大，
  *    也不要在一张论文图里印两个地球。
  *
- * Key 策略（与 tthh 同口径）：本机没填过 Key 时用内置 DEFAULT_API_KEY（可用
- *   window.OGV_AI_DEFAULT_KEY 覆盖）；用户自填的永远优先。存储一律走 OGVStorage。
+ * Key 策略（2026-10-27 改）：**不再内置任何 Key**（原来那把已经泄露失效）。
+ *   必须由用户自己填，只存本机（OGVStorage）；宿主页可用 window.OGV_AI_DEFAULT_KEY
+ *   显式注入自建网关的 token。没 Key 时所有「要花钱」的路径（模型/联网）都不发起，
+ *   只保留本地直通（矢量搜索 / 地名表），并明确提示去填 Key。
+ *   存储一律走 OGVStorage。
  *
  * 依赖：geo-utils.js（OGVStorage）、geojsonloader.js（__OGV_search/__OGV_highlight）、
  *       map-export-ui.js / map-export.js（MapExport）—— 均为**运行时**依赖，加载顺序随意。
@@ -83,14 +86,14 @@
    */
   var THINKING = "disabled";
   /**
-   * 内置默认 Key：让访客开箱即用。⚠️ 明文写在静态 JS 里 = 公网任何人都拿得到，
-   * 配额与费用挂在签发账号上 —— 这是既定取舍，作废时把值改回 ""。
-   * 宿主页可先写 window.OGV_AI_DEFAULT_KEY 覆盖（"" = 当作没内置 Key）。
+   * 内置默认 Key：**已作废**（2026-10-27）。
+   * 原来这里明文写着一把 sk-…：公网任何人 F12 就能拿到并烧配额，已经被用光/失效。
+   * 现在一律留空 —— 必须由用户自己填（只存本机 localStorage）。
+   * 宿主页仍可用 `window.OGV_AI_DEFAULT_KEY` 显式注入（**别再把真 Key 写进仓库**，
+   * 要共享就走一个自己的转发网关，别把上游 Key 发给浏览器）。
    */
   var DEFAULT_API_KEY =
-    global.OGV_AI_DEFAULT_KEY != null
-      ? String(global.OGV_AI_DEFAULT_KEY)
-      : "sk-edb523a619a34d3392029ddf30334c55";
+    global.OGV_AI_DEFAULT_KEY != null ? String(global.OGV_AI_DEFAULT_KEY) : "";
 
   var MAX_TOOL_ROUNDS = 8; // tool-calling 循环上限（防模型死循环调工具）
   var MAX_HISTORY = 12; // 带上文条数（纯文本，不大）
@@ -128,8 +131,18 @@
     "   dpi 默认 300（论文配图），可选 96/150/300/600/1200，也可传任意 30~2400 的数字；",
     "   title/subtitle 是主副标题；graticule/legend/scaleBar/northArrow/labels/attribution 是布尔开关，",
     "   用户没提的开关不要乱改；用户说「不要图例」就 legend=false，以此类推。",
-    "6. 一次回复里可以连续调多个工具（如先 set_view 再 export_image）。",
-    "7. **联网搜索**（web_search / web_fetch）—— 用在本地三级都覆盖不到的地方：",
+    "   图面风格用 template 一键切换：paper 论文（双线图框+实线经纬网+双环指北针）、",
+    "   report 报告（单线框+虚线网+罗盘指北针+色条图例）、slide 汇报（无图框无经纬网）、",
+    "   field 野外（点线网+十字指北针）。需要单项微调时再传 northArrowStyle",
+    "   (classic/compact/compass/cross)、legendStyle(card/plain/swatch)、",
+    "   graticuleStyle(solid/dashed/dotted/none)、frameStyle(double/single)。",
+    "   用户只说了「论文风格」这类词 → 直接给 template，不要编一堆开关。",
+    "6. **矢量属性 / 数据统计**：用户问「这个图层有哪些字段」「某列平均多少」「数据质量」时，",
+    "   一律先 describe_layer（要素数、字段类型、缺失率、唯一值、min/max/均值/中位数/标准差、",
+    "   分类字段高频值都已在**前端**算好）。**不要**要求用户贴数据、不要试图一次读全部要素；",
+    "   想看具体记录长什么样，只用 query_features 取几行（默认 5 行、只给需要的字段）。",
+    "7. 一次回复里可以连续调多个工具（如先 set_view 再 export_image）。",
+    "8. **联网搜索**（web_search / web_fetch）—— 用在本地三级都覆盖不到的地方：",
     "   - 问的是**知识/事实**而不是位置时（深度、年龄、面积、定义、某规范哪年实施、",
     "     最近有什么新闻），直接 web_search，不要拿训练数据硬答；",
     "   - locate 返回 ok:false 但它同时给了 web 结果时，说明图上定位不到 —— 先说明这一点，",
@@ -138,7 +151,7 @@
     "     表格时才 web_fetch 那一两条最相关的 URL（抓全文很贵，一次别超过 2 条）；",
     "   - 引用要给链接，格式 `[站点名](url)`，放在提到该结论的那句话后面；",
     "   - 搜索结果为空就直说「网上也没查到」，不要换个说法编一遍。",
-    "8. 用简体中文简洁作答；操作完成后一句话说明做了什么，不要罗列参数。",
+    "9. 用简体中文简洁作答；操作完成后一句话说明做了什么，不要罗列参数。",
   ].join("\n");
 
   var TOOLS = [
@@ -262,6 +275,60 @@
     {
       type: "function",
       function: {
+        name: "describe_layer",
+        description:
+          "看某个矢量图层的**属性摘要**（前端已经算好的统计）：要素数、几何类型、外包框，" +
+          "每个字段的类型 / 缺失率 / 唯一值数 / 数值 min-max-均值-中位数-标准差 / 分类字段的高频值。" +
+          "用户问「这个图层有哪些字段」「某列的平均值/分布」「数据质量如何」时**先用这个**，" +
+          "不要试图索取原始要素，也不要自己要求用户贴数据。",
+        parameters: {
+          type: "object",
+          properties: {
+            layer: { type: "string", description: "图层名（照 list_layers 的 name 写，可只给关键词）" },
+            fields: {
+              type: "array",
+              items: { type: "string" },
+              description: "只看这几个字段（可选）",
+            },
+          },
+          required: ["layer"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "query_features",
+        description:
+          "按条件取**少量**要素属性行（默认 5 行，字段可指定，值截断 60 字）。" +
+          "用在「看看某条记录长什么样」「这个字段的取值是什么样」。要看统计量用 describe_layer；" +
+          "**绝不能**用它把整层数据拉进上下文。",
+        parameters: {
+          type: "object",
+          properties: {
+            layer: { type: "string", description: "图层名" },
+            where: {
+              type: "object",
+              description: "筛选条件（可选）",
+              properties: {
+                field: { type: "string" },
+                op: {
+                  type: "string",
+                  enum: ["contains", "eq", "ne", "gt", "gte", "lt", "lte", "exists", "empty"],
+                },
+                value: { type: "string" },
+              },
+            },
+            fields: { type: "array", items: { type: "string" }, description: "只回这几个字段（最多 10 个）" },
+            limit: { type: "number", description: "返回行数，默认 5，最多 30" },
+          },
+          required: ["layer"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
         name: "toggle_layer",
         description: "打开或关闭某个图层",
         parameters: {
@@ -291,6 +358,15 @@
             legend: { type: "boolean" },
             scaleBar: { type: "boolean" },
             northArrow: { type: "boolean" },
+            template: {
+              type: "string",
+              enum: ["paper", "report", "slide", "field"],
+              description: "图面模板：paper 论文（双线框+实线网）/ report 报告（罗盘+色条图例）/ slide 汇报（无框无网）/ field 野外（点线网+十字北针）",
+            },
+            northArrowStyle: { type: "string", enum: ["classic", "compact", "compass", "cross"] },
+            legendStyle: { type: "string", enum: ["card", "plain", "swatch"] },
+            graticuleStyle: { type: "string", enum: ["solid", "dashed", "dotted", "none"] },
+            frameStyle: { type: "string", enum: ["double", "single"] },
             labels: { type: "boolean", description: "要素标签" },
           },
         },
@@ -317,6 +393,15 @@
             legendTitle: { type: "string", description: "图例标题" },
             scaleBar: { type: "boolean", description: "比例尺" },
             northArrow: { type: "boolean", description: "指北针" },
+            template: {
+              type: "string",
+              enum: ["paper", "report", "slide", "field"],
+              description: "图面模板：paper 论文（双线框+实线网）/ report 报告（罗盘+色条图例）/ slide 汇报（无框无网）/ field 野外（点线网+十字北针）",
+            },
+            northArrowStyle: { type: "string", enum: ["classic", "compact", "compass", "cross"] },
+            legendStyle: { type: "string", enum: ["card", "plain", "swatch"] },
+            graticuleStyle: { type: "string", enum: ["solid", "dashed", "dotted", "none"] },
+            frameStyle: { type: "string", enum: ["double", "single"] },
             labels: { type: "boolean", description: "要素标签" },
             attribution: { type: "boolean", description: "数据来源/版权标注" },
             includeBase: { type: "boolean", description: "是否含底图" },
@@ -442,6 +527,15 @@
             legend: { type: "boolean" },
             scaleBar: { type: "boolean" },
             northArrow: { type: "boolean" },
+            template: {
+              type: "string",
+              enum: ["paper", "report", "slide", "field"],
+              description: "图面模板：paper 论文（双线框+实线网）/ report 报告（罗盘+色条图例）/ slide 汇报（无框无网）/ field 野外（点线网+十字北针）",
+            },
+            northArrowStyle: { type: "string", enum: ["classic", "compact", "compass", "cross"] },
+            legendStyle: { type: "string", enum: ["card", "plain", "swatch"] },
+            graticuleStyle: { type: "string", enum: ["solid", "dashed", "dotted", "none"] },
+            frameStyle: { type: "string", enum: ["double", "single"] },
             labels: { type: "boolean" },
             attribution: { type: "boolean" },
             includeBase: { type: "boolean" },
@@ -855,6 +949,422 @@
         return { name: it.name, group: it.group, on: it.on };
       }),
       truncated: hit.length > limit,
+    };
+  }
+
+  // ─────────────────────────────────────────────
+  //  矢量属性分析（前端统计，不把原始要素喂给模型）
+  //
+  //  为什么这么做（2026-10-27 用户口径）：把整个 GeoJSON 的 properties 塞给模型
+  //  上下文又长又没用 —— 一万行属性不等于「有信息」。真正该给模型的是**摘要**：
+  //  字段名 + 类型 + 缺失率 + 唯一值数 + 每类前几个值 + 数值的 min/max/均值/方差。
+  //  这些**在前端一次算完**（O(n)，几十万行也就几十毫秒），模型只读几百字节，
+  //  再让它按需要「取几行看长相」（query_features，默认 5 行、只给指定字段）。
+  // ─────────────────────────────────────────────
+  var MAX_FIELDS = 36; // 字段数上限（超过就只报前 36 个 + 总数）
+  var MAX_TOPVALS = 6; // 分类/文本字段最多列几个高频值
+  var SAMPLE_N = 3; // 每个字段的示例值个数
+  var MEDIAN_CAP = 4000; // 中位数/分位用抽样上限（精确中位数要存全量，不值得）
+  var MAX_SCAN_ROWS = 60000; // 属性全扫上限，超过就等距抽样
+
+  /** 关键词 → 图层项（先精确、再前缀、最后包含；都不中返回 null） */
+  function _resolveLayer(name) {
+    var q = String(name || "").trim().toLowerCase();
+    if (!q) return null;
+    var all = _layerItems();
+    var exact = null;
+    var prefix = null;
+    var fuzzy = null;
+    for (var i = 0; i < all.length; i++) {
+      var it = all[i];
+      var n = String(it.name || "").toLowerCase();
+      if (n === q) {
+        exact = it;
+        break;
+      }
+      if (!prefix && n.indexOf(q) === 0) prefix = it;
+      if (!fuzzy && n.indexOf(q) >= 0) fuzzy = it;
+      if (!fuzzy && it.group && it.group.toLowerCase().indexOf(q) >= 0) fuzzy = it;
+    }
+    return exact || prefix || fuzzy;
+  }
+
+  /** 取某图层的要素数组（懒加载没完成时可能为空 → 上层给出明确提示） */
+  function _layerFeatures(item) {
+    if (!item) return [];
+    var cache = global._featureCache || null;
+    if (!cache) return [];
+    return cache[item.id] || [];
+  }
+
+  function _isNumVal(v) {
+    if (typeof v === "number") return isFinite(v);
+    if (typeof v !== "string") return false;
+    var t = v.trim();
+    if (!t) return false;
+    // 只认「纯数字」（允许千分位、前后空格、正负号、科学计数）
+    return /^[+-]?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?([eE][+-]?\d+)?$/.test(t);
+  }
+  function _numVal(v) {
+    if (typeof v === "number") return v;
+    return Number(String(v).replace(/,/g, "").trim());
+  }
+  var DATE_RE = /^(\d{4})[-/年.](\d{1,2})([-/月.](\d{1,2}))?/;
+  function _isDateVal(v) {
+    if (typeof v !== "string") return false;
+    return DATE_RE.test(v.trim());
+  }
+
+  function _round(v, n) {
+    if (!isFinite(v)) return null;
+    var p = Math.pow(10, n == null ? 3 : n);
+    return Math.round(v * p) / p;
+  }
+  function _clip(s, n) {
+    var t = String(s == null ? "" : s).replace(/\s+/g, " ").trim();
+    return t.length > n ? t.slice(0, n) + "…" : t;
+  }
+
+  /**
+   * 一次扫描算出每个字段的统计。
+   *
+   * 数值：count/sum/sumsq/min/max + 抽样（≤4000）算中位数与标准差 ——
+   *   方差用**总体方差**（∑(x-μ)²/n），并在输出里注明，免得模型按样本方差解释。
+   * 分类/文本：值计数（最多记 400 个不同值，超出算「其它」）+ Top N。
+   * 日期：按字符串前缀取 min/max（ISO 与「2024年3月」都能比）。
+   */
+  function _fieldStats(features) {
+    var cols = Object.create(null);
+    var order = [];
+    var scanned = 0;
+    var i, j;
+
+    function col(name) {
+      if (!cols[name]) {
+        cols[name] = {
+          name: name,
+          filled: 0,
+          missing: 0,
+          numOk: 0,
+          dateOk: 0,
+          nums: [], // 抽样（中位数用）
+          count: 0,
+          sum: 0,
+          sumsq: 0,
+          min: Infinity,
+          max: -Infinity,
+          freq: Object.create(null),
+          uniq: 0,
+          overflow: false,
+          strMin: null,
+          strMax: null,
+          samples: [],
+        };
+        order.push(name);
+      }
+      return cols[name];
+    }
+
+    // 抽样上限：60 万行的层直接全扫要几秒、还会把主线程钉住。
+    // 超过就**等距抽样**到 ~6 万行（统计量足够稳），并在输出里明确写「抽样自 N 行」，
+    // 免得模型把抽样均值当成全量真值。
+    var step = Math.max(1, Math.ceil(features.length / MAX_SCAN_ROWS));
+    for (i = 0; i < features.length; i += step) {
+      var f = features[i];
+      var p = f && f.properties;
+      if (!p) continue;
+      scanned++;
+      for (var k in p) {
+        if (!Object.prototype.hasOwnProperty.call(p, k)) continue;
+        var v = p[k];
+        var c = col(k);
+        // 内部字段（geojsonloader 塞的 _featureIndex 之类）不算业务字段
+        if (k.charAt(0) === "_") {
+          c.missing++;
+          continue;
+        }
+        if (v === null || v === undefined || v === "") {
+          c.missing++;
+          continue;
+        }
+        c.filled++;
+        var vs = typeof v === "string" ? v : String(v);
+        if (_isNumVal(v)) {
+          var n = _numVal(v);
+          if (isFinite(n)) {
+            c.numOk++;
+            c.count++;
+            c.sum += n;
+            c.sumsq += n * n;
+            if (n < c.min) c.min = n;
+            if (n > c.max) c.max = n;
+            if (c.nums.length < MEDIAN_CAP) c.nums.push(n);
+          }
+        } else if (_isDateVal(v)) {
+          c.dateOk++;
+          var d = vs.trim().replace(/[年月/.]/g, "-").replace(/-$/, "");
+          if (!c.strMin || d < c.strMin) c.strMin = d;
+          if (!c.strMax || d > c.strMax) c.strMax = d;
+        }
+        // 值频次（分类判定与 Top 值）：超过 400 个不同值就只记前 400 个
+        if (c.uniq < 400) {
+          var key = _clip(vs, 60);
+          if (c.freq[key] == null) {
+            c.freq[key] = 0;
+            c.uniq++;
+          }
+          c.freq[key]++;
+        } else {
+          c.overflow = true;
+        }
+        if (c.samples.length < SAMPLE_N) {
+          var sv = _clip(vs, 60);
+          if (c.samples.indexOf(sv) === -1) c.samples.push(sv);
+        }
+      }
+    }
+
+    function pct(a, b) {
+      return b > 0 ? Math.round((a / b) * 1000) / 10 : null;
+    }
+
+    var out = [];
+    for (j = 0; j < order.length; j++) {
+      var c2 = cols[order[j]];
+      if (c2.filled === 0 && c2.missing > 0) continue; // 全空列不报
+      var type;
+      if (c2.filled > 0 && c2.numOk / c2.filled >= 0.9) type = "number";
+      else if (c2.filled > 0 && c2.dateOk / c2.filled >= 0.9) type = "date";
+      else if (c2.uniq <= 24 || (c2.filled > 0 && c2.uniq / c2.filled <= 0.05)) type = "category";
+      else type = "text";
+
+      var item = {
+        field: c2.name,
+        type: type,
+        filled: c2.filled,
+        missing: c2.missing,
+        fillRate: pct(c2.filled, c2.filled + c2.missing) + "%",
+        unique: c2.overflow ? ">400" : c2.uniq,
+      };
+
+      if (type === "number") {
+        var mean = c2.sum / c2.count;
+        // 总体方差：E[x²] − μ²（浮点误差夹到非负）
+        var variance = Math.max(0, c2.sumsq / c2.count - mean * mean);
+        var sorted = c2.nums.slice().sort(function (a, b) {
+          return a - b;
+        });
+        var median =
+          sorted.length === 0
+            ? null
+            : sorted.length % 2
+              ? sorted[(sorted.length - 1) / 2]
+              : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+        item.min = _round(c2.min, 4);
+        item.max = _round(c2.max, 4);
+        item.mean = _round(mean, 4);
+        item.median = _round(median, 4);
+        item.std = _round(Math.sqrt(variance), 4);
+        item.varianceNote = "总体方差";
+        item.sum = _round(c2.sum, 2);
+      } else if (type === "date") {
+        item.min = c2.strMin;
+        item.max = c2.strMax;
+        item.samples = c2.samples;
+      } else {
+        // Top 值（按频次降序，取前 N）
+        var pairs = Object.keys(c2.freq).map(function (k) {
+          return [k, c2.freq[k]];
+        });
+        pairs.sort(function (a, b) {
+          return b[1] - a[1];
+        });
+        item.top = pairs.slice(0, MAX_TOPVALS).map(function (pp) {
+          return { value: pp[0], count: pp[1] };
+        });
+        if (pairs.length > MAX_TOPVALS) item.topMore = pairs.length - MAX_TOPVALS;
+        item.samples = c2.samples;
+      }
+      out.push(item);
+    }
+    return { fields: out, scanned: scanned };
+  }
+
+  /** 几何概况：类型分布 + 外包框（不算面积，别为了一次问答跑几十万次测地计算） */
+  function _geomInfo(features) {
+    var types = Object.create(null);
+    var b = { west: Infinity, east: -Infinity, south: Infinity, north: -Infinity };
+    var i;
+    function eat(c) {
+      if (typeof c[0] === "number") {
+        var x = c[0];
+        var y = c[1];
+        if (x < b.west) b.west = x;
+        if (x > b.east) b.east = x;
+        if (y < b.south) b.south = y;
+        if (y > b.north) b.north = y;
+      } else {
+        for (var k = 0; k < c.length; k++) eat(c[k]);
+      }
+    }
+    for (i = 0; i < features.length; i++) {
+      var g = features[i] && features[i].geometry;
+      if (!g || !g.type) continue;
+      types[g.type] = (types[g.type] || 0) + 1;
+      if (g.coordinates) eat(g.coordinates);
+    }
+    return {
+      geomTypes: types,
+      bbox:
+        isFinite(b.west) && isFinite(b.north)
+          ? {
+              west: _round(b.west, 4),
+              south: _round(b.south, 4),
+              east: _round(b.east, 4),
+              north: _round(b.north, 4),
+            }
+          : null,
+    };
+  }
+
+  /**
+   * describe_layer：图层属性**摘要**（字段清单 + 统计），不含原始行。
+   * @param {{layer:string, fields?:string[], sampleRows?:number}} args
+   */
+  function _describeLayer(args) {
+    var item = _resolveLayer(args.layer);
+    if (!item) {
+      return {
+        ok: false,
+        error: "没找到图层「" + args.layer + "」",
+        hint: "先用 list_layers 看确切名字（图层要在面板里勾选过才会加载数据）",
+      };
+    }
+    var feats = _layerFeatures(item);
+    if (!feats.length) {
+      var on = !!item.on;
+      return {
+        ok: false,
+        layer: item.name,
+        on: on,
+        error: on ? "图层数据还没加载完（gzip 解压 + 建索引中）" : "图层未打开，数据没有加载",
+        hint: on ? "等一两秒再试" : "先 toggle_layer 打开「" + item.name + "」再分析",
+      };
+    }
+    var st = _fieldStats(feats);
+    var want = Array.isArray(args.fields) && args.fields.length ? args.fields : null;
+    var fields = st.fields;
+    if (want) {
+      fields = fields.filter(function (f) {
+        return want.some(function (w) {
+          return f.field.toLowerCase() === String(w).toLowerCase();
+        });
+      });
+    }
+    var total = fields.length;
+    var shown = fields.slice(0, MAX_FIELDS);
+    return {
+      ok: true,
+      layer: item.name,
+      group: item.group || "",
+      featureCount: feats.length,
+      // 抽样说明：全扫时是 null；抽样时写清「统计基于多少行」
+      statBase: st.scanned >= feats.length ? null : { scanned: st.scanned, total: feats.length },
+      geom: _geomInfo(feats),
+      fieldCount: total,
+      fields: shown,
+      fieldsTruncated: total > shown.length ? total - shown.length : 0,
+      note:
+        "上面是**前端算好的统计**，不是原始数据。需要看具体行再调 query_features" +
+        "（默认只回 5 行、只给指定字段）；不要把整份属性往上下文里塞。",
+    };
+  }
+
+  /**
+   * query_features：按条件取**少量**行（默认 5 行、字段白名单、值截断 60 字）。
+   * 这是模型「看长相」的唯一入口 —— 想看全量统计请用 describe_layer。
+   */
+  function _queryFeatures(args) {
+    var item = _resolveLayer(args.layer);
+    if (!item) {
+      return { ok: false, error: "没找到图层「" + args.layer + "」", hint: "先 list_layers" };
+    }
+    var feats = _layerFeatures(item);
+    if (!feats.length) {
+      return {
+        ok: false,
+        error: "图层「" + item.name + "」没有可用数据（未打开或还在加载）",
+        hint: "先 toggle_layer 打开它",
+      };
+    }
+    var limit = Math.min(30, Math.max(1, Number(args.limit) || 5));
+    var where = args.where || null;
+    var fields = Array.isArray(args.fields) ? args.fields.slice(0, 10) : null;
+
+    // 字段名容错：模型常把 NAME 写成 name（或反过来）。先按小写建一张映射表，
+    // 用户点名的字段一律解析回**数据里的真实键名**，否则 where/fields 全落空。
+    var keyMap = Object.create(null);
+    for (var fi = 0; fi < feats.length && !Object.keys(keyMap).length; fi++) {
+      var fp = (feats[fi] && feats[fi].properties) || null;
+      if (!fp) continue;
+      for (var fk in fp) keyMap[String(fk).toLowerCase()] = fk;
+    }
+    function realKey(name) {
+      if (!name) return name;
+      if (keyMap[String(name).toLowerCase()]) return keyMap[String(name).toLowerCase()];
+      return name;
+    }
+    if (where && where.field) where.field = realKey(where.field);
+    if (fields) fields = fields.map(realKey).slice(0, 10);
+
+    function match(p) {
+      if (!where || !where.field) return true;
+      var v = p[where.field];
+      var op = String(where.op || "contains").toLowerCase();
+      var target = where.value;
+      if (op === "exists") return v !== null && v !== undefined && v !== "";
+      if (op === "empty") return v === null || v === undefined || v === "";
+      if (v === null || v === undefined) return false;
+      if (op === "eq") return String(v) === String(target);
+      if (op === "ne") return String(v) !== String(target);
+      if (op === "gt" || op === "gte" || op === "lt" || op === "lte") {
+        var a = Number(String(v).replace(/,/g, ""));
+        var b = Number(String(target).replace(/,/g, ""));
+        if (!isFinite(a) || !isFinite(b)) return false;
+        if (op === "gt") return a > b;
+        if (op === "gte") return a >= b;
+        if (op === "lt") return a < b;
+        return a <= b;
+      }
+      // contains（默认）：不区分大小写的子串
+      return String(v).toLowerCase().indexOf(String(target).toLowerCase()) >= 0;
+    }
+
+    var rows = [];
+    var hit = 0;
+    for (var i = 0; i < feats.length; i++) {
+      var p = (feats[i] && feats[i].properties) || null;
+      if (!p) continue;
+      if (!match(p)) continue;
+      hit++;
+      if (rows.length >= limit) continue;
+      var o = {};
+      var keys = fields || Object.keys(p).filter(function (k) {
+        return k.charAt(0) !== "_";
+      });
+      keys.slice(0, 10).forEach(function (k) {
+        if (k.charAt(0) === "_" && !fields) return;
+        o[k] = _clip(p[k], 60);
+      });
+      rows.push(o);
+    }
+    return {
+      ok: rows.length > 0,
+      layer: item.name,
+      matched: hit,
+      returned: rows.length,
+      rows: rows,
+      note: fields ? "只包含指定字段" : "每行最多 10 个字段，值截断 60 字",
     };
   }
 
@@ -1274,6 +1784,7 @@
       [
         "preset", "paperWidthMm", "paperHeightMm", "dpi", "title", "subtitle",
         "graticule", "legend", "legendTitle", "scaleBar", "northArrow", "labels",
+        "template", "northArrowStyle", "legendStyle", "graticuleStyle", "frameStyle",
         "attribution", "includeBase", "includeOverlays", "baseOpacity",
         "vectorOpacity", "background",
       ].forEach(function (k) {
@@ -1359,7 +1870,7 @@
         return {
           ok: false,
           error:
-            "联网搜索当前是关闭的。如果确实需要网上资料，告诉用户「点输入框下方的『联网搜索』打开后再问」；" +
+            "联网搜索当前是关闭的。如果确实需要网上资料，告诉用户「点输入框里的『🌐 联网』打开后再问」；" +
             "能用本地数据（locate / geocode / search_features）回答的就先用本地的。",
         };
       }
@@ -1399,6 +1910,12 @@
     }
     if (name === "list_layers") {
       return _listLayers(args);
+    }
+    if (name === "describe_layer") {
+      return _describeLayer(args);
+    }
+    if (name === "query_features") {
+      return _queryFeatures(args);
     }
     if (name === "set_view") {
       var m0 = global.map;
@@ -1461,6 +1978,7 @@
       [
         "preset", "paperWidthMm", "dpi", "title", "subtitle",
         "graticule", "legend", "scaleBar", "northArrow", "labels",
+        "template", "northArrowStyle", "legendStyle", "graticuleStyle", "frameStyle",
       ].forEach(function (k) {
         if (args[k] !== undefined) opts[k] = args[k];
       });
@@ -1476,6 +1994,7 @@
       [
         "preset", "paperWidthMm", "paperHeightMm", "dpi", "title", "subtitle",
         "graticule", "legend", "legendTitle", "scaleBar", "northArrow", "labels",
+        "template", "northArrowStyle", "legendStyle", "graticuleStyle", "frameStyle",
         "attribution", "includeBase", "includeOverlays", "format", "filename",
       ].forEach(function (k) {
         if (args[k] !== undefined) eopts[k] = args[k];
@@ -1590,7 +2109,18 @@
         return r.json().then(function (j) {
           if (!r.ok) {
             var em = (j && j.error && j.error.message) || "HTTP " + r.status;
-            throw new Error(em);
+            // 状态码翻成人话：401/402 是最常见的两种「看起来能点但就是不回答」
+            var map = {
+              401: "API Key 无效或已失效 —— 点右上角 🔑 重新填一个",
+              402: "DeepSeek 账户余额不足，请先充值",
+              403: "Key 没有权限调用该模型",
+              429: "请求太频繁（或额度用尽），等几秒再试",
+              500: "DeepSeek 服务端错误，稍后重试",
+              503: "DeepSeek 服务繁忙，稍后重试",
+            };
+            var err = new Error(map[r.status] ? map[r.status] + "（" + em + "）" : em);
+            err.status = r.status;
+            throw err;
           }
           return j;
         });
@@ -1730,6 +2260,12 @@
     list_layers: function () {
       return "📋 读取图层清单…";
     },
+    describe_layer: function (a) {
+      return "📊 统计图层「" + (a.layer || "") + "」的字段…";
+    },
+    query_features: function (a) {
+      return "🔎 取「" + (a.layer || "") + "」的几行属性…";
+    },
     list_options: function () {
       return "⚙️ 读取设置项…";
     },
@@ -1808,17 +2344,27 @@
     _root.appendChild(head);
 
     // Key 行（默认收起）
+    // 2026-10-27：内置 Key 作废后，这里是**唯一入口**，所以把「去哪拿、存哪、没填会怎样」
+    // 都写清楚 —— 否则用户点了 🔑 只看到一个输入框，不知道要填什么。
     var keyRow = _el("div", "ogv-ai-keyrow");
+    var keyLine = _el("div", "ogv-ai-keyline");
     var keyInput = document.createElement("input");
     keyInput.type = "password";
     keyInput.className = "ogv-ai-key";
-    keyInput.placeholder = "DeepSeek API Key（sk-…），仅保存本机";
+    keyInput.placeholder = "DeepSeek API Key（sk-…）";
     keyInput.autocomplete = "off";
     keyInput.spellcheck = false;
-    keyRow.appendChild(keyInput);
+    keyLine.appendChild(keyInput);
     var btnKeySave = _el("button", "ogv-ai-keysave", "保存");
     btnKeySave.type = "button";
-    keyRow.appendChild(btnKeySave);
+    keyLine.appendChild(btnKeySave);
+    keyRow.appendChild(keyLine);
+    var keyHint = _el("div", "ogv-ai-keyhint");
+    keyHint.innerHTML =
+      'Key 只存在本机浏览器（不上传）。没有就在 ' +
+      '<a class="ai-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">' +
+      "platform.deepseek.com</a> 生成一个；不填也能用「查地名 / 开关图层」这类本地功能。";
+    keyRow.appendChild(keyHint);
     _root.appendChild(keyRow);
 
     var msgs = _el("div", "ogv-ai-msgs");
@@ -1841,41 +2387,86 @@
     hist.appendChild(histList);
     _root.appendChild(hist);
 
+    // ── 输入区（2026-10-27 重做：一个圆角框包住「文字 + 工具条」）──
+    // 改前：「思考 / 联网」在输入框**上面**一行、textarea 自己一圈边框、发送键挂在右边
+    //       → 视觉上是两个叠着的框，窄屏一挤发送键就换行。
+    // 改后：照 DeepSeek —— **一个框**：上面文字区，下面工具条（左：能力开关 + 语音，
+    //       右：发送）。思考/联网/语音都是「这次提问怎么跑」的开关，归到框里才说得通。
     var comp = _el("div", "ogv-ai-comp");
-    // 两个运行开关（对齐 DeepSeek 官网输入框底部那两颗 pill 的交互）
+    var box = _el("div", "ogv-ai-box");
+
+    // 录音徽标：压在框的左上角（绝对定位，不占行高、不挤动下方内容）
+    var voiceTip = _el("div", "ogv-ai-voice-tip");
+    voiceTip.appendChild(_el("span", "ogv-ai-voice-ico", "🎤"));
+    var voiceTipTx = _el("span", "ogv-ai-voice-tx", "正在聆听 · 松开结束");
+    voiceTip.appendChild(voiceTipTx);
+    box.appendChild(voiceTip);
+
+    var ta = document.createElement("textarea");
+    ta.className = "ogv-ai-input";
+    ta.rows = 1; // 只决定 JS 接管前的初始高度，_autoGrow 会立刻接上
+    // ⚠️ 提示要**短到一行**：placeholder 会参与 scrollHeight，写长了空态就被切成两行
+    ta.placeholder = "问问这地图：地名、图层、设置、出图…";
+    ta.setAttribute("aria-label", "给 AI 发送消息");
+    box.appendChild(ta);
+
+    var bar = _el("div", "ogv-ai-bar");
     var opts = _el("div", "ogv-ai-opts");
     var bThink = _el("button", "ogv-ai-pill");
     bThink.type = "button";
     bThink.setAttribute("data-opt", "think");
-    bThink.innerHTML = '<span class="ogv-ai-pill-i" aria-hidden="true">🧠</span>深度思考';
+    bThink.setAttribute("aria-pressed", "false");
+    bThink.innerHTML =
+      '<span class="ogv-ai-pill-i" aria-hidden="true">🧠</span><span class="ogv-ai-pill-t">思考</span>';
     var bWeb = _el("button", "ogv-ai-pill");
     bWeb.type = "button";
     bWeb.setAttribute("data-opt", "web");
-    bWeb.innerHTML = '<span class="ogv-ai-pill-i" aria-hidden="true">🌐</span>联网搜索';
+    bWeb.setAttribute("aria-pressed", "false");
+    bWeb.innerHTML =
+      '<span class="ogv-ai-pill-i" aria-hidden="true">🌐</span><span class="ogv-ai-pill-t">联网</span>';
     opts.appendChild(bThink);
     opts.appendChild(bWeb);
-    comp.appendChild(opts);
 
-    var inputRow = _el("div", "ogv-ai-inputrow");
-    var ta = document.createElement("textarea");
-    ta.className = "ogv-ai-input";
-    ta.rows = 1;
-    ta.placeholder = "给 AI 发送消息（Ctrl/⌘ + K）";
-    inputRow.appendChild(ta);
-    var btnSend = _el("button", "ogv-ai-send", "发送");
+    // 语音输入：点一下开始、再点一下结束（开关语义）；
+    // 「按住输入框说话」是另一个入口，见 _voicePressDown。
+    var btnMic = _el("button", "ogv-ai-pill ogv-ai-mic");
+    btnMic.type = "button";
+    btnMic.setAttribute("aria-pressed", "false");
+    btnMic.innerHTML =
+      '<span class="ogv-ai-pill-i" aria-hidden="true">🎤</span><span class="ogv-ai-pill-t">语音</span>';
+    if (!_voiceCtor()) {
+      // 不支持就明说（Safari 旧版 / Firefox 没有 SpeechRecognition），别让用户按住半天以为坏了
+      btnMic.classList.add("is-off");
+      btnMic.title = "当前浏览器不支持语音输入（需 Chrome / Edge）";
+    } else {
+      btnMic.title = "点一下开始录音，再点一下结束（也可按住输入框说话，松手即停）";
+    }
+    opts.appendChild(btnMic);
+    bar.appendChild(opts);
+
+    var endWrap = _el("div", "ogv-ai-end");
+    var btnSend = _el("button", "ogv-ai-send", "↑");
     btnSend.type = "button";
-    inputRow.appendChild(btnSend);
-    comp.appendChild(inputRow);
+    btnSend.title = "发送（Enter）";
+    btnSend.setAttribute("aria-label", "发送");
+    endWrap.appendChild(btnSend);
+    bar.appendChild(endWrap);
+    box.appendChild(bar);
+    comp.appendChild(box);
     _root.appendChild(comp);
 
     document.body.appendChild(_root);
     _els = {
-      msgs: msgs, ta: ta, btnSend: btnSend,
+      msgs: msgs, ta: ta, btnSend: btnSend, box: box, composer: comp,
       keyRow: keyRow, keyInput: keyInput, btnKeySave: btnKeySave, btnKey: btnKey,
-      optWeb: bWeb, optThink: bThink,
+      keyHint: keyHint,
+      optWeb: bWeb, optThink: bThink, btnMic: btnMic,
+      voiceTip: voiceTip, voiceTipTx: voiceTipTx,
       hist: hist, histList: histList, btnHist: btnHist, btnNew: btnNew, btnHistClose: btnHistClose,
     };
     _syncOptBtns();
+    // 浮层高度同步（输入框是 absolute，消息区不会自动为它让位）
+    _observeComposer();
 
     btnHist.addEventListener("click", function () {
       _toggleHist();
@@ -1949,10 +2540,20 @@
         _send();
       }
     });
-    ta.addEventListener("input", function () {
-      ta.style.height = "auto";
-      ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+    ta.addEventListener("input", _autoGrowInput);
+    // ── 语音入口①：点 🎤 = 开/关「持续录制」（点一次开始，再点一次结束）──
+    // 不绑 pointerdown/up —— 那是「按住」语义，和入口②会打架；click 天然同时接住
+    // 鼠标 / 触屏 / 键盘（空格、回车），无障碍不用另写。
+    btnMic.addEventListener("click", function () {
+      if (_voice.active) _voiceStop();
+      else _voiceStart("toggle");
     });
+    // ── 语音入口②：按住输入框 = 按住说话（松手即停；触屏不绑，见 _voicePressDown）──
+    ta.addEventListener("pointerdown", _voicePressDown);
+    ta.addEventListener("pointermove", _voicePressMove);
+    // 松手可能已经滑出输入框 → 收尾挂在 window 上
+    window.addEventListener("pointerup", _voicePressUp);
+    window.addEventListener("pointercancel", _voicePressUp);
     // 候选卡片点击（事件委托：消息区反复重建，不逐个绑）
     msgs.addEventListener("click", function (e) {
       var t = e.target && e.target.closest ? e.target : null;
@@ -2004,11 +2605,335 @@
     var k = _key();
     var own = !!_ownKey();
     _els.btnKey.title = !k
-      ? "未设置 Key（点击填写）"
+      ? "未设置 API Key（点击填写，否则只能查地名 / 开关图层）"
       : own
         ? "Key 已设置：" + _maskKey(k) + "（点击更换）"
-        : "使用内置 Key " + _maskKey(k) + "（点击可填自己的）";
+        : "使用页面注入的 Key " + _maskKey(k) + "（点击可填自己的）";
+    // 没 Key 时 🔑 带红框：面板一打开就知道「得先填 key」，而不是发了消息才被拦
     _els.btnKey.classList.toggle("unset", !k);
+  }
+
+  // ─────────────────────────────────────────────
+  //  输入框自动增高
+  // ─────────────────────────────────────────────
+  var INPUT_MIN_H = 40;
+  var INPUT_MAX_H = 148; // 兜底：CSS 里 .ogv-ai-input 的 max-height 优先（窄屏会调低）
+  /**
+   * ⚠️ 必须先把高度**归零**再读 scrollHeight：scrollHeight 只会 >= 当前高度，
+   *    不清零的话删字时高度永远不回落（只会一路长高，最后卡在 max 上滚动）。
+   */
+  function _autoGrowInput() {
+    var ta = _els && _els.ta;
+    if (!ta) return;
+    ta.style.height = "auto";
+    var cs = global.getComputedStyle(ta);
+    var bY = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    // ⚠️ 上限读 **CSS 的 max-height**，别写死 JS 常量：窄屏用媒体查询把上限调到
+    //    104px（把高度留给对话区），若 JS 仍按 148 判定，就会出现「内容超了但
+    //    不显示滚动条」—— 用户看着字被切掉却滚不动。
+    var cssMax = parseFloat(cs.maxHeight);
+    var maxH = isFinite(cssMax) && cssMax > 0 ? cssMax : INPUT_MAX_H;
+    var need = ta.scrollHeight + bY;
+    ta.style.height = Math.max(INPUT_MIN_H, Math.min(need, maxH)) + "px";
+    ta.classList.toggle("is-max", need > maxH + 0.5);
+    // 输入框长高 → 浮层变高 → 消息区底部留白跟着长（否则最后一条会被压住）
+    _syncComposerPad();
+  }
+
+  // ─────────────────────────────────────────────
+  //  悬浮输入框 ↔ 消息区留白的同步（2026-10-27）
+  //
+  //  输入框改成 `position:absolute` 的浮层后（用户口径：「悬浮在对话框上面，
+  //  不需要单独再有框线」），它不再参与 flex 布局 —— 消息区不会自动为它让位，
+  //  最后一条消息会被永久压在框下面。所以这里把「浮层的实际高度」写成
+  //  `.ogv-ai-msgs` 的 `padding-bottom`。
+  //
+  //  ⚠️ 为什么用 ResizeObserver 而不是只听 resize：会让浮层变高的东西太多 ——
+  //     输入框自动增高、语音徽标、安全区、面板宽度变化（胶囊换行）、字体加载。
+  //     靠事件追不齐，靠观察尺寸才是一次到位。
+  // ─────────────────────────────────────────────
+  var _compRO = null;
+  function _syncComposerPad() {
+    var c = _els && _els.composer;
+    var m = _els && _els.msgs;
+    if (!c || !m) return;
+    var h = c.offsetHeight;
+    if (!h) return; // 面板还没显示（display:none）→ 量出来是 0，别写成 8px
+    var pad = h + 10; // +10：最后一条消息与浮层之间留一口气
+    if (m.style.paddingBottom !== pad + "px") m.style.paddingBottom = pad + "px";
+    // 已经贴底时补一次滚动：留白变大后内容会「跳」，保持贴底更自然
+    if (m.scrollHeight - m.scrollTop - m.clientHeight < pad + 40) {
+      m.scrollTop = m.scrollHeight;
+    }
+  }
+  /** 只挂一次：浮层尺寸的任何变化（增高/换行/安全区）都要重算留白 */
+  function _observeComposer() {
+    if (_compRO || !_els || !_els.composer) return;
+    if (typeof global.ResizeObserver !== "function") {
+      global.addEventListener("resize", _syncComposerPad);
+      return;
+    }
+    _compRO = new global.ResizeObserver(function () {
+      _syncComposerPad();
+    });
+    _compRO.observe(_els.composer);
+  }
+
+  // ─────────────────────────────────────────────
+  //  语音输入（Web Speech API，2026-10-27）
+  //
+  //  两个入口（用户点名都要）：
+  //    ① 🎤 按钮 —— **开关**：点一下开始，一直录到再点一下；
+  //    ② **按住输入框** 380ms —— 按住说话，松手即停。
+  //
+  //  转写**边识别边写进输入框**（interimResults），所以「说完发现识别错」可以直接改。
+  //
+  //  ⚠️⚠️ 两个浏览器事实（不是 bug，别当坏了修）：
+  //    ① `webkitSpeechRecognition` 是**云端识别**：Chrome 走 Google、Edge 走微软。
+  //       国内 Chrome 常直接报 `network` —— 错误文案要翻译成人话并提示换 Edge。
+  //    ② `continuous = true` 在静音几秒后也会自己 end；用户还没松手时要**自动续上**，
+  //       否则长句子说到一半就断。
+  //    ③ 触屏**不绑**长按：手指按住文本框会弹原生放大镜/选择菜单，和录音抢手势，
+  //       手机上请用 🎤 按钮。
+  // ─────────────────────────────────────────────
+  var VOICE_HOLD_MS = 380; // 按住多久算「要说话」（再短就和普通点选/双击打架）
+  var _voice = {
+    rec: null,
+    active: false,
+    holding: false,
+    mode: "",
+    base: "",
+    final: "",
+    interim: "",
+    error: null,
+    silent: false,
+    noRender: false,
+    session: 0,
+    holdT: 0,
+    holdOn: false,
+    hx: 0,
+    hy: 0,
+  };
+
+  function _voiceCtor() {
+    return global.SpeechRecognition || global.webkitSpeechRecognition || null;
+  }
+
+  function _coarsePointer() {
+    try {
+      return !!(global.matchMedia && global.matchMedia("(pointer: coarse)").matches);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function _voiceErrMsg(code) {
+    var M = {
+      "not-allowed": "麦克风被拒绝：请在地址栏左侧允许使用麦克风",
+      "service-not-allowed": "浏览器禁用了语音识别服务",
+      "audio-capture": "没找到可用的麦克风",
+      "no-speech": "",
+      network: "语音识别连不上：Chrome 走 Google 云端，国内常失败 —— 换 Edge 试试",
+      aborted: "",
+      "language-not-supported": "浏览器不支持中文识别",
+    };
+    return M[code] !== undefined ? M[code] : "语音识别出错（" + code + "）";
+  }
+
+  /** 把 base + final + interim 写回输入框（不触发 input 事件 → 手动 autoGrow）。 */
+  function _voiceRender() {
+    var ta = _els && _els.ta;
+    if (!ta) return;
+    var live = _voice.final + _voice.interim;
+    var sep = live && _voice.base && !/\s$/.test(_voice.base) ? " " : "";
+    ta.value = _voice.base + (live ? sep + live : "");
+    _autoGrowInput();
+  }
+
+  /** @param {string=} mode "toggle"（点 🎤，默认）| "hold"（按住输入框） */
+  function _voiceStart(mode) {
+    if (_voice.active) return;
+    var SR = _voiceCtor();
+    if (!SR) {
+      _toast("当前浏览器不支持语音输入（需 Chrome / Edge）");
+      return;
+    }
+    var ta = _els && _els.ta;
+    if (!ta) return;
+    _voice.mode = mode === "hold" ? "hold" : "toggle";
+    var rec = new SR();
+    rec.lang = "zh-CN";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onresult = function (e) {
+      // ⚠️ 每次**全量**重建（不按 resultIndex 增量拼）：interim 段会被替换、
+      //    终稿段会被移出 interim，增量拼法很容易把同一句拼两遍。
+      var fin = "";
+      var itr = "";
+      for (var i = 0; i < e.results.length; i++) {
+        var r = e.results[i];
+        var t = r[0] && r[0].transcript ? r[0].transcript : "";
+        if (r.isFinal) fin += t;
+        else itr += t;
+      }
+      _voice.final = fin;
+      _voice.interim = itr;
+      _voiceRender();
+    };
+    rec.onerror = function (e) {
+      _voice.error = (e && e.error) || "unknown";
+      // 终止性错误（拒绝授权/没有麦克风）：留着录制态会让 UI 一直亮着
+      if (_voice.error !== "no-speech" && _voice.error !== "aborted") _voice.holding = false;
+    };
+    rec.onend = function () {
+      // 浏览器自己 end（静音超时）但用户还按着 → 静默续上，别切断句子
+      if (_voice.holding && _voice.active) {
+        var mine = _voice.session;
+        setTimeout(function () {
+          if (!_voice.holding || !_voice.active || mine !== _voice.session) return;
+          try {
+            rec.start();
+          } catch (err) {
+            _voiceFinish();
+          }
+        }, 80);
+        return;
+      }
+      _voiceFinish();
+    };
+    _voice.rec = rec;
+    _voice.active = true;
+    _voice.holding = true;
+    _voice.session++;
+    _voice.error = null;
+    _voice.silent = false;
+    _voice.noRender = false;
+    _voice.base = ta.value || "";
+    _voice.final = "";
+    _voice.interim = "";
+    try {
+      rec.start();
+    } catch (err) {
+      _voice.active = false;
+      _voice.holding = false;
+      _toast("语音识别启动失败：" + (err && err.message ? err.message : "未知原因"));
+      return;
+    }
+    if (_els.voiceTipTx) {
+      _els.voiceTipTx.textContent =
+        _voice.mode === "toggle" ? "正在聆听 · 再点一下结束" : "正在聆听 · 松开结束";
+    }
+    _voicePaint(true);
+  }
+
+  /** 录音中要「发出去 / 关窗 / 换会话」时用：丢掉未定稿结果再收尾（不写回文字）。 */
+  function _voiceCancel() {
+    if (!_voice.active) return;
+    _voice.interim = "";
+    _voice.final = "";
+    /**
+     * ⚠️ 只清 final 不够：stop() 之后 onend 是**异步**来的（20~200ms），
+     *    收尾那次 _voiceRender() 会把 base 整段写回输入框 —— 而 _send() 已经清空了
+     *    输入框，于是「刚发出去的话又冒出来」。所以主动取消时连 render 一起关掉。
+     */
+    _voice.base = "";
+    _voice.noRender = true;
+    _voice.silent = true;
+    _voiceStop();
+  }
+
+  function _voiceStop() {
+    if (!_voice.active) return;
+    _voice.holding = false;
+    var mine = _voice.session;
+    try {
+      if (_voice.rec) _voice.rec.stop();
+    } catch (e) {}
+    // 兜底：个别情况下 stop() 后 onend 迟迟不来（Edge 偶发）→ 420ms 强制收尾
+    setTimeout(function () {
+      if (_voice.active && mine === _voice.session) _voiceFinish();
+    }, 420);
+  }
+
+  function _voiceFinish() {
+    if (!_voice.active) return;
+    _voice.active = false;
+    _voice.holding = false;
+    _voice.mode = "";
+    // ⚠️ 松手太快时最后一段往往还是 interim（浏览器还没把它定稿）——
+    //    直接丢掉就是「说到一半的话没了」。宁可留下这段临时结果让人自己改。
+    if (!_voice.final && _voice.interim) _voice.final = _voice.interim;
+    _voice.interim = "";
+    var noRender = _voice.noRender;
+    _voice.noRender = false;
+    if (!noRender) _voiceRender();
+    _voicePaint(false);
+    var err = _voice.error;
+    var silent = _voice.silent;
+    _voice.error = null;
+    _voice.silent = false;
+    var got = (_voice.final || "").trim();
+    var ta = _els && _els.ta;
+    if (ta) {
+      try {
+        ta.focus();
+        var n = ta.value.length;
+        ta.setSelectionRange(n, n);
+      } catch (e) {}
+    }
+    try {
+      if (_voice.rec && _voice.rec.abort) _voice.rec.abort();
+    } catch (e) {}
+    _voice.rec = null;
+    if (silent) return;
+    var msg = err ? _voiceErrMsg(err) : "";
+    if (msg) _toast(msg);
+    else if (!got) _toast("没听清，再按住说一次试试");
+  }
+
+  /** 录音态 UI：框描边 + 左上角徽标 + 🎤 高亮（三处必须同步，漏一处就像没在录）。 */
+  function _voicePaint(on) {
+    if (!_els) return;
+    if (_els.box) _els.box.classList.toggle("is-voice", !!on);
+    if (_els.voiceTip) _els.voiceTip.classList.toggle("on", !!on);
+    if (_els.btnMic) {
+      _els.btnMic.classList.toggle("is-on", !!on);
+      _els.btnMic.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+  }
+
+  // ── 语音入口②：按住输入框 ──
+  function _voicePressDown(e) {
+    if (!_voiceCtor()) return;
+    if (_voice.active) return; // 已经在录（点了 🎤）→ 按住输入框不再起一个
+    if (e.button && e.button !== 0) return; // 右键/中键不参与
+    if (_coarsePointer()) return; // 触屏：交给 🎤（长按文本框会弹原生选择菜单）
+    clearTimeout(_voice.holdT);
+    _voice.holdOn = true;
+    _voice.hx = e.clientX;
+    _voice.hy = e.clientY;
+    _voice.holdT = setTimeout(function () {
+      if (!_voice.holdOn) return;
+      _voice.holdOn = false;
+      _voiceStart("hold");
+    }, VOICE_HOLD_MS);
+  }
+
+  function _voicePressMove(e) {
+    if (!_voice.holdOn) return;
+    // 动了 = 用户在划选文字，不是要说话
+    if (Math.abs(e.clientX - _voice.hx) > 6 || Math.abs(e.clientY - _voice.hy) > 6) {
+      _voice.holdOn = false;
+      clearTimeout(_voice.holdT);
+    }
+  }
+
+  function _voicePressUp() {
+    _voice.holdOn = false;
+    clearTimeout(_voice.holdT);
+    // ⚠️ 只停「按住输入框」那种；点 🎤 起的持续录制必须活到下一次点击
+    if (_voice.mode === "hold") _voiceStop();
   }
 
   function _pushMsg(role, text, cands) {
@@ -2031,13 +2956,18 @@
         "「打开火山图层」→ 开关图层",
         "「关掉深色模式 / 打开点位聚类」→ 改站点设置",
         "「放大一点」「切到卫星底图」→ 调视野 / 换底图",
-        "「出一张 A4 300dpi 带经纬网的图」→ 辅助出图",
+        "「出一张 A4 300dpi 论文风格的图」→ 套模板出图（指北针/图例/格网可换样式）",
+        "「火山图层有哪些字段、深度均值多少」→ 前端统计属性（不把原始数据丢给模型）",
         "「马里亚纳海沟最大深度多少」→ 本地没有就联网搜（带来源链接）",
       ].forEach(function (t) {
         empty.appendChild(_el("div", "ogv-ai-empty-i", t));
       });
       empty.appendChild(
-        _el("div", "ogv-ai-empty-i ogv-ai-empty-k", "快捷键 Ctrl / ⌘ + K · 需要上网时先点亮「🌐 联网搜索」"),
+        _el(
+          "div",
+          "ogv-ai-empty-i ogv-ai-empty-k",
+          "Ctrl / ⌘ + K 唤起 · 🎤 或按住输入框说话 · 需要上网先点亮「🌐 联网」",
+        ),
       );
       box.appendChild(empty);
       return;
@@ -2331,8 +3261,11 @@
   function _send() {
     var text = _els.ta.value.trim();
     if (!text || _busy) return;
+    // 正在录音就先把识别收掉（否则 onend 的收尾会把刚发出去的话写回输入框）
+    if (_voice.active) _voiceCancel();
     _els.ta.value = "";
-    _els.ta.style.height = "auto";
+    _els.ta.style.height = "";
+    _autoGrowInput();
     _pushMsg("user", text);
 
     // ① 出图意图 → 直接进模型（本地搜索会误命中图层名）
@@ -2455,8 +3388,16 @@
    *  @param hint 附在最后一条用户消息后的补充（如「本地三级都没查到，可联网搜」） */
   function _askModelFlow(hint) {
     if (!_key()) {
-      _pushMsg("assistant", "还没配置 API Key：点右上角 🔑 填一个 DeepSeek Key 即可。");
+      // 内置 Key 已作废 → 没 Key 就**不发起请求**（本地直通仍然可用，见 _send）
+      _pushMsg(
+        "assistant",
+        "这个请求要调用模型，但本机还没填 API Key。\n\n" +
+          "点右上角 🔑 填一个 DeepSeek Key（只存本机、不上传），去 " +
+          "[platform.deepseek.com](https://platform.deepseek.com/api_keys) 免费生成。\n\n" +
+          "只查地名 / 开关图层 / 调设置这类操作**不填 Key 也能用**。",
+      );
       _els.keyRow.classList.add("open");
+      if (_els.keyInput) _els.keyInput.focus();
       return;
     }
     _busy = true;
@@ -2579,6 +3520,10 @@
     _open = true;
     _syncFab();
     _els.ta.focus();
+    // 打开时量一次高度：placeholder 会换行，纯 CSS 的 min-height 量不准（首次会切掉半行）
+    _autoGrowInput();
+    // 面板刚显示时 offsetHeight 才有值 → 必须在这时算一次留白，否则首屏最后一条被压住
+    _syncComposerPad();
   }
   // 出图面板（#mapExportPanel）也停靠右侧：它打开时 AI 面板左移让位，关闭后弹回
   var _mepObserver = null;
@@ -2613,6 +3558,8 @@
   function close(opts) {
     if (_root) _root.classList.remove("open");
     _open = false;
+    // 面板关了还亮着麦克风是隐私事故（浏览器地址栏会一直挂红点）
+    if (_voice.active) _voiceCancel();
     _flushSave(); // 关面板/切标签页前把最后一句立刻落盘（别丢在防抖窗口里）
     _syncFab();
     if (!(opts && opts.keepRequest) && _abort) _abort.abort();
@@ -2717,6 +3664,10 @@
     _webSearch: _webSearchTool,
     _optionItems: _optionItems,
     _ctxLine: _ctxLine,
+    // 矢量属性分析（前端统计）：探针直接用，不经模型
+    _describeLayer: _describeLayer,
+    _queryFeatures: _queryFeatures,
+    _fieldStats: _fieldStats,
     // 运行开关（联网搜索 / 深度思考）与历史会话：探针与宿主页用
     opts: function () {
       return { web: !!_opt.web, think: !!_opt.think };

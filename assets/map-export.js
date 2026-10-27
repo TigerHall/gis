@@ -47,6 +47,82 @@
   var FONT_SERIF = '"Times New Roman", "Nimbus Roman", "Songti SC", SimSun, serif';
   var FONT_SANS = '"Microsoft YaHei", "PingFang SC", Arial, sans-serif';
 
+  // ─────────────────────────────────────────────
+  //  图面模板 / 装饰样式（2026-10-27）
+  //
+  //  设计口径（用户原话）：「出图就是把模板套上去」——一份模板只描述**图面语言**
+  //  （指北针、图例、格网、图框各长什么样），纸面尺寸/dpi/内容开关仍然是独立轴。
+  //  所以模板 = 一组 style 默认值的别名 + 若干开关的初值，不锁死任何东西：
+  //  用户套完模板再手改任意一项即可（改过的项不再跟模板联动，UI 标「自定义」）。
+  //
+  //  ⚠️ 新增一种样式 = ① 往 STYLE_ENUM 里加取值 ② 在对应的 draw* 里加一个分支
+  //     ③ 往 TEMPLATES 里挑是否引用。**不要**为某个模板写单独一套绘制代码。
+  // ─────────────────────────────────────────────
+  var STYLE_DEFAULTS = {
+    northArrowStyle: "classic", // classic 双环黑白指针 / compact 细箭头 / compass 八角罗盘 / cross 十字
+    legendStyle: "card", // card 白底细框 / plain 无底无框 / swatch 左侧色条
+    graticuleStyle: "solid", // solid / dashed / dotted / none
+    frameStyle: "double", // double 外粗内细 / single 单线
+  };
+
+  var STYLE_ENUM = {
+    northArrowStyle: ["classic", "compact", "compass", "cross"],
+    legendStyle: ["card", "plain", "swatch"],
+    graticuleStyle: ["solid", "dashed", "dotted", "none"],
+    frameStyle: ["double", "single"],
+  };
+
+  var TEMPLATES = {
+    paper: {
+      label: "论文",
+      // 学术插图：衬线、双线图框、实线经纬网、双环黑白指北针、白底细框图例
+      style: { northArrowStyle: "classic", legendStyle: "card", graticuleStyle: "solid", frameStyle: "double" },
+      flags: { frame: true, frameLabels: "all", graticule: true, northArrow: true, scaleBar: true, legend: true },
+    },
+    report: {
+      label: "报告",
+      // 工程/调查报告：单线框、虚线网、罗盘指北针、左侧色条图例
+      style: { northArrowStyle: "compass", legendStyle: "swatch", graticuleStyle: "dashed", frameStyle: "single" },
+      flags: { frame: true, frameLabels: "lb", graticule: true, northArrow: true, scaleBar: true, legend: true },
+    },
+    slide: {
+      label: "汇报",
+      // 汇报/PPT 截图向：不要图框、不要经纬网，只留标题 + 简洁指北针 + 无底图例
+      style: { northArrowStyle: "compact", legendStyle: "plain", graticuleStyle: "none", frameStyle: "single" },
+      flags: { frame: false, frameLabels: "none", graticule: false, northArrow: true, scaleBar: true, legend: true },
+    },
+    field: {
+      label: "野外",
+      // 野外速览/草图：点线格网 + 十字指北针，强调位置感
+      style: { northArrowStyle: "cross", legendStyle: "plain", graticuleStyle: "dotted", frameStyle: "single" },
+      flags: { frame: true, frameLabels: "all", graticule: true, northArrow: true, scaleBar: true, legend: true },
+    },
+  };
+
+  /**
+   * 归一化样式：模板默认 ← opts.style* 单项覆盖 ← opts.style 对象覆盖。
+   * 未知取值一律回落到 STYLE_DEFAULTS（前端传错不该把图搞坏）。
+   */
+  function resolveStyle(opts) {
+    var out = {};
+    var k;
+    for (k in STYLE_DEFAULTS) out[k] = STYLE_DEFAULTS[k];
+    var tpl = opts && opts.template && TEMPLATES[opts.template];
+    if (tpl) for (k in tpl.style) out[k] = tpl.style[k];
+    if (opts && opts.style && typeof opts.style === "object") {
+      for (k in opts.style) if (out[k] != null && opts.style[k] != null) out[k] = opts.style[k];
+    }
+    if (opts) {
+      for (k in STYLE_ENUM) {
+        if (opts[k] != null && String(opts[k]) !== "") out[k] = String(opts[k]);
+      }
+    }
+    for (k in STYLE_ENUM) {
+      if (STYLE_ENUM[k].indexOf(out[k]) === -1) out[k] = STYLE_DEFAULTS[k];
+    }
+    return out;
+  }
+
   // ========== 投影换算 ==========
   function lonToX(lon, scale, originX) {
     return ((lon + 180) / 360) * scale + originX;
@@ -788,71 +864,181 @@
         }
         return;
       }
-      // ⑤ 点标记
-      if (layer instanceof L.Marker) markers.push(layer);
+      // ⑤ 点标记：**不在这里收**（见下方 collectMarkerDescs 的说明）
     });
 
+    // 点标记统一从 markerPane 的 DOM 反查：能拿到「屏幕上真正的那个图标」，
+    // 也顺手解决「图层对象藏在组/世界副本/聚类里走不到」的老问题。
+    markers = collectMarkerDescs(map);
     return { paths: paths, markers: markers, pointLayers: pointLayers };
   }
 
   /**
-   * 点标记 → 「屏幕上那个图标」的描述。
+   * 点标记 → 「屏幕上那个图标」的描述（2026-10-27 重做）。
    *
-   * 以前出图把点一律画成半径 3px 的红点 —— 与屏幕差得离谱：
-   * 屏幕上是带白边的火山三角/热点火焰（L.divIcon 内联 SVG），出图变成小红点，
-   * 论文图里根本看不出是什么。这里直接把**已经渲染出来的 DOM 图标**序列化成
-   * data URL 再 drawImage，形状/颜色/尺寸与屏幕完全一致。
+   * 验收标准只有一条：**出图里那一点，和屏幕上那一点长得一样大、一样花**。
+   * 老实现有两个都会导致「大小不对」的硬伤：
    *
-   * ⚠️ 位置不能用 latlng 直接当图标中心：带标签的图标是 [120,20] 的 wrapper、
-   *    iconAnchor 在左端（见 Leaflet.GeoMarker.createSvgLabeledMarker），
-   *    图标实际画在坐标点右侧。所以量 DOM 矩形、算它相对「坐标点屏幕位置」的偏移。
-   *    这样任意 anchor / wrapper 结构都对。
+   *  ① 只认 `L.Marker` 图层对象 → 藏在 `L.WorldCopyGroup` / `markerClusterGroup`
+   *     里的 marker 一个都收不到（`map.eachLayer` 不递归子树），整层凭空消失。
+   *  ② 只认 `<svg>` / `<img>` 子节点 → 用 `createLabeledMarker` 画的圆点
+   *     （`.station-dot`，一个 span + CSS 圆）匹配不上 → 掉进「半径 3px 红点」兜底，
+   *     屏幕上 20px 的圆点在论文图里变成 3px —— 这就是「出图点比看到的细」的根因。
+   *
+   * 现在改成**直接扫 markerPane 里真实的 DOM**：屏幕上有什么就描什么，
+   * 一个不落、一个不多。位置也不用 latlng 硬算 —— 量出图标矩形的中心，
+   * 反投影成 latlng 再正常走 project()，任意 iconAnchor / wrapper 结构都对。
    */
-  function describeMarker(mk, map) {
-    var el = mk.getElement && mk.getElement();
-    if (!el) return null;
+  function collectMarkerDescs(map) {
+    var pane = map.getPanes && map.getPanes().markerPane;
+    if (!pane) return [];
+    var nodes = pane.querySelectorAll(".leaflet-marker-icon");
+    if (!nodes || !nodes.length) return [];
+
+    var cr = map.getContainer().getBoundingClientRect();
+    var size = map.getSize();
+    // 容器有虚线边框：clientWidth 不含边框，getBoundingClientRect 含
+    var bw = Math.max(0, (cr.width - size.x) / 2);
+    var bh = Math.max(0, (cr.height - size.y) / 2);
+    var out = [];
+
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var cs = window.getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden") continue;
+      if (parseFloat(cs.opacity) === 0) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) continue;
+      // 中心点（容器 CSS px）→ 反投影成经纬度（世界副本上的图标也能落回正本 latlng）
+      var cx = r.left + r.width / 2 - cr.left - bw;
+      var cy = r.top + r.height / 2 - cr.top - bh;
+      // 完全在图外的不画（屏幕上也看不见）
+      if (cx < -r.width || cx > size.x + r.width) continue;
+      if (cy < -r.height || cy > size.y + r.height) continue;
+      var ll = map.containerPointToLatLng(L.point(cx, cy));
+      var d = describeMarkerEl(el, r, cs);
+      if (!d) continue;
+      d.ll = ll;
+      d.alpha = effMarkerOpacity(el, pane);
+      out.push(d);
+    }
+    return out;
+  }
+
+  /** 从元素往上累计 opacity（`.gm-op-wrap` 那种「图层不透明度」就是这么生效的） */
+  function effMarkerOpacity(el, stopAt) {
+    var op = 1;
+    var node = el;
+    var guard = 0;
+    while (node && node !== stopAt && guard++ < 12) {
+      var o = parseFloat(window.getComputedStyle(node).opacity);
+      if (isFinite(o)) op *= o;
+      node = node.parentNode;
+    }
+    return op;
+  }
+
+  /**
+   * 单个 DOM 图标的「画法描述」。三种形态，覆盖项目里全部点样式：
+   *   · icon    —— 有 svg / img 子节点（火山三角、热点、聚类圆、外部图标）
+   *   · dot     —— `.station-dot` 或自绘背景色的 divIcon（无标签圆点）
+   *   · cluster —— markercluster 默认气泡（背景色 + 数字）
+   */
+  function describeMarkerEl(el, rect, cs) {
+    var w = rect.width;
+    var h = rect.height;
     var node =
       el.querySelector(".station-icon-svg > svg") ||
       el.querySelector("svg") ||
       el.querySelector("img");
-    if (!node) return null;
-    var r = node.getBoundingClientRect();
-    if (!r.width || !r.height) return null;
-    var ll = mk.getLatLng && mk.getLatLng();
-    if (!ll) return null;
 
-    var url = null;
-    if (node.tagName.toLowerCase() === "img") {
-      url = node.currentSrc || node.src;
-    } else {
-      // 内联 SVG → data URL（同一标签/图标的 marker 共用同一条 URL，只加载一次）
-      var clone = node.cloneNode(true);
-      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      clone.setAttribute("width", String(Math.round(r.width)));
-      clone.setAttribute("height", String(Math.round(r.height)));
-      try {
-        url =
-          "data:image/svg+xml;charset=utf-8," +
-          encodeURIComponent(new XMLSerializer().serializeToString(clone));
-      } catch (e) {
-        url = null;
-      }
+    if (node) {
+      var nr = node.getBoundingClientRect();
+      if (nr.width < 0.5 || nr.height < 0.5) return null;
+      var url = serializeIconNode(node, nr);
+      if (!url) return null;
+      return { kind: "icon", url: url, w: nr.width, h: nr.height };
     }
-    if (!url) return null;
 
-    var c = map.latLngToContainerPoint(ll);
-    var cr = map.getContainer().getBoundingClientRect();
-    // 容器有虚线边框：clientWidth 不含边框，getBoundingClientRect 含
-    var bw = Math.max(0, (cr.width - map.getSize().x) / 2);
-    return {
-      ll: ll,
-      url: url,
-      // 图标中心 − 坐标点的屏幕偏移（CSS px）
-      dx: r.left + r.width / 2 - (cr.left + bw + c.x),
-      dy: r.top + r.height / 2 - (cr.top + bw + c.y),
-      w: r.width,
-      h: r.height,
-    };
+    // ── 圆点：`.station-dot`（createLabeledMarker）──
+    var dot = el.querySelector(".station-dot");
+    if (dot) {
+      var dr = dot.getBoundingClientRect();
+      var ds = window.getComputedStyle(dot);
+      if (dr.width < 0.5) return null;
+      return {
+        kind: "dot",
+        r: dr.width / 2,
+        fill: ds.backgroundColor || "#e63946",
+        stroke: ds.borderTopColor || "#fff",
+        strokeW: parseFloat(ds.borderTopWidth) || 0,
+      };
+    }
+
+    // ── markercluster 默认气泡：背景色 + 计数 ──
+    if (/(^|\s)marker-cluster(\s|$)/.test(el.className || "")) {
+      var inner = el.querySelector("div") || el;
+      var is = window.getComputedStyle(inner);
+      var span = el.querySelector("span") || el;
+      var ss = window.getComputedStyle(span);
+      return {
+        kind: "cluster",
+        r: Math.min(w, h) / 2,
+        fill: is.backgroundColor || "rgba(110,204,57,0.6)",
+        stroke: is.borderTopColor && is.borderTopWidth !== "0px" ? is.borderTopColor : null,
+        strokeW: parseFloat(is.borderTopWidth) || 0,
+        text: (el.textContent || "").trim(),
+        textColor: ss.color || "#fff",
+        font: ss.font || "bold 12px sans-serif",
+      };
+    }
+
+    // ── 兜底：自带背景色的方/圆 divIcon ──
+    var bg = cs.backgroundColor;
+    if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+      return {
+        kind: "dot",
+        r: Math.min(w, h) / 2,
+        fill: bg,
+        stroke: cs.borderTopColor || null,
+        strokeW: parseFloat(cs.borderTopWidth) || 0,
+      };
+    }
+    return null;
+  }
+
+  /**
+   * 内联 SVG / img → 可直接 drawImage 的 URL。
+   * ⚠️ 同款图标（几百个火山三角）序列化代价不小 → 按「html + 取整尺寸」缓存，
+   *    实测 3000 点层的出图时间从分钟级回到秒级。
+   */
+  var _iconUrlCache = {};
+  function serializeIconNode(node, r) {
+    var tag = node.tagName.toLowerCase();
+    if (tag === "img") return node.currentSrc || node.src || null;
+    var w = Math.round(r.width);
+    var h = Math.round(r.height);
+    var key = w + "x" + h + "|";
+    try {
+      key += node.outerHTML;
+    } catch (e) {
+      return null;
+    }
+    if (_iconUrlCache[key]) return _iconUrlCache[key];
+    var clone = node.cloneNode(true);
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", String(w));
+    clone.setAttribute("height", String(h));
+    var url = null;
+    try {
+      url =
+        "data:image/svg+xml;charset=utf-8," +
+        encodeURIComponent(new XMLSerializer().serializeToString(clone));
+    } catch (e) {
+      url = null;
+    }
+    if (url) _iconUrlCache[key] = url;
+    return url;
   }
 
   /**
@@ -1014,6 +1200,87 @@
   }
 
   /**
+   * 屏幕空间网格聚类 —— **逐字照搬 Leaflet.MarkersCanvas.js 的 computeClusters**。
+   *
+   * 为什么必须照搬而不是「差不多」：出图的不变量是「出图范围 == 屏幕视野」，
+   * 屏幕上那堆聚合气泡是这张图的视觉主体；出图若自己换了算法/半径/网格原点，
+   * 就会得到另一组气泡（数量、位置、大小全不一样），用户立刻能看出「和看到的不是一张图」。
+   *
+   * ⚠️ 输入输出都是**屏幕 CSS 像素**（不是画布像素）：先在屏幕空间聚类，
+   *    画的时候再整体乘 posK，才与屏幕的聚类结果严格同构。
+   *
+   * @param pts    [{x,y,color}]
+   * @param radius clusterDistance（屏幕像素，默认 100）
+   * @returns [{x,y,color,count}]  count=0 表示单点
+   */
+  function clusterScreenPoints(pts, radius) {
+    if (!pts.length) return [];
+    var cellSize = Math.max(Math.floor(radius / 2), 1);
+    var grid = Object.create(null);
+    var i;
+
+    for (i = 0; i < pts.length; i++) {
+      var p = pts[i];
+      var gx = Math.floor(p.x / cellSize);
+      var gy = Math.floor(p.y / cellSize);
+      var key = gx + "," + gy;
+      if (!grid[key]) grid[key] = { pts: [], cx: 0, cy: 0 };
+      var cell = grid[key];
+      cell.pts.push(p);
+      cell.cx += p.x;
+      cell.cy += p.y;
+    }
+
+    var deleted = Object.create(null);
+    var keys = Object.keys(grid);
+    var kk, dx, dy, nkey, neighbor, ccx, ccy, ncX, ncY, distX, distY, nj;
+    for (kk = 0; kk < keys.length; kk++) {
+      var mainKey = keys[kk];
+      if (deleted[mainKey]) continue;
+      var mainCell = grid[mainKey];
+      var parts = mainKey.split(",");
+      var mx = parseInt(parts[0], 10);
+      var my = parseInt(parts[1], 10);
+      for (dx = -1; dx <= 1; dx++) {
+        for (dy = -1; dy <= 1; dy++) {
+          if (!dx && !dy) continue;
+          nkey = mx + dx + "," + (my + dy);
+          if (deleted[nkey] || !grid[nkey]) continue;
+          neighbor = grid[nkey];
+          ccx = mainCell.cx / mainCell.pts.length;
+          ccy = mainCell.cy / mainCell.pts.length;
+          ncX = neighbor.cx / neighbor.pts.length;
+          ncY = neighbor.cy / neighbor.pts.length;
+          distX = ncX - ccx;
+          distY = ncY - ccy;
+          if (distX * distX + distY * distY <= radius * radius) {
+            for (nj = 0; nj < neighbor.pts.length; nj++) {
+              mainCell.pts.push(neighbor.pts[nj]);
+              mainCell.cx += neighbor.pts[nj].x;
+              mainCell.cy += neighbor.pts[nj].y;
+            }
+            deleted[nkey] = true;
+          }
+        }
+      }
+    }
+
+    var out = [];
+    for (kk = 0; kk < keys.length; kk++) {
+      if (deleted[keys[kk]]) continue;
+      var c2 = grid[keys[kk]];
+      var count = c2.pts.length;
+      out.push({
+        x: c2.cx / count,
+        y: c2.cy / count,
+        color: c2.pts[0].color,
+        count: count === 1 ? 0 : count,
+      });
+    }
+    return out;
+  }
+
+  /**
    * 把收集到的矢量内容画到画布上。
    *
    * @param data      collectVectorPaths() 的结果
@@ -1057,86 +1324,185 @@
      *    一片浑浊的棕色（实测：红三角被 0.3 透明度的褐色面糊成金褐色）。
      */
     function drawPoints() {
-      // ---- 点 ①：DOM 标记（可以拿到真实图标）----
-      (data.markers || []).forEach(function (mk) {
-      var d = mk._iconDesc;
-      var ll = d ? d.ll : mk.getLatLng && mk.getLatLng();
-      if (!ll) return;
-      var pos = project(ll);
-      if (pos.y < -H || pos.y > H * 2) return; // 极点外/明显越界（省 CPU）
-      var img = d && iconCache ? iconCache[d.url] : null;
-      var kk = ksOf(pos.x);
+      // ---- 点 ①：DOM 标记（屏幕上有什么就描什么）----
+      (data.markers || []).forEach(function (d) {
+        if (!d || !d.ll) return;
+        var pos = project(d.ll);
+        if (pos.y < -H || pos.y > H * 2) return; // 极点外/明显越界（省 CPU）
+        var kk = ksOf(pos.x);
+        var op = d.alpha == null ? 1 : d.alpha;
 
-      if (img && d.w > 0) {
-        // 真实图标：尺寸与偏移都按屏幕比例放大
-        var dw = d.w * posK;
-        var dh = d.h * posK;
-        var cy = pos.y + d.dy * posK;
-        for (var k = kk[0]; k <= kk[1]; k++) {
-          var iconCx = pos.x + d.dx * posK + k * worldW;
-          if (iconCx + dw / 2 < 0 || iconCx - dw / 2 > W) continue;
-          if (cy + dh / 2 < 0 || cy - dh / 2 > H) continue;
-          try {
-            ctx.drawImage(img, iconCx - dw / 2, cy - dh / 2, dw, dh);
-            n++;
-          } catch (e) {}
+        if (d.kind === "icon") {
+          var img = iconCache ? iconCache[d.url] : null;
+          var dw = d.w * posK;
+          var dh = d.h * posK;
+          for (var k = kk[0]; k <= kk[1]; k++) {
+            var iconCx = pos.x + k * worldW;
+            if (iconCx + dw / 2 < 0 || iconCx - dw / 2 > W) continue;
+            if (pos.y + dh / 2 < 0 || pos.y - dh / 2 > H) continue;
+            ctx.globalAlpha = baseA * op;
+            if (imgOk(img)) {
+              try {
+                ctx.drawImage(img, iconCx - dw / 2, pos.y - dh / 2, dw, dh);
+                n++;
+              } catch (e) {}
+            } else {
+              // 图标解码失败：按屏幕尺寸画一个同色圆，至少大小不跑偏
+              ctx.beginPath();
+              ctx.arc(iconCx, pos.y, dw / 2, 0, Math.PI * 2);
+              ctx.fillStyle = "rgba(160,160,160,0.85)";
+              ctx.fill();
+              n++;
+            }
+          }
+          ctx.globalAlpha = baseA;
+          return;
         }
-        return;
-      }
 
-      // 兜底：取不到图标（标记不在 DOM 里 / SVG 序列化失败）→ 小圆点
-      var r = Math.max(1.5, 3 * scaleFactor);
-      for (var k2 = kk[0]; k2 <= kk[1]; k2++) {
-        var cx = pos.x + k2 * worldW;
-        if (cx < -r || cx > W + r) continue;
-        ctx.beginPath();
-        ctx.arc(cx, pos.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = "#e63946";
+        // 圆点 / 聚类气泡：半径与描边都照屏幕（CSS px）等比放大
+        var r = Math.max(1, (d.kind === "cluster" ? d.r : d.r || 4) * posK);
+        var sw = (d.strokeW || 0) * posK;
+        for (var k2 = kk[0]; k2 <= kk[1]; k2++) {
+          var cx = pos.x + k2 * worldW;
+          if (cx < -r || cx > W + r) continue;
+          ctx.globalAlpha = baseA * op;
+          ctx.beginPath();
+          ctx.arc(cx, pos.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = d.fill || "#e63946";
+          ctx.fill();
+          if (d.stroke && sw > 0) {
+            ctx.lineWidth = Math.max(0.4, sw);
+            ctx.strokeStyle = d.stroke;
+            ctx.stroke();
+          }
+          if (d.kind === "cluster" && d.text) {
+            // 计数文字：屏幕上是 11~13px 粗体，按同一比例放大
+            var fs = Math.max(6, r * 0.95);
+            ctx.font = "700 " + fs + "px Arial, sans-serif";
+            ctx.fillStyle = d.textColor || "#fff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(d.text, cx, pos.y);
+          }
+          n++;
+        }
         ctx.globalAlpha = baseA;
-        ctx.fill();
-        ctx.lineWidth = Math.max(0.5, 1 * scaleFactor);
-        ctx.strokeStyle = "#fff";
-        ctx.stroke();
-        n++;
-      }
-    });
+      });
 
-    // ---- 点 ②：Canvas 点层（大数据集，无 DOM）----
-    (data.pointLayers || []).forEach(function (layer) {
-      var feats = layer._features || [];
-      if (!feats.length) return;
-      var oo = layer.options || {};
-      var size = Math.max(2, (oo.iconSize || 20) * posK);
-      var singleImg = imgOk(oo.iconImage) ? oo.iconImage : null;
-      var colorImgs = oo.iconImages || null;
-      var op2 = oo.opacity == null ? 1 : oo.opacity;
-      ctx.globalAlpha = baseA * op2;
-      for (var i = 0; i < feats.length; i++) {
-        var f = feats[i];
-        if (!f || !isFinite(f.lat) || !isFinite(f.lng)) continue;
-        var p = project({ lat: f.lat, lng: f.lng });
-        if (p.y < -size || p.y > H + size) continue;
-        var img2 = singleImg || (colorImgs ? colorImgs[f.color] : null);
-        var kk2 = ksOf(p.x);
-        for (var k3 = kk2[0]; k3 <= kk2[1]; k3++) {
-          var x3 = p.x + k3 * worldW;
-          if (x3 < -size || x3 > W + size) continue;
-          if (imgOk(img2)) {
+      // ---- 点 ②：Canvas 点层（大数据集，无 DOM）----
+      // ⚠️ 这里是「点尺寸对不上」的另一半根因：屏幕侧由 Leaflet.MarkersCanvas
+      //    自己画（图标等比适配 iconSize、无图标时半径 8、开启聚类时画气泡），
+      //    出图侧以前只会「把 iconSize 当正方形铺满」+「永不聚类」——
+      //    于是缩小时屏幕满是聚合气泡，出图却是一片密点。下面逐条对齐屏幕口径。
+      (data.pointLayers || []).forEach(function (layer) {
+        var feats = layer._features || [];
+        if (!feats.length) return;
+        var oo = layer.options || {};
+        var op2 = oo.opacity == null ? 1 : oo.opacity;
+        var szCss = oo.iconSize || 20; // 屏幕语义：图标外接框边长（CSS px）
+        var singleImg = imgOk(oo.iconImage) ? oo.iconImage : null;
+        var colorImgs = oo.iconImages || null;
+
+        // ★ 首选：**直接抄屏幕已经算好的绘制单元**（layer._lastClusters）。
+        //   MarkersCanvas 每次 _redraw 都会把这批单元存下来（x/y 是容器 CSS 像素，
+        //   已含聚类结果）。用它出图，聚合气泡的数量/位置/计数与屏幕**逐字节一致**，
+        //   连「为什么屏幕上这两个点并成一个气泡」都不用重新解释。
+        var units = null;
+        var lc = layer._lastClusters;
+        if (Array.isArray(lc) && lc.length) units = lc;
+
+        var scrW = W / posK;
+        var scrH = H / posK;
+
+        if (!units) {
+          // 兜底：屏幕上还没算过（刚加图层就出图）→ 本地按同一套算法算一遍。
+          // ⚠️ 只拿**视口内**的点参与聚类（MarkersCanvas 也是查视口矩形再聚类）；
+          //    把视口外的点也丢进去会把聚类中心拽偏 → 气泡与屏幕对不上。
+          var zoomNow = data.zoom == null ? 0 : data.zoom;
+          var useCluster =
+            !!oo.clustering && zoomNow <= (oo.clusterMaxZoom == null ? 14 : oo.clusterMaxZoom);
+          var clusterR = oo.clusterDistance || 100;
+          var scr = [];
+          for (var i = 0; i < feats.length; i++) {
+            var f = feats[i];
+            if (!f || !isFinite(f.lat) || !isFinite(f.lng)) continue;
+            var p = project({ lat: f.lat, lng: f.lng });
+            scr.push({ x: p.x / posK, y: p.y / posK, color: f.color });
+          }
+          var kRange = ksOf(0);
+          units = [];
+          for (var kk3 = kRange[0]; kk3 <= kRange[1]; kk3++) {
+            var offX = kk3 * scrW;
+            var inView = [];
+            for (var q = 0; q < scr.length; q++) {
+              var sx = scr[q].x + offX;
+              var sy = scr[q].y;
+              if (sx < 0 || sx > scrW || sy < 0 || sy > scrH) continue;
+              inView.push({ x: sx, y: sy, color: scr[q].color });
+            }
+            if (!inView.length) continue;
+            if (useCluster) {
+              units = units.concat(clusterScreenPoints(inView, clusterR));
+            } else {
+              units = units.concat(
+                inView.map(function (s) {
+                  return { x: s.x, y: s.y, color: s.color, count: 0 };
+                }),
+              );
+            }
+          }
+        }
+
+        ctx.globalAlpha = baseA * op2;
+        for (var u = 0; u < units.length; u++) {
+          var un = units[u];
+          if (!un || !isFinite(un.x) || !isFinite(un.y)) continue;
+          var X = un.x * posK;
+          if (X < -szCss * posK || X > W + szCss * posK) continue;
+          var Y = un.y * posK;
+          if (Y < -szCss * posK || Y > H + szCss * posK) continue;
+          if (un.count) {
+            // 聚合气泡：半径公式照抄 MarkersCanvas（10 + log2(n)*5，上限 36）
+            var cr2 = Math.min(10 + Math.log2(un.count) * 5, 36) * posK;
+            ctx.beginPath();
+            ctx.fillStyle = un.color || "#3388ff";
+            ctx.arc(X, Y, cr2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = Math.max(0.6, 2 * posK);
+            ctx.stroke();
+            ctx.fillStyle = "#fff";
+            ctx.font = "700 " + Math.max(6, 11 * posK) + "px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(String(un.count), X, Y);
+            n++;
+            continue;
+          }
+          var img2 = singleImg || (colorImgs ? colorImgs[un.color] : null);
+          if (imgOk(img2) && img2.naturalWidth) {
+            // 与屏幕一致：等比缩放进 iconSize 的方框，不拉伸
+            var sc = Math.min(szCss / img2.naturalWidth, szCss / img2.naturalHeight);
+            var dw2 = Math.round(img2.naturalWidth * sc) * posK;
+            var dh2 = Math.round(img2.naturalHeight * sc) * posK;
             try {
-              ctx.drawImage(img2, x3 - size / 2, p.y - size / 2, size, size);
+              ctx.drawImage(img2, X - dw2 / 2, Y - dh2 / 2, dw2, dh2);
               n++;
             } catch (e) {}
           } else {
+            // 无自定义图标：屏幕画半径 8、白描边 1 的实心圆（不是 iconSize/2！）
             ctx.beginPath();
-            ctx.arc(x3, p.y, size / 2, 0, Math.PI * 2);
-            ctx.fillStyle = f.color || "#e63946";
+            ctx.arc(X, Y, Math.max(1, 8 * posK), 0, Math.PI * 2);
+            ctx.fillStyle = un.color || "#3388ff";
             ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = Math.max(0.5, 1 * posK);
+            ctx.stroke();
             n++;
           }
         }
-      }
-      ctx.globalAlpha = baseA;
-    });
+        ctx.globalAlpha = baseA;
+      });
     }
 
     // ---- 面 / 线（先画）----
@@ -1328,11 +1694,13 @@
    *    而画布可能覆盖一个以上世界宽度（低缩放 + 大幅面时），
    *    直接按未归一化的经度算 x 才能正确重复出多份网格。
    */
-  function drawGraticule(ctx, o, W, H, scaleFactor, ivs) {
+  function drawGraticule(ctx, o, W, H, scaleFactor, ivs, sty) {
     var ivLng = ivs && ivs.lng ? ivs.lng : 10;
     var ivLat = ivs && ivs.lat ? ivs.lat : ivLng;
     var worldSize = o.worldSize;
     var S = o.S;
+    var gstyle = (sty && sty.graticuleStyle) || "solid";
+    if (gstyle === "none") return { lng: ivLng, lat: ivLat, style: "none" };
 
     function lngToX(lng) {
       return ((lng + 180) / 360) * worldSize * S - o.shiftX;
@@ -1354,6 +1722,18 @@
     ctx.strokeStyle = "rgba(90,90,90,0.45)";
     ctx.lineWidth = lineW;
     ctx.setLineDash([]);
+    // ── 格网样式（2026-10-27）──
+    // 三种都只改「线的笔触」，不动格点与刻度：格点是 drawFrame 的刻度/标注基准，
+    // 一旦两处各算各的，刻度和线就对不上（论文图里最刺眼的那种错）。
+    if (gstyle === "dashed") {
+      ctx.setLineDash([Math.max(3, 2.6 * lineW * 2), Math.max(2.5, 2.2 * lineW * 2)]);
+      ctx.strokeStyle = "rgba(70,70,70,0.5)";
+    } else if (gstyle === "dotted") {
+      ctx.setLineDash([Math.max(0.8, lineW * 0.9), Math.max(2.4, lineW * 2.6)]);
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(60,60,60,0.55)";
+      ctx.lineWidth = Math.max(lineW, lineW * 1.25);
+    }
 
     // 经线（格点 = ivLng 的整数倍，与 drawFrame 的刻度/标注同一套格点）
     var l0 = latticeStart(west, ivLng);
@@ -1448,13 +1828,17 @@
     ctx.save();
     ctx.setLineDash([]);
     // ① 图框：外粗内细（内线只画一半透明度，避免抢主线）
+    //    frameStyle="single" → 只留外线（报告/PPT 风格，图面更轻）
+    var fstyle = opts.frameStyle || "double";
     ctx.strokeStyle = "#222";
-    ctx.lineWidth = Math.max(1, 0.85 * P);
+    ctx.lineWidth = Math.max(1, (fstyle === "single" ? 0.7 : 0.85) * P);
     ctx.strokeRect(x0, y0, VW, VH);
-    var gi = Math.max(2, 1.5 * P);
-    ctx.strokeStyle = "rgba(34,34,34,0.5)";
-    ctx.lineWidth = Math.max(0.5, 0.4 * P);
-    ctx.strokeRect(x0 + gi, y0 + gi, VW - 2 * gi, VH - 2 * gi);
+    if (fstyle !== "single") {
+      var gi = Math.max(2, 1.5 * P);
+      ctx.strokeStyle = "rgba(34,34,34,0.5)";
+      ctx.lineWidth = Math.max(0.5, 0.4 * P);
+      ctx.strokeRect(x0 + gi, y0 + gi, VW - 2 * gi, VH - 2 * gi);
+    }
 
     // ② 刻度：主刻度对齐经纬线，次刻度在每格中点（向内）
     var tickLen = Math.max(4, 2.2 * P);
@@ -1789,13 +2173,24 @@
   }
 
   /**
-   * 指北针（论文样式）：细双环 + 半黑半白三角指针 + 衬线 N。
-   * 上一版是「实心红三角 + 圆底 + 无衬线 N」，放在论文图里像个 App 图标；
-   * 学术插图基本都用手绘感的黑白指针：左半实心（阴影侧）、右半空心留白。
+   * 指北针（4 种样式，2026-10-27）。
+   *
+   *   classic —— 论文标配：细双环 + 半黑半白三角指针 + 衬线 N（默认，最耐看）
+   *   compact —— 汇报向：无圆底，一根细箭头 + 顶部 N，占地小、压底图不糊
+   *   compass —— 报告/工程向：八角罗盘玫瑰（长四向 + 短四隅，黑白交替）
+   *   cross   —— 野外/草图向：十字准星 + N，最省墨、远看也认得出北
+   *
+   * 统一约束：**贴内容区右上角**、白底/白描边保证压在任何底图上都读得出来、
+   * 尺寸按 pt 折算（换 dpi 不会变成巨型图标）。新增样式就加一个 case，别改调用点。
    */
-  function drawNorthArrow(ctx, w, h, scaleFactor, ptPx) {
+  function drawNorthArrow(ctx, w, h, scaleFactor, ptPx, style) {
     var sf = Math.min(scaleFactor, 6);
     var P = Number(ptPx) || sf * 1.33;
+    var kind = style || "classic";
+    if (kind === "compact") return drawNorthCompact(ctx, w, h, P);
+    if (kind === "compass") return drawNorthCompass(ctx, w, h, P);
+    if (kind === "cross") return drawNorthCross(ctx, w, h, P);
+
     var size = Math.max(24, 34 * P); // 圆直径 ≈ 12mm，与论文图里的指北针同量级
     var pad = Math.max(9, 3 * P);
     var cx = w - pad - size / 2;
@@ -1850,6 +2245,138 @@
     ctx.textBaseline = "middle";
     ctx.fillText("N", cx, cy + r * 0.63);
     ctx.restore();
+  }
+
+  /** 细箭头式（汇报向）：白描边黑箭头 + 顶部 N，无圆底 */
+  function drawNorthCompact(ctx, w, h, P) {
+    var pad = Math.max(9, 3 * P);
+    var hgt = Math.max(18, 22 * P);
+    var cx = w - pad - hgt * 0.35;
+    var top = pad;
+    var tipY = top + hgt;
+    var botY = tipY + hgt * 0.55;
+    var halfW = hgt * 0.28;
+    ctx.save();
+    ctx.lineJoin = "round";
+    // 箭头
+    ctx.beginPath();
+    ctx.moveTo(cx, tipY);
+    ctx.lineTo(cx - halfW, botY);
+    ctx.lineTo(cx, botY - hgt * 0.18);
+    ctx.lineTo(cx + halfW, botY);
+    ctx.closePath();
+    ctx.fillStyle = "#111";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth = Math.max(1, 0.9 * P);
+    ctx.stroke();
+    // N
+    ctx.font = "700 " + Math.max(9, hgt * 0.5) + "px " + FONT_SERIF;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "#111";
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth = Math.max(1.4, 1.2 * P);
+    ctx.lineJoin = "round";
+    ctx.strokeText("N", cx, tipY - hgt * 0.06);
+    ctx.fillText("N", cx, tipY - hgt * 0.06);
+    ctx.restore();
+  }
+
+  /** 罗盘玫瑰（报告向）：四长四短，黑白交替，外圈细环 */
+  function drawNorthCompass(ctx, w, h, P) {
+    var size = Math.max(26, 38 * P);
+    var pad = Math.max(9, 3 * P);
+    var cx = w - pad - size / 2;
+    var cy = pad + size / 2;
+    var r = size / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fill();
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = Math.max(0.8, 0.55 * P);
+    ctx.stroke();
+
+    var i;
+    var long = r * 0.82;
+    var short = r * 0.46;
+    var halfA = Math.PI / 8; // 每瓣张角
+    // 八个方向：0=北，之后每 45°
+    for (i = 0; i < 8; i++) {
+      var ang = -Math.PI / 2 + (i * Math.PI) / 4;
+      var len = i % 2 === 0 ? long : short;
+      var dark = i % 2 === 0; // 正南北东西用实心黑，四隅留白
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len);
+      ctx.lineTo(
+        cx + Math.cos(ang - halfA) * (r * 0.3),
+        cy + Math.sin(ang - halfA) * (r * 0.3),
+      );
+      ctx.lineTo(
+        cx + Math.cos(ang + halfA) * (r * 0.3),
+        cy + Math.sin(ang + halfA) * (r * 0.3),
+      );
+      ctx.closePath();
+      ctx.fillStyle = dark ? "#222" : "#fff";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(34,34,34,0.75)";
+      ctx.lineWidth = Math.max(0.4, 0.28 * P);
+      ctx.stroke();
+    }
+    // N 压在正北瓣外侧
+    ctx.fillStyle = "#111";
+    ctx.font = "700 " + Math.max(8, r * 0.34) + "px " + FONT_SERIF;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("N", cx, cy - r * 0.98 + r * 0.16);
+    ctx.restore();
+  }
+
+  /** 十字准星（野外向）：四条短线 + 缺口圆 + N */
+  function drawNorthCross(ctx, w, h, P) {
+    var size = Math.max(22, 30 * P);
+    var pad = Math.max(9, 3 * P);
+    var cx = w - pad - size / 2;
+    var cy = pad + size / 2;
+    var r = size / 2;
+    ctx.save();
+    // 白描边先打底，压深色底图时不糊
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth = Math.max(3, 2.6 * P);
+    drawCrossPath(ctx, cx, cy, r);
+    ctx.stroke();
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = Math.max(1, 0.85 * P);
+    drawCrossPath(ctx, cx, cy, r);
+    ctx.stroke();
+    // N：写在正上方缺口的延长线上
+    ctx.font = "700 " + Math.max(9, r * 0.56) + "px " + FONT_SERIF;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "#111";
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth = Math.max(1.4, 1.2 * P);
+    ctx.lineJoin = "round";
+    ctx.strokeText("N", cx, cy - r * 1.02);
+    ctx.fillText("N", cx, cy - r * 1.02);
+    ctx.restore();
+  }
+
+  function drawCrossPath(ctx, cx, cy, r) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + r * 0.34); // 上：留出缺口给 N
+    ctx.lineTo(cx, cy - r * 0.34);
+    ctx.moveTo(cx, cy + r * 0.42);
+    ctx.lineTo(cx, cy + r);
+    ctx.moveTo(cx - r * 0.34, cy);
+    ctx.lineTo(cx - r, cy);
+    ctx.moveTo(cx + r * 0.34, cy);
+    ctx.lineTo(cx + r, cy);
+    // 中间的空心小圆
+    ctx.moveTo(cx + r * 0.22, cy);
+    ctx.arc(cx, cy, r * 0.22, 0, Math.PI * 2);
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -1933,12 +2460,30 @@
     var y = Math.max(pad * 1.8, opts.startY || 0);
 
     ctx.save();
-    // 直角白底（不透明度高一点，保证图例本身可读）
-    ctx.fillStyle = "rgba(255,255,255,0.93)";
-    ctx.fillRect(x, y, boxW, boxH);
-    ctx.strokeStyle = "#222";
-    ctx.lineWidth = Math.max(0.6, 0.5 * P);
-    ctx.strokeRect(x, y, boxW, boxH);
+    // ── 图例样式（2026-10-27）──
+    //  card   白底细框（论文默认）：压底图也能读
+    //  plain  无底无框：文字加白色描边当「光晕」，适合深色底图/汇报
+    //  swatch 无底无框 + 左侧色条：更接近 ArcGIS/QGIS 的默认图例观感
+    var lstyle = opts.style || "card";
+    var halo = lstyle !== "card";
+    function textWithHalo(t, tx, ty, color) {
+      if (halo) {
+        ctx.strokeStyle = "rgba(255,255,255,0.92)";
+        ctx.lineWidth = Math.max(2, fontPx * 0.34);
+        ctx.lineJoin = "round";
+        ctx.strokeText(t, tx, ty);
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(t, tx, ty);
+    }
+    if (lstyle === "card") {
+      // 直角白底（不透明度高一点，保证图例本身可读）
+      ctx.fillStyle = "rgba(255,255,255,0.93)";
+      ctx.fillRect(x, y, boxW, boxH);
+      ctx.strokeStyle = "#222";
+      ctx.lineWidth = Math.max(0.6, 0.5 * P);
+      ctx.strokeRect(x, y, boxW, boxH);
+    }
 
     var cy = y + pad * 0.55;
     if (opts.legendTitle) {
@@ -1946,15 +2491,23 @@
       ctx.font = "600 " + titlePx + "px " + FONT_SERIF;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
+      if (halo) {
+        ctx.strokeStyle = "rgba(255,255,255,0.92)";
+        ctx.lineWidth = Math.max(2.2, titlePx * 0.34);
+        ctx.lineJoin = "round";
+        ctx.strokeText(opts.legendTitle, x + pad, cy);
+      }
       ctx.fillText(opts.legendTitle, x + pad, cy);
       cy += titlePx + pad * 0.55;
-      // 标题下的细分隔线：论文图例的标志性细节
-      ctx.beginPath();
-      ctx.moveTo(x, cy - pad * 0.28);
-      ctx.lineTo(x + boxW, cy - pad * 0.28);
-      ctx.strokeStyle = "rgba(34,34,34,0.45)";
-      ctx.lineWidth = Math.max(0.4, 0.32 * P);
-      ctx.stroke();
+      // 标题下的细分隔线：论文图例的标志性细节（无框样式不需要这条线）
+      if (lstyle === "card") {
+        ctx.beginPath();
+        ctx.moveTo(x, cy - pad * 0.28);
+        ctx.lineTo(x + boxW, cy - pad * 0.28);
+        ctx.strokeStyle = "rgba(34,34,34,0.45)";
+        ctx.lineWidth = Math.max(0.4, 0.32 * P);
+        ctx.stroke();
+      }
     }
 
     items.forEach(function (it) {
@@ -1963,7 +2516,18 @@
       var color = it.color || "#888";
       var gt = it.geomType || "polygon";
 
-      if (gt === "point") {
+      if (lstyle === "swatch") {
+        // 色条样式：不管几何类型，一律一根横向色条（ArcGIS/QGIS 默认图例观感）
+        var sw2 = symW * 1.15;
+        var sh2 = Math.max(3, fontPx * 0.5);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = gt === "line" ? 1 : 0.72;
+        ctx.fillRect(gx, gy - sh2 / 2, sw2, sh2);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "rgba(0,0,0,0.28)";
+        ctx.lineWidth = Math.max(0.4, 0.3 * P);
+        ctx.strokeRect(gx, gy - sh2 / 2, sw2, sh2);
+      } else if (gt === "point") {
         ctx.beginPath();
         ctx.arc(gx + symW * 0.4, gy, Math.max(2, fontPx * 0.27), 0, Math.PI * 2);
         ctx.fillStyle = color;
@@ -1997,7 +2561,7 @@
       ctx.font = "500 " + fontPx + "px " + FONT_SERIF;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText(String(it.name || ""), gx + symW, gy);
+      textWithHalo(String(it.name || ""), gx + symW, gy, "#111");
       cy += rowH;
     });
     ctx.restore();
@@ -2116,6 +2680,14 @@
     if (!map) return Promise.reject(new Error("地图未就绪"));
 
     opts = opts || {};
+    // ── 模板（2026-10-27）──
+    // 模板只给「没显式指定的项」兜底：显式传了的参数永远优先，便于
+    // ① UI 套模板后再微调 ② AI 只写 template:"报告" 也能出一张像样的图。
+    var sty = resolveStyle(opts);
+    if (opts.template && TEMPLATES[opts.template]) {
+      var tplFlags = TEMPLATES[opts.template].flags || {};
+      for (var fk in tplFlags) if (opts[fk] == null) opts[fk] = tplFlags[fk];
+    }
     // 支持两种传法：width/height（像素，老用法）或 paper/MM 系列（新用法）
     var dpi = Number(opts.dpi || 96);
     var W = opts.width
@@ -2304,6 +2876,9 @@
       scaleBarKm: null,
       attributions: [],
       warnings: [],
+      // 图面语言：模板与四个装饰样式（AI 出图后据此向用户复述「用了哪套」）
+      template: opts.template || null,
+      style: sty,
     };
 
     // ---- 构图护栏②：把「画面为什么长这样」说清楚 ----
@@ -2450,7 +3025,7 @@
     // ---- 3. 经纬网（在矢量之下，与屏幕层级一致）----
     if (opts.graticule) {
       steps.push(function () {
-        drawGraticule(ctx, o, VW, VH, scaleFactor, gratIvs);
+        drawGraticule(ctx, o, VW, VH, scaleFactor, gratIvs, sty);
       });
     }
 
@@ -2461,23 +3036,18 @@
         // worldW = 该瓦片级下「一整圈世界」在画布上的像素宽，
         // 跨 180° 环绕全靠它做平移单位
         var data = collectVectorPaths(map);
-        data.markers.forEach(function (mk) {
-          mk._iconDesc = describeMarker(mk, map);
-        });
+        // Canvas 点层要不要画聚合气泡，判定用的是**屏幕当前 zoom**（与 MarkersCanvas 同源）
+        data.zoom = map.getZoom();
         // 图标是异步资源：先全部就位再画，否则 getIcon 还没回来就只剩兜底小圆点
-        return preloadIcons(
-          data.markers.map(function (mk) {
-            return mk._iconDesc;
-          }),
-        ).then(function (iconCache) {
+        return preloadIcons(data.markers).then(function (iconCache) {
           var parts = {
             paths: data.paths.length,
             markers: data.markers.length,
             icons: 0,
             points: 0,
           };
-          data.markers.forEach(function (mk) {
-            if (mk._iconDesc && iconCache[mk._iconDesc.url]) parts.icons++;
+          data.markers.forEach(function (d) {
+            if (d.kind === "icon" && iconCache[d.url]) parts.icons++;
           });
           data.pointLayers.forEach(function (l) {
             parts.points += (l._features || []).length;
@@ -2540,7 +3110,7 @@
       if (opts.scaleBar) {
         report.scaleBarKm = drawScaleBar(ctx, VW, VH, metersPerPx, scaleFactor, ptPx);
       }
-      if (opts.northArrow) drawNorthArrow(ctx, VW, VH, scaleFactor, ptPx);
+      if (opts.northArrow) drawNorthArrow(ctx, VW, VH, scaleFactor, ptPx, sty.northArrowStyle);
       if (opts.legend) {
         report.legend = drawLegend(ctx, VW, VH, scaleFactor, {
           legendTitle: opts.legendTitle,
@@ -2548,6 +3118,7 @@
           maxItems: opts.legendMaxItems,
           startY: Math.max(titleH, opts.figureLabel ? 16 * ptPx : 0) || undefined,
           ptPx: ptPx,
+          style: sty.legendStyle,
         });
         if (!report.legend) report.warnings.push("当前没有可入图的矢量图层（图例为空）");
       }
@@ -2570,6 +3141,7 @@
         intervalLat: gratIvs.lat,
         labels: opts.frameLabels == null ? "all" : opts.frameLabels,
         ptPx: ptPx,
+        frameStyle: sty.frameStyle,
       });
     });
 
@@ -2648,6 +3220,11 @@
         Math.pow(2, zoom)
       );
     },
+    // 模板与样式枚举：UI 用它渲染按钮/下拉，AI 工具用它校验取值
+    TEMPLATES: TEMPLATES,
+    STYLE_DEFAULTS: STYLE_DEFAULTS,
+    STYLE_ENUM: STYLE_ENUM,
+    resolveStyle: resolveStyle,
     open: null, // 由 map-export-ui.js 挂载
     close: null,
     isOpen: function () {

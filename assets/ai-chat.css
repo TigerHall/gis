@@ -63,13 +63,29 @@
 /* ── Key 行（默认收起） ── */
 .ogv-ai-keyrow {
   display: none;
-  gap: 6px;
-  padding: 8px 12px;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 12px 10px;
   border-bottom: 1px solid var(--c-border);
   flex: none;
 }
 .ogv-ai-keyrow.open {
   display: flex;
+}
+.ogv-ai-keyline {
+  display: flex;
+  gap: 6px;
+}
+.ogv-ai-keyhint {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--c-text-dim, #888);
+  /* 域名不能被 break-all 拆成「deepseek.co / m」，宁可整词下移 */
+  overflow-wrap: anywhere;
+}
+.ogv-ai-keyhint .ai-link {
+  word-break: normal;
+  white-space: nowrap;
 }
 .ogv-ai-key {
   flex: 1;
@@ -99,9 +115,14 @@
   flex: 1;
   overflow-y: auto;
   padding: 12px;
+  /* 底部留白 = 悬浮输入框的高度（`_syncComposerPad()` 会写精确值）。
+     这里是「JS 还没跑」时的兜底，宁可多留一点也不要把最后一条消息压在框下。 */
+  padding-bottom: 96px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* 滚动到底部时不要被输入框的渐变再吃掉一段 */
+  scroll-padding-bottom: 8px;
 }
 .ogv-ai-empty {
   color: var(--c-text-dim, #999);
@@ -225,33 +246,132 @@
   flex: none;
 }
 
-/* ── 输入区 ── */
+/* ── 输入区（2026-10-27：一个圆角框包住「文字 + 工具条」，照 DeepSeek）──
+   2026-10-27 二改：**改成浮层**——脱流压在消息区上方，不再占一条独立的横带，
+   也不再画那条分割线（用户口径：「悬浮在对话框上面，不需要单独再有框线」）。
+   代价是消息区不再自动为它让位 → 由 `_syncComposerPad()` 用 ResizeObserver
+   把等高的 padding-bottom 写给 `.ogv-ai-msgs`，保证最后一条永远完整可见。 */
 .ogv-ai-comp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 12px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 0;
+  /* 顶部一段渐隐：消息滑到框后面时是「淡出」，不是被硬切一刀。
+     ⚠️ 用 --c-bg 铺底而不是透明 —— 半透明会让下面的字透出来，看着像重影。 */
+  /* 先给一个纯色兜底（老浏览器不认渐变时不会变成透明），再用渐变覆盖 */
+  background: var(--c-bg);
+  background: linear-gradient(to top, var(--c-bg) 0%, var(--c-bg) 76%, transparent 100%);
+  /* 渐变那一段不拦指针：用户还能在那儿滚动消息 */
+  pointer-events: none;
+}
+.ogv-ai-comp > * {
+  pointer-events: auto;
+}
+.ogv-ai-box {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px 10px;
-  border-top: 1px solid var(--c-border);
-  flex: none;
+  gap: 2px;
+  padding: 4px 4px 4px;
+  /* ⚠️ 静止态**不画框线**（用户口径：「悬浮在对话框上面，不需要单独再有框线」）：
+     靠「比面板略深一档的底色 + 一层投影」表达浮起，而不是靠描边。
+     `border` 仍保留 1px **透明**——这样 focus / 录音换色时不会引起 1px 位移。
+     想改回有描边：把 transparent 换回 var(--c-border) 即可。 */
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--c-bg-alt, #f5f5f5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    background 0.14s ease;
 }
-.ogv-ai-inputrow {
-  display: flex;
-  gap: 6px;
-  align-items: flex-end;
+[data-theme="dark"] .ogv-ai-box {
+  /* 深底上投影几乎看不见 → 加重一点，否则浮层与面板糊成一片 */
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
+}
+/* 焦点环用达 AA 的绿（--accent 只有 1.58:1，不能当边框）：
+   静止态没有框线，所以焦点必须**明确画出来**，否则键盘用户不知道焦点在哪。 */
+.ogv-ai-box:focus-within {
+  background: var(--c-bg);
+  border-color: var(--c-green-text-strong, #3a743a);
+  box-shadow:
+    0 0 0 1px var(--c-green-text-strong, #3a743a),
+    0 4px 16px rgba(0, 0, 0, 0.12);
+}
+/* 录音中：整框变暖红 + 左上角徽标（三处同步：框、徽标、🎤 按钮） */
+.ogv-ai-box.is-voice {
+  border-color: #c0392b;
+  box-shadow: 0 0 0 1px #c0392b;
+}
+[data-theme="dark"] .ogv-ai-box.is-voice {
+  border-color: #ff8a7a;
+  box-shadow: 0 0 0 1px #ff8a7a;
 }
 
-/* 运行开关：深度思考 / 联网搜索（对齐 DeepSeek 官网输入框底部那两颗 pill） */
+.ogv-ai-input {
+  width: 100%;
+  resize: none;
+  min-height: 40px;
+  max-height: 148px;
+  padding: 6px 8px 2px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--c-text);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.45;
+  /* 未到上限时不要滚动条（JS 用 .is-max 打开），避免「才一行就有条」 */
+  overflow-y: hidden;
+}
+.ogv-ai-input.is-max {
+  overflow-y: auto;
+}
+.ogv-ai-input::placeholder {
+  color: var(--c-text-dim, #999);
+}
+
+/* 工具条：左侧能力开关（可横滑，绝不换行），右侧发送 */
+.ogv-ai-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px 2px;
+}
 .ogv-ai-opts {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.ogv-ai-opts::-webkit-scrollbar {
+  display: none;
+}
+.ogv-ai-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+/* 运行开关：思考 / 联网 / 语音（一个 aria-pressed 胶囊，不做原生 checkbox：
+   原生勾选框在这么矮的一行里会把文字挤成两行） */
 .ogv-ai-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 25px;
-  padding: 0 10px;
+  flex: none;
+  height: 26px;
+  padding: 0 9px;
   border-radius: 13px;
   border: 1px solid var(--c-border);
   background: transparent;
@@ -274,74 +394,111 @@
   outline: 2px solid var(--c-green-text-strong, #3a743a);
   outline-offset: 1px;
 }
-/* 激活态：绿底深字（9.3:1）+ 左侧实心点，不只靠颜色区分 */
+/* 激活态：绿底深字（9.3:1）+ 加粗，不只靠颜色区分 */
 .ogv-ai-pill.is-on {
   background: var(--c-green);
   border-color: transparent;
   color: #1a1a2e;
   font-weight: 600;
 }
-.ogv-ai-pill.is-on .ogv-ai-pill-i {
-  filter: none;
+.ogv-ai-pill.is-off {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .ogv-ai-pill-i {
   font-size: 12px;
   line-height: 1;
 }
+/* 窄屏：把输入框上限压低，把高度还给对话区（"确保对话能全部展示出来"） */
+@media (max-width: 520px) {
+  .ogv-ai-input {
+    max-height: 104px;
+  }
+  .ogv-ai-msgs {
+    padding-bottom: 92px;
+  }
+}
+@media (max-width: 420px) {
+  /* 窄屏只留图标：三个胶囊并排时字数会把「语音」挤出去 */
+  .ogv-ai-pill-t {
+    display: none;
+  }
+  .ogv-ai-pill {
+    padding: 0 8px;
+  }
+}
 
-/* 「测试中」徽标：功能仍在打磨，先明确告知，别让用户以为是稳定版 */
-.ogv-ai-beta,
-.mep-beta {
-  flex: none;
-  font-size: 10px;
-  line-height: 1.5;
-  padding: 0 5px;
-  border-radius: 4px;
-  border: 1px solid #c89428;
-  color: #8a6210; /* 对白底 5.3:1 */
-  background: transparent;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-[data-theme="dark"] .ogv-ai-beta,
-[data-theme="dark"] .mep-beta {
-  border-color: #8a6210;
-  color: #e0b355; /* 对深底 5:1 以上 */
-}
-.ogv-ai-input {
-  flex: 1;
-  min-width: 0;
-  resize: none;
-  padding: 8px 10px;
-  border: 1px solid var(--c-border);
-  border-radius: 8px;
-  background: var(--c-bg);
-  color: var(--c-text);
-  font-size: 14px;
-  font-family: inherit;
-  line-height: 1.4;
-  max-height: 120px;
-}
-.ogv-ai-input:focus-visible {
-  outline: 2px solid var(--c-green-text-strong, #3a743a);
-  outline-offset: 1px;
-}
+/* 发送键：圆形图标键（↑），钉在工具条最右 */
 .ogv-ai-send {
-  align-self: flex-end;
-  padding: 8px 16px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  border-radius: 8px;
+  border-radius: 50%;
   background: var(--c-green);
   color: #1a1a2e;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
+  transition:
+    background 0.12s ease,
+    transform 0.12s ease;
 }
 .ogv-ai-send:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
 }
 .ogv-ai-send:not(:disabled):hover {
   background: var(--c-green-hover, var(--c-green));
+}
+.ogv-ai-send:not(:disabled):active {
+  transform: scale(0.94);
+}
+.ogv-ai-send:focus-visible {
+  outline: 2px solid var(--c-green-text-strong, #3a743a);
+  outline-offset: 2px;
+}
+
+/* 录音徽标：压在框的左上边框上（绝对定位，不占行高） */
+.ogv-ai-voice-tip {
+  display: none;
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  align-items: center;
+  gap: 4px;
+  height: 19px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  z-index: 2;
+}
+.ogv-ai-voice-tip.on {
+  display: inline-flex;
+  animation: ogvAiPulse 1.4s ease-in-out infinite;
+}
+@keyframes ogvAiPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.62;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ogv-ai-voice-tip.on {
+    animation: none;
+  }
 }
 
 /* ── 右下角悬浮球（L.Control，自动排在图层控件上方）── */
@@ -424,7 +581,7 @@
     padding: 10px;
   }
   .ogv-ai-comp {
-    padding: 6px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   }
   .ogv-ai-bubble {
     max-width: 92%;
